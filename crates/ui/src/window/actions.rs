@@ -205,28 +205,88 @@ fn set_accelerators(window: &gtk4::ApplicationWindow) {
 }
 
 /// Perform PDF export
-fn perform_pdf_export(_window: &gtk4::ApplicationWindow, state: &crate::app::AppState) {
+fn perform_pdf_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppState) {
     // Get active document
-    if let Some(_document) = state.active_document() {
+    if state.active_document().is_some() {
         tracing::info!("Exporting active document to PDF");
 
-        // For now, just log the action
-        // In a full implementation, would show file dialog and export
-        tracing::info!("✅ PDF export action triggered (dialog not yet implemented)");
+        let window_clone = window.clone();
+        let state_clone = state.clone();
+
+        glib::spawn_future_local(async move {
+            // Show export dialog
+            if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, "pdf").await {
+                // Perform export
+                match crate::export::export_pdf(&state_clone.active_document().unwrap(), &path) {
+                    Ok(_) => {
+                        tracing::info!("✅ PDF export completed: {}", path.display());
+                    }
+                    Err(e) => {
+                        tracing::error!("❌ PDF export failed: {}", e);
+                    }
+                }
+            } else {
+                tracing::info!("PDF export cancelled by user");
+            }
+        });
     } else {
         tracing::warn!("No active document to export");
     }
 }
 
 /// Perform image export (PNG/JPEG/SVG)
-fn perform_image_export(_window: &gtk4::ApplicationWindow, state: &crate::app::AppState, format: &str) {
+fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppState, format: &str) {
     // Get active document
-    if let Some(_document) = state.active_document() {
+    if state.active_document().is_some() {
         tracing::info!("Exporting active document to {}", format.to_uppercase());
 
-        // For now, just log the action
-        // In a full implementation, would show file dialog and export
-        tracing::info!("✅ {} export action triggered (dialog not yet implemented)", format.to_uppercase());
+        let window_clone = window.clone();
+        let state_clone = state.clone();
+        let format_str = format.to_string();
+
+        glib::spawn_future_local(async move {
+            // Show export dialog
+            if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, &format_str).await {
+                // Perform export
+                match format_str.as_str() {
+                    "png" => {
+                        match crate::export::export_png(&state_clone.active_document().unwrap(), &path, 96.0) {
+                            Ok(_) => {
+                                tracing::info!("✅ PNG export completed: {}", path.display());
+                            }
+                            Err(e) => {
+                                tracing::error!("❌ PNG export failed: {}", e);
+                            }
+                        }
+                    }
+                    "jpeg" => {
+                        match crate::export::export_jpeg(&state_clone.active_document().unwrap(), &path, 96.0, 85) {
+                            Ok(_) => {
+                                tracing::info!("✅ JPEG export completed: {}", path.display());
+                            }
+                            Err(e) => {
+                                tracing::error!("❌ JPEG export failed: {}", e);
+                            }
+                        }
+                    }
+                    "svg" => {
+                        match crate::export::export_svg(&state_clone.active_document().unwrap(), &path) {
+                            Ok(_) => {
+                                tracing::info!("✅ SVG export completed: {}", path.display());
+                            }
+                            Err(e) => {
+                                tracing::error!("❌ SVG export failed: {}", e);
+                            }
+                        }
+                    }
+                    _ => {
+                        tracing::error!("Unknown export format: {}", format_str);
+                    }
+                }
+            } else {
+                tracing::info!("{} export cancelled by user", format_str.to_uppercase());
+            }
+        });
     } else {
         tracing::warn!("No active document to export");
     }
