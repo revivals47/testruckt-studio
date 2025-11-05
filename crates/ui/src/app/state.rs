@@ -28,6 +28,19 @@ impl AppState {
             .and_then(|id| inner.project.document(id).cloned())
     }
 
+    pub fn with_active_document<F, R>(&self, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut Document) -> R,
+    {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                return Some(f(doc));
+            }
+        }
+        None
+    }
+
     pub fn undo_redo_stack(&self) -> std::sync::Arc<std::sync::Mutex<UndoRedoStack>> {
         let inner = self.inner.lock().expect("state");
         inner.undo_redo_stack.clone()

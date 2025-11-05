@@ -29,6 +29,10 @@ impl Project {
         self.documents.get(&id)
     }
 
+    pub fn document_mut(&mut self, id: DocumentId) -> Option<&mut Document> {
+        self.documents.get_mut(&id)
+    }
+
     pub fn apply_template(&self, template: TemplateRef) -> Option<Document> {
         self.templates.get(template.id).map(|tmpl| {
             let mut builder = crate::document::DocumentBuilder::new().with_title(&tmpl.name);
