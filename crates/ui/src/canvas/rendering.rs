@@ -43,6 +43,36 @@ impl Default for RulerConfig {
     }
 }
 
+/// Guide line orientation
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GuideOrientation {
+    Horizontal,
+    Vertical,
+}
+
+/// A single guide line
+#[derive(Clone, Debug)]
+pub struct Guide {
+    pub orientation: GuideOrientation,
+    pub position: f32,
+    pub color: Color,
+}
+
+impl Guide {
+    pub fn new(orientation: GuideOrientation, position: f32) -> Self {
+        Self {
+            orientation,
+            position,
+            color: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.6,
+            },
+        }
+    }
+}
+
 /// Canvas rendering state
 #[derive(Clone, Debug)]
 pub struct RenderConfig {
@@ -52,6 +82,11 @@ pub struct RenderConfig {
     pub show_grid: bool,
     pub show_rulers: bool,
     pub show_guides: bool,
+    pub snap_to_grid: bool,
+    pub grid_spacing: f32,
+    pub guides: Vec<Guide>,
+    pub snap_to_guides: bool,
+    pub guide_snap_distance: f32,
 }
 
 impl Default for RenderConfig {
@@ -63,6 +98,11 @@ impl Default for RenderConfig {
             show_grid: true,
             show_rulers: true,
             show_guides: true,
+            snap_to_grid: true,
+            grid_spacing: 10.0,
+            guides: Vec::new(),
+            snap_to_guides: true,
+            guide_snap_distance: 5.0,
         }
     }
 }
@@ -364,6 +404,18 @@ pub fn draw_text_element(
 ) -> Result<(), cairo::Error> {
     ctx.save()?;
 
+    // Draw background color if specified
+    if let Some(bg_color) = style.background_color {
+        ctx.set_source_rgb(bg_color.r as f64, bg_color.g as f64, bg_color.b as f64);
+        ctx.rectangle(
+            bounds.origin.x as f64,
+            bounds.origin.y as f64,
+            bounds.size.width as f64,
+            bounds.size.height as f64
+        );
+        ctx.fill()?;
+    }
+
     // Clipping rectangle
     ctx.rectangle(
         bounds.origin.x as f64,
@@ -377,18 +429,191 @@ pub fn draw_text_element(
     let layout = pangocairo::functions::create_layout(ctx);
     layout.set_text(text);
 
-    // Set font
+    // Set font with styling
     let mut font_desc = pango::FontDescription::new();
     font_desc.set_family(&style.font_family);
     font_desc.set_size((style.font_size * pango::SCALE as f32) as i32);
+
+    // Apply font weight
+    let pango_weight = match style.weight {
+        testruct_core::typography::FontWeight::Thin => pango::Weight::Thin,
+        testruct_core::typography::FontWeight::Light => pango::Weight::Light,
+        testruct_core::typography::FontWeight::Regular => pango::Weight::Normal,
+        testruct_core::typography::FontWeight::Medium => pango::Weight::Medium,
+        testruct_core::typography::FontWeight::Bold => pango::Weight::Bold,
+        testruct_core::typography::FontWeight::Black => pango::Weight::Ultrabold,
+    };
+    font_desc.set_weight(pango_weight);
+
+    // Apply italic style
+    if style.italic {
+        font_desc.set_style(pango::Style::Italic);
+    }
+
     layout.set_font_description(Some(&font_desc));
 
+    // Apply text alignment
+    let pango_alignment = match style.alignment {
+        testruct_core::typography::TextAlignment::Start => pango::Alignment::Left,
+        testruct_core::typography::TextAlignment::Center => pango::Alignment::Center,
+        testruct_core::typography::TextAlignment::End => pango::Alignment::Right,
+        testruct_core::typography::TextAlignment::Justified => pango::Alignment::Center, // Fallback for justified
+    };
+    layout.set_alignment(pango_alignment);
+
+    // Apply underline
+    if style.underline {
+        let mut attrs = pango::AttrList::new();
+        let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
+        attrs.insert(underline_attr);
+        layout.set_attributes(Some(&attrs));
+    }
+
     // Set text color
-    ctx.set_source_rgb(0.2, 0.2, 0.2);
+    ctx.set_source_rgb(style.color.r as f64, style.color.g as f64, style.color.b as f64);
     ctx.move_to(bounds.origin.x as f64 + 5.0, bounds.origin.y as f64 + 5.0);
 
     // Render layout
     pangocairo::functions::show_layout(ctx, &layout);
+
+    // Draw strikethrough if enabled
+    if style.strikethrough {
+        ctx.set_source_rgb(style.color.r as f64, style.color.g as f64, style.color.b as f64);
+        ctx.set_line_width(1.0);
+        let baseline_y = bounds.origin.y as f64 + 5.0 + (style.font_size as f64 / 2.0);
+        ctx.move_to(bounds.origin.x as f64 + 5.0, baseline_y);
+        ctx.line_to(bounds.origin.x as f64 + bounds.size.width as f64 - 5.0, baseline_y);
+        ctx.stroke()?;
+    }
+
+    ctx.restore()?;
+    Ok(())
+}
+
+/// Draw a text cursor for editing mode
+pub fn draw_text_cursor(
+    ctx: &Context,
+    bounds: &Rect,
+    _text: &str,
+    cursor_pos: usize,
+    _style: &testruct_core::typography::TextStyle,
+) -> Result<(), cairo::Error> {
+    ctx.save()?;
+
+    let x_offset = bounds.origin.x as f64 + 5.0;
+    let y_offset = bounds.origin.y as f64 + 5.0;
+
+    // Estimate cursor x position based on character count and average character width
+    let char_width = 8.0; // Approximate width per character
+    let cursor_x = x_offset + (cursor_pos as f64 * char_width);
+
+    // Draw text cursor as a thin vertical line (blinking cursor appearance)
+    ctx.set_source_rgb(0.0, 0.5, 1.0); // Blue cursor
+    ctx.set_line_width(2.0);
+    ctx.move_to(cursor_x, y_offset);
+    ctx.line_to(cursor_x, y_offset + (bounds.size.height as f64 - 10.0));
+    ctx.stroke()?;
+
+    ctx.restore()?;
+    Ok(())
+}
+
+/// Draw a frame to indicate text editing mode
+pub fn draw_text_editing_frame(
+    ctx: &Context,
+    bounds: &Rect,
+) -> Result<(), cairo::Error> {
+    ctx.save()?;
+
+    // Draw a dashed border to indicate editing mode
+    ctx.set_source_rgb(0.2, 0.6, 1.0); // Light blue
+    ctx.set_line_width(2.0);
+    ctx.set_dash(&[5.0, 3.0], 0.0);
+    ctx.rectangle(
+        bounds.origin.x as f64,
+        bounds.origin.y as f64,
+        bounds.size.width as f64,
+        bounds.size.height as f64,
+    );
+    ctx.stroke()?;
+
+    ctx.restore()?;
+    Ok(())
+}
+
+/// Draw a placeholder for image elements
+pub fn draw_image_placeholder(
+    ctx: &Context,
+    bounds: &Rect,
+) -> Result<(), cairo::Error> {
+    ctx.save()?;
+
+    // Draw background with subtle gradient effect
+    ctx.set_source_rgb(0.96, 0.96, 0.98);
+    ctx.rectangle(
+        bounds.origin.x as f64,
+        bounds.origin.y as f64,
+        bounds.size.width as f64,
+        bounds.size.height as f64,
+    );
+    ctx.fill()?;
+
+    // Draw border with rounded corners effect
+    ctx.set_source_rgb(0.65, 0.71, 0.82);
+    ctx.set_line_width(1.5);
+    ctx.rectangle(
+        bounds.origin.x as f64,
+        bounds.origin.y as f64,
+        bounds.size.width as f64,
+        bounds.size.height as f64,
+    );
+    ctx.stroke()?;
+
+    // Draw image icon (simple mountain/photo symbol)
+    let cx = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
+    let cy = bounds.origin.y as f64 + bounds.size.height as f64 / 2.0;
+    let icon_size = 30.0;
+
+    ctx.set_source_rgb(0.55, 0.63, 0.75);
+    ctx.set_line_width(2.0);
+
+    // Draw mountain peaks
+    ctx.move_to(cx - icon_size, cy + icon_size * 0.3);
+    ctx.line_to(cx - icon_size * 0.3, cy - icon_size * 0.3);
+    ctx.line_to(cx + icon_size * 0.3, cy + icon_size * 0.2);
+    ctx.line_to(cx + icon_size, cy - icon_size * 0.3);
+    ctx.stroke()?;
+
+    // Draw circle (representing sun)
+    ctx.arc(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size * 0.2, 0.0, std::f64::consts::PI * 2.0);
+    ctx.stroke()?;
+
+    // Draw "Image" text with better styling
+    ctx.set_source_rgb(0.4, 0.4, 0.5);
+    ctx.move_to(cx - icon_size * 0.4, cy + icon_size * 0.8);
+    let layout = pangocairo::functions::create_layout(ctx);
+    layout.set_text("Image Placeholder");
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family("Sans");
+    font_desc.set_size((11 * pango::SCALE as i32) as i32);
+    layout.set_font_description(Some(&font_desc));
+    pangocairo::functions::show_layout(ctx, &layout);
+
+    // Draw helpful hint text
+    if bounds.size.height > 80.0 && bounds.size.width > 100.0 {
+        ctx.set_source_rgb(0.6, 0.6, 0.6);
+        ctx.move_to(
+            bounds.origin.x as f64 + 5.0,
+            bounds.origin.y as f64 + bounds.size.height as f64 - 15.0,
+        );
+        let hint_layout = pangocairo::functions::create_layout(ctx);
+        hint_layout.set_text("(Actual image will display here)");
+        let mut hint_font = pango::FontDescription::new();
+        hint_font.set_family("Sans");
+        hint_font.set_size((9 * pango::SCALE as i32) as i32);
+        hint_layout.set_font_description(Some(&hint_font));
+        pangocairo::functions::show_layout(ctx, &hint_layout);
+    }
 
     ctx.restore()?;
     Ok(())
@@ -478,6 +703,143 @@ pub fn draw_line(
     }
 
     Ok(())
+}
+
+/// Draw an arrow shape
+pub fn draw_arrow(
+    ctx: &Context,
+    bounds: &Rect,
+    stroke: &Option<Color>,
+) -> Result<(), cairo::Error> {
+    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
+
+    let x1 = bounds.origin.x as f64;
+    let y1 = bounds.origin.y as f64;
+    let x2 = bounds.origin.x as f64 + bounds.size.width as f64;
+    let y2 = bounds.origin.y as f64 + bounds.size.height as f64;
+
+    // Draw the line
+    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_line_width(2.0);
+    ctx.move_to(x1, y1);
+    ctx.line_to(x2, y2);
+    ctx.stroke()?;
+
+    // Draw the arrowhead
+    let arrow_size = 12.0;
+    let angle = (y2 - y1).atan2(x2 - x1);
+
+    // Calculate arrowhead points
+    let point1_x = x2 - arrow_size * angle.cos();
+    let point1_y = y2 - arrow_size * angle.sin();
+
+    let arrow_angle = std::f64::consts::PI / 6.0; // 30 degrees
+    let p1x = point1_x - arrow_size * (angle - arrow_angle).cos();
+    let p1y = point1_y - arrow_size * (angle - arrow_angle).sin();
+    let p2x = point1_x - arrow_size * (angle + arrow_angle).cos();
+    let p2y = point1_y - arrow_size * (angle + arrow_angle).sin();
+
+    // Draw arrowhead triangle
+    ctx.move_to(x2, y2);
+    ctx.line_to(p1x, p1y);
+    ctx.line_to(p2x, p2y);
+    ctx.close_path();
+    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.fill()?;
+
+    Ok(())
+}
+
+/// Draw guide lines on the canvas
+pub fn draw_guides(
+    ctx: &Context,
+    guides: &[Guide],
+    page_size: &Size,
+) -> Result<(), cairo::Error> {
+    for guide in guides {
+        ctx.set_source_rgba(
+            guide.color.r as f64,
+            guide.color.g as f64,
+            guide.color.b as f64,
+            guide.color.a as f64,
+        );
+        ctx.set_line_width(1.0);
+
+        match guide.orientation {
+            GuideOrientation::Vertical => {
+                // Vertical guide line
+                let x = guide.position as f64;
+                ctx.move_to(x, 0.0);
+                ctx.line_to(x, page_size.height as f64);
+            }
+            GuideOrientation::Horizontal => {
+                // Horizontal guide line
+                let y = guide.position as f64;
+                ctx.move_to(0.0, y);
+                ctx.line_to(page_size.width as f64, y);
+            }
+        }
+        ctx.stroke()?;
+    }
+    Ok(())
+}
+
+/// Find the closest guide to a position
+pub fn snap_to_guide(
+    value: f32,
+    guides: &[Guide],
+    orientation: GuideOrientation,
+    snap_distance: f32,
+) -> Option<f32> {
+    for guide in guides {
+        if guide.orientation == orientation {
+            let distance = (value - guide.position).abs();
+            if distance <= snap_distance {
+                return Some(guide.position);
+            }
+        }
+    }
+    None
+}
+
+/// Grid snapping configuration
+pub struct GridSnapConfig {
+    pub enabled: bool,
+    pub spacing: f32,
+}
+
+impl Default for GridSnapConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            spacing: 10.0,
+        }
+    }
+}
+
+/// Snap a coordinate value to the grid
+pub fn snap_to_grid(value: f32, spacing: f32) -> f32 {
+    if spacing > 0.0 {
+        (value / spacing).round() * spacing
+    } else {
+        value
+    }
+}
+
+/// Snap a point to the grid
+pub fn snap_point_to_grid(point: &Point, spacing: f32) -> Point {
+    Point::new(
+        snap_to_grid(point.x, spacing),
+        snap_to_grid(point.y, spacing),
+    )
+}
+
+/// Snap a rectangle's origin to the grid
+pub fn snap_rect_to_grid(rect: &Rect, spacing: f32) -> Rect {
+    Rect::new(
+        snap_point_to_grid(&rect.origin, spacing),
+        rect.size.clone(),
+    )
 }
 
 #[cfg(test)]

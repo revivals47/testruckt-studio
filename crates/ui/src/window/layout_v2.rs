@@ -30,7 +30,7 @@ pub struct ToolPaletteButtons {
 pub fn build_layout(
     app_state: AppState,
     _toolbar: ToolbarWidgets,
-) -> (GtkBox, CanvasView, ToolPaletteButtons) {
+) -> (GtkBox, CanvasView, ToolPaletteButtons, GtkBox, GtkBox) {
     let main_container = GtkBox::new(Orientation::Vertical, 0);
 
     // Note: Menubar and toolbars are added in layout.rs
@@ -60,7 +60,7 @@ pub fn build_layout(
     let status_bar = build_status_bar();
     main_container.append(&status_bar);
 
-    (main_container, canvas_view, tool_buttons)
+    (main_container, canvas_view, tool_buttons, tool_palette, properties_panel)
 }
 
 /// Build the left tool palette

@@ -11,8 +11,10 @@ pub struct ToolButtons {
     pub select_btn: ToggleButton,
     pub rectangle_btn: ToggleButton,
     pub circle_btn: ToggleButton,
-    pub text_btn: ToggleButton,
     pub line_btn: ToggleButton,
+    pub arrow_btn: ToggleButton,
+    pub image_btn: ToggleButton,
+    pub text_btn: ToggleButton,
 }
 
 impl ToolButtons {
@@ -22,8 +24,10 @@ impl ToolButtons {
             select_btn: ToggleButton::with_label("Select"),
             rectangle_btn: ToggleButton::with_label("Rectangle"),
             circle_btn: ToggleButton::with_label("Circle"),
-            text_btn: ToggleButton::with_label("Text"),
             line_btn: ToggleButton::with_label("Line"),
+            arrow_btn: ToggleButton::with_label("Arrow"),
+            image_btn: ToggleButton::with_label("Image"),
+            text_btn: ToggleButton::with_label("Text"),
         }
     }
 
@@ -33,10 +37,14 @@ impl ToolButtons {
             ToolMode::Rectangle
         } else if self.circle_btn.is_active() {
             ToolMode::Circle
+        } else if self.line_btn.is_active() {
+            ToolMode::Line
+        } else if self.arrow_btn.is_active() {
+            ToolMode::Arrow
+        } else if self.image_btn.is_active() {
+            ToolMode::Image
         } else if self.text_btn.is_active() {
             ToolMode::Text
-        } else if self.line_btn.is_active() {
-            ToolMode::Pan  // Placeholder for line tool
         } else {
             ToolMode::Select
         }
@@ -48,16 +56,21 @@ impl ToolButtons {
         self.select_btn.set_active(false);
         self.rectangle_btn.set_active(false);
         self.circle_btn.set_active(false);
-        self.text_btn.set_active(false);
         self.line_btn.set_active(false);
+        self.arrow_btn.set_active(false);
+        self.image_btn.set_active(false);
+        self.text_btn.set_active(false);
 
         // Activate the appropriate button
         match tool {
             ToolMode::Select => self.select_btn.set_active(true),
             ToolMode::Rectangle => self.rectangle_btn.set_active(true),
             ToolMode::Circle => self.circle_btn.set_active(true),
+            ToolMode::Line => self.line_btn.set_active(true),
+            ToolMode::Arrow => self.arrow_btn.set_active(true),
+            ToolMode::Image => self.image_btn.set_active(true),
             ToolMode::Text => self.text_btn.set_active(true),
-            ToolMode::Pan => self.line_btn.set_active(true),
+            ToolMode::Pan => {}, // Pan is not a selectable tool button
         }
     }
 }
@@ -83,28 +96,38 @@ pub fn build_tool_section(container: &GtkBox) -> ToolButtons {
     tool_buttons_box.set_margin_start(12);
     tool_buttons_box.set_margin_end(12);
 
-    let tool_row = GtkBox::new(Orientation::Horizontal, 6);
-    tool_row.set_homogeneous(true);
+    let tool_row1 = GtkBox::new(Orientation::Horizontal, 6);
+    tool_row1.set_homogeneous(true);
+
+    let tool_row2 = GtkBox::new(Orientation::Horizontal, 6);
+    tool_row2.set_homogeneous(true);
 
     let buttons = ToolButtons::new();
 
     buttons.select_btn.set_active(true);  // Default to Select
     buttons.select_btn.add_css_class("flat");
-    tool_row.append(&buttons.select_btn);
+    tool_row1.append(&buttons.select_btn);
 
     buttons.rectangle_btn.add_css_class("flat");
-    tool_row.append(&buttons.rectangle_btn);
+    tool_row1.append(&buttons.rectangle_btn);
 
     buttons.circle_btn.add_css_class("flat");
-    tool_row.append(&buttons.circle_btn);
-
-    buttons.text_btn.add_css_class("flat");
-    tool_row.append(&buttons.text_btn);
+    tool_row1.append(&buttons.circle_btn);
 
     buttons.line_btn.add_css_class("flat");
-    tool_row.append(&buttons.line_btn);
+    tool_row1.append(&buttons.line_btn);
 
-    tool_buttons_box.append(&tool_row);
+    buttons.arrow_btn.add_css_class("flat");
+    tool_row2.append(&buttons.arrow_btn);
+
+    buttons.image_btn.add_css_class("flat");
+    tool_row2.append(&buttons.image_btn);
+
+    buttons.text_btn.add_css_class("flat");
+    tool_row2.append(&buttons.text_btn);
+
+    tool_buttons_box.append(&tool_row1);
+    tool_buttons_box.append(&tool_row2);
     container.append(&tool_buttons_box);
 
     buttons

@@ -141,6 +141,13 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
             ctx.stroke()
                 .map_err(|e| anyhow!("Failed to stroke line: {}", e))?;
         }
+        ShapeKind::Arrow => {
+            // Draw as line with arrowhead
+            ctx.move_to(x, y);
+            ctx.line_to(x + width, y + height);
+            ctx.stroke()
+                .map_err(|e| anyhow!("Failed to stroke arrow: {}", e))?;
+        }
         ShapeKind::Polygon => {
             ctx.rectangle(x, y, width, height); // Placeholder
             ctx.stroke()

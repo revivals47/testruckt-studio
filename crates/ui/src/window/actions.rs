@@ -2,10 +2,16 @@
 //!
 //! Implements action callbacks for file operations, editing, view toggles, and tools.
 
-use gtk4::{gio, prelude::*};
+use gtk4::{gio, prelude::*, Box as GtkBox};
 
 /// Register all window-level actions
-pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
+pub fn register_window_actions(
+    window: &gtk4::ApplicationWindow,
+    state: crate::app::AppState,
+    canvas_view: &crate::canvas::CanvasView,
+    tool_palette: &GtkBox,
+    properties_panel: &GtkBox,
+) {
     // File menu actions
     let new_state = state.clone();
     add_window_action(window, "new", move |_| {
@@ -76,30 +82,50 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::a
 
     // Edit menu actions
     let undo_state = state.clone();
+    let undo_drawing_area = canvas_view.drawing_area();
     add_window_action(window, "undo", move |_| {
         tracing::info!("Action: undo");
         if undo_state.undo() {
             tracing::info!("✅ Undo successful");
-            // TODO: Trigger canvas redraw
+            undo_drawing_area.queue_draw();
         } else {
             tracing::info!("⚠️  Nothing to undo");
         }
     });
 
     let redo_state = state.clone();
+    let redo_drawing_area = canvas_view.drawing_area();
     add_window_action(window, "redo", move |_| {
         tracing::info!("Action: redo");
         if redo_state.redo() {
             tracing::info!("✅ Redo successful");
-            // TODO: Trigger canvas redraw
+            redo_drawing_area.queue_draw();
         } else {
             tracing::info!("⚠️  Nothing to redo");
         }
     });
 
-    add_window_action(window, "select-all", |_| {
+    let select_all_state = state.clone();
+    let select_all_drawing_area = canvas_view.drawing_area();
+    let select_all_render_state = canvas_view.render_state().clone();
+    add_window_action(window, "select-all", move |_| {
         tracing::info!("Action: select all objects");
-        // TODO: Select all objects on canvas
+
+        let all_ids = select_all_state.get_all_object_ids();
+
+        if all_ids.is_empty() {
+            tracing::info!("⚠️  No objects to select");
+        } else {
+            // Clear current selection and select all
+            let mut selected = select_all_render_state.selected_ids.borrow_mut();
+            selected.clear();
+            for id in &all_ids {
+                selected.push(*id);
+            }
+            drop(selected);
+            select_all_drawing_area.queue_draw();
+            tracing::info!("✅ Selected {} objects", all_ids.len());
+        }
     });
 
     // Page management actions
@@ -188,14 +214,20 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::a
         // TODO: Toggle rulers visibility
     });
 
-    add_window_action(window, "toggle-layers", |_| {
+    let tool_palette_toggle = tool_palette.clone();
+    add_window_action(window, "toggle-layers", move |_| {
         tracing::info!("Action: toggle layers panel");
-        // TODO: Toggle layers panel visibility
+        let is_visible = tool_palette_toggle.is_visible();
+        tool_palette_toggle.set_visible(!is_visible);
+        tracing::info!("✅ Tool palette visibility toggled: {}", !is_visible);
     });
 
-    add_window_action(window, "toggle-properties", |_| {
+    let properties_panel_toggle = properties_panel.clone();
+    add_window_action(window, "toggle-properties", move |_| {
         tracing::info!("Action: toggle properties panel");
-        // TODO: Toggle properties panel visibility
+        let is_visible = properties_panel_toggle.is_visible();
+        properties_panel_toggle.set_visible(!is_visible);
+        tracing::info!("✅ Properties panel visibility toggled: {}", !is_visible);
     });
 
     add_window_action(window, "open-json-editor", |_| {
@@ -204,6 +236,58 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::a
     });
 
     // Tools menu actions
+    let insert_image_state = state.clone();
+    let insert_image_window = window.clone();
+    let insert_image_drawing_area = canvas_view.drawing_area();
+    add_window_action(window, "insert-image", move |_| {
+        tracing::info!("Action: insert image");
+
+        let window_ref = insert_image_window.clone();
+        let state_ref = insert_image_state.clone();
+        let drawing_area = insert_image_drawing_area.clone();
+
+        // Show image file chooser dialog
+        let window_as_base = window_ref.upcast::<gtk4::Window>();
+        crate::dialogs::show_image_chooser_async(
+            &window_as_base,
+            Box::new(move |path| {
+                tracing::info!("Selected image file: {}", path.display());
+
+                // Register image path with asset catalog
+                let asset_catalog = state_ref.asset_catalog();
+                let asset_ref = {
+                    let mut catalog = asset_catalog.lock().expect("asset catalog");
+                    catalog.register(&path)
+                };
+                tracing::info!("✅ Registered image asset: {:?}", asset_ref);
+
+                // Create ImageElement with registered asset
+                let image_element = testruct_core::document::ImageElement {
+                    id: uuid::Uuid::new_v4(),
+                    source: asset_ref,
+                    bounds: testruct_core::layout::Rect {
+                        origin: testruct_core::layout::Point { x: 100.0, y: 100.0 },
+                        size: testruct_core::layout::Size { width: 200.0, height: 200.0 },
+                    },
+                };
+
+                // Add image to document
+                match state_ref.add_element_to_active_page(
+                    testruct_core::document::DocumentElement::Image(image_element),
+                ) {
+                    Ok(_) => {
+                        tracing::info!("✅ Image inserted: {}", path.display());
+                        // Trigger canvas redraw
+                        drawing_area.queue_draw();
+                    }
+                    Err(e) => {
+                        tracing::error!("❌ Failed to insert image: {}", e);
+                    }
+                }
+            }),
+        );
+    });
+
     add_window_action(window, "templates", |_| {
         tracing::info!("Action: show templates");
         // TODO: Show template manager
@@ -279,6 +363,7 @@ fn set_accelerators(window: &gtk4::ApplicationWindow) {
         ("win.duplicate-page", "<Primary><Shift>c"),
         ("win.move-page-up", "<Primary><Shift>Page_Up"),
         ("win.move-page-down", "<Primary><Shift>Page_Down"),
+        ("win.insert-image", "<Primary>i"),
         ("win.toggle-grid", "F8"),
         ("win.toggle-guides", "F7"),
         ("win.toggle-rulers", "F6"),

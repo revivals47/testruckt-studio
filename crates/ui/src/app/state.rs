@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use testruct_core::{Document, DocumentId, Project};
+use testruct_core::workspace::assets::AssetCatalog;
 use testruct_db::ItemBank;
 use crate::undo_redo::UndoRedoStack;
 
@@ -20,6 +21,7 @@ impl Default for AppState {
                 active_document: None,
                 undo_redo_stack: Arc::new(Mutex::new(crate::undo_redo::UndoRedoStack::default())),
                 item_bank: Arc::new(Mutex::new(item_bank)),
+                asset_catalog: Arc::new(Mutex::new(AssetCatalog::new())),
             })),
         };
 
@@ -123,6 +125,11 @@ impl AppState {
         inner.item_bank.clone()
     }
 
+    pub fn asset_catalog(&self) -> Arc<Mutex<AssetCatalog>> {
+        let inner = self.inner.lock().expect("state");
+        inner.asset_catalog.clone()
+    }
+
     /// Add a new page to the active document
     pub fn add_page(&self) -> Result<(), String> {
         let mut inner = self.inner.lock().expect("state");
@@ -205,6 +212,27 @@ impl AppState {
         }
     }
 
+    /// Get all object IDs in the first page of the active document
+    pub fn get_all_object_ids(&self) -> Vec<uuid::Uuid> {
+        if let Some(doc) = self.active_document() {
+            if let Some(page) = doc.pages.first() {
+                page.elements
+                    .iter()
+                    .map(|element| match element {
+                        testruct_core::document::DocumentElement::Shape(shape) => shape.id,
+                        testruct_core::document::DocumentElement::Text(text) => text.id,
+                        testruct_core::document::DocumentElement::Image(image) => image.id,
+                        testruct_core::document::DocumentElement::Frame(frame) => frame.id,
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        }
+    }
+
 }
 
 struct AppShared {
@@ -212,4 +240,5 @@ struct AppShared {
     active_document: Option<DocumentId>,
     undo_redo_stack: Arc<Mutex<UndoRedoStack>>,
     item_bank: Arc<Mutex<ItemBank>>,
+    asset_catalog: Arc<Mutex<AssetCatalog>>,
 }

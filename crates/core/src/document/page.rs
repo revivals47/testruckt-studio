@@ -51,6 +51,7 @@ pub struct TextElement {
     pub id: uuid::Uuid,
     pub content: String,
     pub style: crate::typography::TextStyle,
+    pub bounds: super::super::layout::Rect,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -74,5 +75,6 @@ pub enum ShapeKind {
     Rectangle,
     Ellipse,
     Line,
+    Arrow,
     Polygon,
 }

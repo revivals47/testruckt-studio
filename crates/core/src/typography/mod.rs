@@ -6,4 +6,4 @@ mod font_catalog;
 
 pub use color::{Color, Palette};
 pub use font_catalog::{FontCatalog, FontDescriptor};
-pub use text_style::{TextAlignment, TextStyle};
+pub use text_style::{TextAlignment, TextStyle, FontWeight};

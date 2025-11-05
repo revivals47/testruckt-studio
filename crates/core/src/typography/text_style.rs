@@ -8,6 +8,10 @@ pub struct TextStyle {
     pub weight: FontWeight,
     pub alignment: TextAlignment,
     pub color: Color,
+    pub italic: bool,
+    pub underline: bool,
+    pub strikethrough: bool,
+    pub background_color: Option<Color>,
 }
 
 impl Default for TextStyle {
@@ -18,6 +22,10 @@ impl Default for TextStyle {
             weight: FontWeight::Regular,
             alignment: TextAlignment::Start,
             color: Color::from_rgb(0.1, 0.1, 0.1),
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            background_color: None,
         }
     }
 }

@@ -140,9 +140,14 @@ impl CanvasView {
             rendering::draw_grid(ctx, &page_size)?;
         }
 
+        // Draw guides if enabled
+        if config.show_guides && !config.guides.is_empty() {
+            rendering::draw_guides(ctx, &config.guides, &page_size)?;
+        }
+
         // Draw page elements
         let selected = render_state.selected_ids.borrow();
-        Self::draw_elements(ctx, page, &selected)?;
+        Self::draw_elements(ctx, page, &selected, render_state)?;
 
         Ok(())
     }
@@ -152,6 +157,7 @@ impl CanvasView {
         ctx: &gtk4::cairo::Context,
         page: &testruct_core::document::Page,
         selected_ids: &[uuid::Uuid],
+        render_state: &CanvasRenderState,
     ) -> Result<(), Box<dyn std::error::Error>> {
         use testruct_core::document::{DocumentElement, ShapeKind};
 
@@ -173,42 +179,49 @@ impl CanvasView {
                     // TODO: Implement frame children rendering
                 }
                 DocumentElement::Text(text) => {
-                    // TODO: TextElement needs bounds field in core crate
-                    // For now, create a placeholder bounds for rendering
-                    let text_bounds = testruct_core::layout::Rect {
-                        origin: testruct_core::layout::Point { x: 10.0, y: 10.0 },
-                        size: testruct_core::layout::Size { width: 200.0, height: 50.0 },
-                    };
+                    // Use actual bounds from text element
+                    let text_bounds = &text.bounds;
 
                     let is_selected = selected_ids.contains(&text.id);
+
+                    // Check if this text element is being edited
+                    let tool_state = render_state.tool_state.borrow();
+                    let is_editing = tool_state.editing_text_id == Some(text.id);
+                    let cursor_pos = tool_state.editing_cursor_pos;
+                    drop(tool_state);
+
                     rendering::draw_text_element(
                         ctx,
-                        &text_bounds,
+                        text_bounds,
                         &text.content,
                         &text.style,
                     )?;
 
-                    if is_selected {
+                    if is_editing {
+                        // Draw editing frame
+                        rendering::draw_text_editing_frame(ctx, text_bounds)?;
+                        // Draw cursor
+                        rendering::draw_text_cursor(
+                            ctx,
+                            text_bounds,
+                            &text.content,
+                            cursor_pos,
+                            &text.style,
+                        )?;
+                    } else if is_selected {
                         let selection_color = testruct_core::typography::Color {
                             r: 0.05,
                             g: 0.49,
                             b: 0.86,
                             a: 1.0,
                         };
-                        rendering::draw_selection_box(ctx, &text_bounds, &selection_color)?;
-                        rendering::draw_resize_handles(ctx, &text_bounds, &selection_color)?;
+                        rendering::draw_selection_box(ctx, text_bounds, &selection_color)?;
+                        rendering::draw_resize_handles(ctx, text_bounds, &selection_color)?;
                     }
                 }
                 DocumentElement::Image(image) => {
-                    // TODO: Load and render image from asset reference
-                    ctx.set_source_rgb(0.8, 0.8, 0.8);
-                    ctx.rectangle(
-                        image.bounds.origin.x as f64,
-                        image.bounds.origin.y as f64,
-                        image.bounds.size.width as f64,
-                        image.bounds.size.height as f64,
-                    );
-                    ctx.fill()?;
+                    // Draw image placeholder with visual feedback
+                    rendering::draw_image_placeholder(ctx, &image.bounds)?;
 
                     let is_selected = selected_ids.contains(&image.id);
                     if is_selected {
@@ -242,6 +255,9 @@ impl CanvasView {
                         }
                         ShapeKind::Line => {
                             rendering::draw_line(ctx, &shape.bounds, &shape.stroke)?;
+                        }
+                        ShapeKind::Arrow => {
+                            rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke)?;
                         }
                         ShapeKind::Polygon => {
                             // TODO: Implement polygon rendering

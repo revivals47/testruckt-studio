@@ -77,6 +77,10 @@ impl MenuBuilder {
         tools_menu.append(Some("_Item Library"), Some("win.toggle-item-library"));
         tools_menu.append(Some("_Block Tools"), Some("win.toggle-block-tools"));
 
+        let insert_section = gio::Menu::new();
+        insert_section.append(Some("Insert _Image..."), Some("win.insert-image"));
+        tools_menu.append_section(None, &insert_section);
+
         let tools_section = gio::Menu::new();
         tools_section.append(Some("_Settings"), Some("win.settings"));
         tools_menu.append_section(None, &tools_section);

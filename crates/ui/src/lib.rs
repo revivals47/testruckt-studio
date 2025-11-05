@@ -8,6 +8,7 @@ pub mod io;
 pub mod menu;
 pub mod panels;
 pub mod template_manager;
+pub mod templates;
 pub mod theme;
 pub mod toolbar;
 pub mod undo_redo;
