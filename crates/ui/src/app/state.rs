@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use testruct_core::{Document, DocumentId, Project};
+use testruct_db::ItemBank;
 use crate::undo_redo::UndoRedoStack;
 
 #[derive(Clone)]
@@ -10,8 +11,16 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
+        // Initialize in-memory database for item bank
+        let item_bank = ItemBank::memory().expect("Failed to initialize item bank");
+
         let app_state = Self {
-            inner: Arc::new(Mutex::new(AppShared::default())),
+            inner: Arc::new(Mutex::new(AppShared {
+                project: Project::default(),
+                active_document: None,
+                undo_redo_stack: Arc::new(Mutex::new(crate::undo_redo::UndoRedoStack::default())),
+                item_bank: Arc::new(Mutex::new(item_bank)),
+            })),
         };
 
         // Initialize with a default document
@@ -109,11 +118,16 @@ impl AppState {
         Err("No active document or pages".to_string())
     }
 
+    pub fn item_bank(&self) -> Arc<Mutex<ItemBank>> {
+        let inner = self.inner.lock().expect("state");
+        inner.item_bank.clone()
+    }
+
 }
 
-#[derive(Default)]
 struct AppShared {
     project: Project,
     active_document: Option<DocumentId>,
     undo_redo_stack: Arc<Mutex<UndoRedoStack>>,
+    item_bank: Arc<Mutex<ItemBank>>,
 }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 testruct-core = { path = "../core" }
+testruct-db = { path = "../db" }
 anyhow = { workspace = true }
 log = { workspace = true }
 tracing = { workspace = true }
