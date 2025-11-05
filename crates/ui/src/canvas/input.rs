@@ -652,9 +652,9 @@ pub fn wire_pointer_events(
             let resize_handle = tool_state.resize_handle;
             let resize_original_bounds = tool_state.resize_original_bounds;
 
-            tracing::debug!(
-                "drag end: shape creation/move from ({}, {}) to ({}, {})",
-                start_x, start_y, current_x, current_y
+            tracing::info!(
+                "🎯 drag end: tool={:?}, offset=({:.1}, {:.1}), from ({}, {}) to ({}, {})",
+                current_tool, offset_x, offset_y, start_x, start_y, current_x, current_y
             );
 
             if is_resizing && (offset_x.abs() > 2.0 || offset_y.abs() > 2.0) {
@@ -775,7 +775,9 @@ pub fn wire_pointer_events(
                     }
                 }
             } else if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
-                // Shape creation based on tool
+                // Shape/Text creation based on tool
+                tracing::info!("📐 Creating {} element with drag offset ({:.1}, {:.1})", current_tool.name(), offset_x, offset_y);
+
                 let element = match current_tool {
                     ToolMode::Rectangle => ShapeFactory::create_rectangle(
                         start_x.min(current_x),
@@ -807,22 +809,32 @@ pub fn wire_pointer_events(
                         (start_x - current_x).abs(),
                         (start_y - current_y).abs(),
                     ),
-                    ToolMode::Text => ShapeFactory::create_text(
-                        start_x,
-                        start_y,
-                        (start_x - current_x).abs(),
-                        (start_y - current_y).abs(),
-                        "New Text".to_string(),
-                    ),
-                    _ => return,
+                    ToolMode::Text => {
+                        tracing::info!("📝 Creating text box at ({:.0}, {:.0}) size ({:.0}x{:.0})",
+                            start_x, start_y, (start_x - current_x).abs(), (start_y - current_y).abs());
+                        ShapeFactory::create_text(
+                            start_x,
+                            start_y,
+                            (start_x - current_x).abs(),
+                            (start_y - current_y).abs(),
+                            "テキストを入力".to_string(),
+                        )
+                    },
+                    _ => {
+                        tracing::warn!("⚠️  Tool {:?} is not supported for creation", current_tool);
+                        return;
+                    }
                 };
 
                 // Add element to document
                 if let Err(e) = app_state_drag_end.add_element_to_active_page(element) {
-                    tracing::warn!("Failed to add element: {}", e);
+                    tracing::warn!("❌ Failed to add element: {}", e);
                 } else {
                     tracing::info!("✅ {} element added to document", current_tool.name());
                 }
+            } else {
+                tracing::debug!("⚠️  Drag ignored: tool={:?}, offset=({:.1}, {:.1}), threshold=5.0px",
+                    current_tool, offset_x, offset_y);
             }
         }
 
