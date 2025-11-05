@@ -18,7 +18,7 @@ uuid = { workspace = true }
 gtk4 = { version = "0.7", features = ["v4_10"] }
 glib = "0.18"
 gio = "0.18"
-cairo-rs = { version = "0.18", features = ["pdf", "png"] }
+cairo-rs = { version = "0.18", features = ["pdf", "png", "svg"] }
 pango = "0.18"
 pangocairo = "0.18"
 dirs = "5.0"

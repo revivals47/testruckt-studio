@@ -1,9 +1,10 @@
 //! Document export functionality
 //!
-//! Provides PDF, PNG, and other format export capabilities using Cairo rendering.
+//! Provides PDF, PNG, SVG, and other format export capabilities using Cairo rendering.
 
 pub mod pdf;
 pub mod image;
+pub mod svg;
 
 use std::path::Path;
 use anyhow::Result;
@@ -22,6 +23,11 @@ pub fn export_png(document: &Document, output_path: &Path, dpi: f64) -> Result<(
 /// Export a document to JPEG format
 pub fn export_jpeg(document: &Document, output_path: &Path, dpi: f64, quality: i32) -> Result<()> {
     image::render_to_jpeg(document, output_path, dpi, quality)
+}
+
+/// Export a document to SVG format
+pub fn export_svg(document: &Document, output_path: &Path) -> Result<()> {
+    svg::render_to_svg(document, output_path)
 }
 
 #[cfg(test)]
