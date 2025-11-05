@@ -16,7 +16,8 @@ pub struct MainWindow {
 impl MainWindow {
     pub fn build(app: &Application, state: AppState) -> ApplicationWindow {
         let components = layout::build_widgets(app, state.clone());
-        actions::register_window_actions(&components.window, state.clone(), &components.canvas_view, &components.tool_palette, &components.properties_panel);
+        actions::register_window_actions(&components.window, state.clone(), &components.canvas_view, &components.tool_palette, &components.properties_panel, &components.property_components);
+        crate::panels::wire_property_signals(&components.property_components, state.clone(), &components.canvas_view);
         bindings::bind_events(&components, state);
         components.window
     }
@@ -32,6 +33,7 @@ pub struct WindowComponents {
     pub tool_palette_buttons: ToolPaletteButtons,
     pub tool_palette: gtk4::Box,
     pub properties_panel: gtk4::Box,
+    pub property_components: crate::panels::PropertyPanelComponents,
 }
 
 impl WindowComponents {
@@ -45,6 +47,7 @@ impl WindowComponents {
         tool_palette_buttons: ToolPaletteButtons,
         tool_palette: gtk4::Box,
         properties_panel: gtk4::Box,
+        property_components: crate::panels::PropertyPanelComponents,
     ) -> Self {
         Self {
             window,
@@ -56,6 +59,7 @@ impl WindowComponents {
             tool_palette_buttons,
             tool_palette,
             properties_panel,
+            property_components,
         }
     }
 }

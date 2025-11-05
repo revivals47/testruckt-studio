@@ -58,6 +58,21 @@ impl Default for Project {
 pub struct ProjectSettings {
     pub autosave_minutes: u32,
     pub workspace_root: std::path::PathBuf,
+
+    // Canvas settings
+    pub default_canvas_width: f32,
+    pub default_canvas_height: f32,
+
+    // Grid settings
+    pub grid_size: f32,
+    pub snap_to_grid: bool,
+
+    // Guide settings
+    pub snap_to_guides: bool,
+    pub snap_distance: f32,
+
+    // Autosave settings
+    pub autosave_enabled: bool,
 }
 
 impl Default for ProjectSettings {
@@ -65,6 +80,13 @@ impl Default for ProjectSettings {
         Self {
             autosave_minutes: 5,
             workspace_root: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
+            default_canvas_width: 595.0,
+            default_canvas_height: 842.0,
+            grid_size: 10.0,
+            snap_to_grid: true,
+            snap_to_guides: true,
+            snap_distance: 5.0,
+            autosave_enabled: true,
         }
     }
 }

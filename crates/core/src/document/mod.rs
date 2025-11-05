@@ -1,6 +1,7 @@
 mod builder;
 mod metadata;
 mod page;
+mod page_size;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,6 +13,7 @@ pub use page::{
     Page, PageId, DocumentElement, ShapeKind,
     FrameElement, TextElement, ImageElement, ShapeElement
 };
+pub use page_size::PageSize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DocumentId(uuid::Uuid);

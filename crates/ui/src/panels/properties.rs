@@ -43,6 +43,12 @@ pub fn build_property_panel() -> GtkBox {
     components.container.upcast()
 }
 
+/// Build the property panel and return both the box and the button components
+pub fn build_property_panel_with_components() -> (GtkBox, PropertyPanelComponents) {
+    let components = build_property_panel_components();
+    (components.container.clone().upcast(), components)
+}
+
 /// Build the complete property panel with all components
 fn build_property_panel_components() -> PropertyPanelComponents {
     // Create scrolled window for the panel content

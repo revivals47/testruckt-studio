@@ -30,7 +30,7 @@ pub struct ToolPaletteButtons {
 pub fn build_layout(
     app_state: AppState,
     _toolbar: ToolbarWidgets,
-) -> (GtkBox, CanvasView, ToolPaletteButtons, GtkBox, GtkBox) {
+) -> (GtkBox, CanvasView, ToolPaletteButtons, GtkBox, GtkBox, crate::panels::PropertyPanelComponents) {
     let main_container = GtkBox::new(Orientation::Vertical, 0);
 
     // Note: Menubar and toolbars are added in layout.rs
@@ -51,7 +51,7 @@ pub fn build_layout(
     panes_box.append(&canvas_section);
 
     // RIGHT: Properties Panel with Item Library
-    let properties_panel = build_properties_panel(&app_state);
+    let (properties_panel, property_components) = build_properties_panel(&app_state);
     panes_box.append(&properties_panel);
 
     main_container.append(&panes_box);
@@ -60,7 +60,7 @@ pub fn build_layout(
     let status_bar = build_status_bar();
     main_container.append(&status_bar);
 
-    (main_container, canvas_view, tool_buttons, tool_palette, properties_panel)
+    (main_container, canvas_view, tool_buttons, tool_palette, properties_panel, property_components)
 }
 
 /// Build the left tool palette
@@ -234,7 +234,7 @@ fn build_page_nav_bar() -> GtkBox {
 }
 
 /// Build the right properties panel with tabbed interface
-fn build_properties_panel(app_state: &AppState) -> GtkBox {
+fn build_properties_panel(app_state: &AppState) -> (GtkBox, crate::panels::PropertyPanelComponents) {
     let properties = GtkBox::new(Orientation::Vertical, 0);
     properties.add_css_class("properties-panel");
     properties.set_width_request(240);  // Fixed width
@@ -248,7 +248,7 @@ fn build_properties_panel(app_state: &AppState) -> GtkBox {
     properties.append(&notebook);
 
     // Tab 1: Properties
-    let props_content = crate::panels::build_property_panel();
+    let (props_content, property_components) = crate::panels::build_property_panel_with_components();
     let props_label = Label::new(Some("プロパティ"));
     notebook.append_page(&props_content, Some(&props_label));
 
@@ -258,7 +258,7 @@ fn build_properties_panel(app_state: &AppState) -> GtkBox {
     let item_lib_label = Label::new(Some("アイテムライブラリ"));
     notebook.append_page(&item_lib_components.container, Some(&item_lib_label));
 
-    properties
+    (properties, property_components)
 }
 
 /// Build the status bar

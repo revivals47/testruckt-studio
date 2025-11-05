@@ -5,6 +5,9 @@ pub mod mouse;
 pub mod keyboard;
 pub mod selection;
 pub mod tools;
+pub mod text_editor;
+pub mod snapping;
+pub mod dirty_region;
 
 use gtk4::{prelude::*, DrawingArea, Overlay, ScrolledWindow};
 use std::cell::RefCell;
@@ -12,6 +15,7 @@ use std::rc::Rc;
 
 use crate::app::AppState;
 use rendering::{RenderConfig, RulerConfig};
+use dirty_region::DirtyRegionTracker;
 
 /// Render state tracking
 #[derive(Clone)]
@@ -21,6 +25,7 @@ pub struct CanvasRenderState {
     pub selected_ids: Rc<RefCell<Vec<uuid::Uuid>>>,
     pub drag_box: Rc<RefCell<Option<testruct_core::layout::Rect>>>,
     pub tool_state: Rc<RefCell<tools::ToolState>>,
+    pub dirty_region: DirtyRegionTracker,
 }
 
 impl Default for CanvasRenderState {
@@ -31,6 +36,7 @@ impl Default for CanvasRenderState {
             selected_ids: Rc::new(RefCell::new(Vec::new())),
             drag_box: Rc::new(RefCell::new(None)),
             tool_state: Rc::new(RefCell::new(tools::ToolState::default())),
+            dirty_region: dirty_region::new_tracker(),
         }
     }
 }
@@ -121,12 +127,8 @@ impl CanvasView {
             return Ok(());
         };
 
-        // TODO: Get page size from document metadata or configuration
-        // For now, using standard A4 dimensions in points (595 x 842)
-        let page_size = testruct_core::layout::Size {
-            width: 595.0,
-            height: 842.0,
-        };
+        // Get page size from document metadata
+        let page_size = document.metadata.page_size.to_size();
 
         // Draw page border
         rendering::draw_page_border(ctx, &page_size)?;
@@ -159,126 +161,151 @@ impl CanvasView {
         selected_ids: &[uuid::Uuid],
         render_state: &CanvasRenderState,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        for element in &page.elements {
+            Self::draw_element(ctx, element, selected_ids, render_state)?;
+        }
+        Ok(())
+    }
+
+    /// Draw a single document element, recursively handling frames
+    fn draw_element(
+        ctx: &gtk4::cairo::Context,
+        element: &testruct_core::document::DocumentElement,
+        selected_ids: &[uuid::Uuid],
+        render_state: &CanvasRenderState,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         use testruct_core::document::{DocumentElement, ShapeKind};
 
-        for element in &page.elements {
-            match element {
-                DocumentElement::Frame(frame) => {
-                    // Draw frame border
-                    ctx.set_source_rgb(0.9, 0.9, 0.9);
-                    ctx.set_line_width(1.0);
-                    ctx.rectangle(
-                        frame.bounds.origin.x as f64,
-                        frame.bounds.origin.y as f64,
-                        frame.bounds.size.width as f64,
-                        frame.bounds.size.height as f64,
-                    );
-                    ctx.stroke()?;
+        match element {
+            DocumentElement::Frame(frame) => {
+                // Draw frame border
+                ctx.set_source_rgb(0.9, 0.9, 0.9);
+                ctx.set_line_width(1.0);
+                ctx.rectangle(
+                    frame.bounds.origin.x as f64,
+                    frame.bounds.origin.y as f64,
+                    frame.bounds.size.width as f64,
+                    frame.bounds.size.height as f64,
+                );
+                ctx.stroke()?;
 
-                    // Recursively draw children
-                    // TODO: Implement frame children rendering
+                // Draw frame selection highlight if selected
+                let is_selected = selected_ids.contains(&frame.id);
+                if is_selected {
+                    let selection_color = testruct_core::typography::Color {
+                        r: 0.05,
+                        g: 0.49,
+                        b: 0.86,
+                        a: 1.0,
+                    };
+                    rendering::draw_selection_box(ctx, &frame.bounds, &selection_color)?;
+                    rendering::draw_resize_handles(ctx, &frame.bounds, &selection_color)?;
                 }
-                DocumentElement::Text(text) => {
-                    // Use actual bounds from text element
-                    let text_bounds = &text.bounds;
 
-                    let is_selected = selected_ids.contains(&text.id);
+                // Recursively draw frame children
+                for child in &frame.children {
+                    Self::draw_element(ctx, child, selected_ids, render_state)?;
+                }
+            }
+            DocumentElement::Text(text) => {
+                // Use actual bounds from text element
+                let text_bounds = &text.bounds;
 
-                    // Check if this text element is being edited
-                    let tool_state = render_state.tool_state.borrow();
-                    let is_editing = tool_state.editing_text_id == Some(text.id);
-                    let cursor_pos = tool_state.editing_cursor_pos;
-                    drop(tool_state);
+                let is_selected = selected_ids.contains(&text.id);
 
-                    rendering::draw_text_element(
+                // Check if this text element is being edited
+                let tool_state = render_state.tool_state.borrow();
+                let is_editing = tool_state.editing_text_id == Some(text.id);
+                let cursor_pos = tool_state.editing_cursor_pos;
+                drop(tool_state);
+
+                rendering::draw_text_element(
+                    ctx,
+                    text_bounds,
+                    &text.content,
+                    &text.style,
+                )?;
+
+                if is_editing {
+                    // Draw editing frame
+                    rendering::draw_text_editing_frame(ctx, text_bounds)?;
+                    // Draw cursor
+                    rendering::draw_text_cursor(
                         ctx,
                         text_bounds,
                         &text.content,
+                        cursor_pos,
                         &text.style,
                     )?;
+                } else if is_selected {
+                    let selection_color = testruct_core::typography::Color {
+                        r: 0.05,
+                        g: 0.49,
+                        b: 0.86,
+                        a: 1.0,
+                    };
+                    rendering::draw_selection_box(ctx, text_bounds, &selection_color)?;
+                    rendering::draw_resize_handles(ctx, text_bounds, &selection_color)?;
+                }
+            }
+            DocumentElement::Image(image) => {
+                // Draw image placeholder with visual feedback
+                rendering::draw_image_placeholder(ctx, &image.bounds)?;
 
-                    if is_editing {
-                        // Draw editing frame
-                        rendering::draw_text_editing_frame(ctx, text_bounds)?;
-                        // Draw cursor
-                        rendering::draw_text_cursor(
+                let is_selected = selected_ids.contains(&image.id);
+                if is_selected {
+                    let selection_color = testruct_core::typography::Color {
+                        r: 0.05,
+                        g: 0.49,
+                        b: 0.86,
+                        a: 1.0,
+                    };
+                    rendering::draw_selection_box(ctx, &image.bounds, &selection_color)?;
+                    rendering::draw_resize_handles(ctx, &image.bounds, &selection_color)?;
+                }
+            }
+            DocumentElement::Shape(shape) => {
+                match shape.kind {
+                    ShapeKind::Rectangle => {
+                        rendering::draw_rectangle(
                             ctx,
-                            text_bounds,
-                            &text.content,
-                            cursor_pos,
-                            &text.style,
+                            &shape.bounds,
+                            &shape.stroke,
+                            &shape.fill,
                         )?;
-                    } else if is_selected {
-                        let selection_color = testruct_core::typography::Color {
-                            r: 0.05,
-                            g: 0.49,
-                            b: 0.86,
-                            a: 1.0,
-                        };
-                        rendering::draw_selection_box(ctx, text_bounds, &selection_color)?;
-                        rendering::draw_resize_handles(ctx, text_bounds, &selection_color)?;
+                    }
+                    ShapeKind::Ellipse => {
+                        rendering::draw_ellipse(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            &shape.fill,
+                        )?;
+                    }
+                    ShapeKind::Line => {
+                        rendering::draw_line(ctx, &shape.bounds, &shape.stroke)?;
+                    }
+                    ShapeKind::Arrow => {
+                        rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke)?;
+                    }
+                    ShapeKind::Polygon => {
+                        rendering::draw_polygon(ctx, &shape.bounds, &shape.stroke)?;
                     }
                 }
-                DocumentElement::Image(image) => {
-                    // Draw image placeholder with visual feedback
-                    rendering::draw_image_placeholder(ctx, &image.bounds)?;
 
-                    let is_selected = selected_ids.contains(&image.id);
-                    if is_selected {
-                        let selection_color = testruct_core::typography::Color {
-                            r: 0.05,
-                            g: 0.49,
-                            b: 0.86,
-                            a: 1.0,
-                        };
-                        rendering::draw_selection_box(ctx, &image.bounds, &selection_color)?;
-                        rendering::draw_resize_handles(ctx, &image.bounds, &selection_color)?;
-                    }
-                }
-                DocumentElement::Shape(shape) => {
-                    match shape.kind {
-                        ShapeKind::Rectangle => {
-                            rendering::draw_rectangle(
-                                ctx,
-                                &shape.bounds,
-                                &shape.stroke,
-                                &shape.fill,
-                            )?;
-                        }
-                        ShapeKind::Ellipse => {
-                            rendering::draw_ellipse(
-                                ctx,
-                                &shape.bounds,
-                                &shape.stroke,
-                                &shape.fill,
-                            )?;
-                        }
-                        ShapeKind::Line => {
-                            rendering::draw_line(ctx, &shape.bounds, &shape.stroke)?;
-                        }
-                        ShapeKind::Arrow => {
-                            rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke)?;
-                        }
-                        ShapeKind::Polygon => {
-                            // TODO: Implement polygon rendering
-                        }
-                    }
-
-                    let is_selected = selected_ids.contains(&shape.id);
-                    if is_selected {
-                        let selection_color = testruct_core::typography::Color {
-                            r: 0.05,
-                            g: 0.49,
-                            b: 0.86,
-                            a: 1.0,
-                        };
-                        rendering::draw_selection_box(ctx, &shape.bounds, &selection_color)?;
-                        rendering::draw_resize_handles(ctx, &shape.bounds, &selection_color)?;
-                    }
+                let is_selected = selected_ids.contains(&shape.id);
+                if is_selected {
+                    let selection_color = testruct_core::typography::Color {
+                        r: 0.05,
+                        g: 0.49,
+                        b: 0.86,
+                        a: 1.0,
+                    };
+                    rendering::draw_selection_box(ctx, &shape.bounds, &selection_color)?;
+                    rendering::draw_resize_handles(ctx, &shape.bounds, &selection_color)?;
                 }
             }
         }
-
         Ok(())
     }
 

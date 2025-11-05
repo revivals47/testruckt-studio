@@ -118,23 +118,27 @@ fn bind_tool_selection(components: &WindowComponents) {
         tracing::debug!("Tool switched to: Text");
     });
 
-    // Line tool button (placeholder - not in ToolMode yet)
+    // Line tool button
     let state_line = render_state.clone();
     tool_buttons.line_btn.connect_clicked(move |_| {
-        let _tool_state = state_line.tool_state.borrow_mut();
-        tracing::info!("Line tool: Not yet implemented");
-        // TODO: Implement line tool mode
+        let mut tool_state = state_line.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Line;
+        tracing::debug!("Tool switched to: Line");
     });
 
-    // Arrow tool button (placeholder - not in ToolMode yet)
+    // Arrow tool button
+    let state_arrow = render_state.clone();
     tool_buttons.arrow_btn.connect_clicked(move |_| {
-        tracing::info!("Arrow tool: Not yet implemented");
-        // TODO: Implement arrow tool mode
+        let mut tool_state = state_arrow.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Arrow;
+        tracing::debug!("Tool switched to: Arrow");
     });
 
-    // Image tool button (placeholder - not in ToolMode yet)
+    // Image tool button
+    let state_image = render_state.clone();
     tool_buttons.image_btn.connect_clicked(move |_| {
-        tracing::info!("Image tool: Not yet implemented");
-        // TODO: Implement image tool mode
+        let mut tool_state = state_image.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Image;
+        tracing::debug!("Tool switched to: Image");
     });
 }

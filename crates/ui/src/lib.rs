@@ -3,6 +3,7 @@
 pub mod app;
 pub mod canvas;
 pub mod dialogs;
+pub mod error;
 pub mod export;
 pub mod io;
 pub mod menu;
@@ -15,6 +16,7 @@ pub mod undo_redo;
 pub mod window;
 
 pub use app::{AppConfig, TestructApplication};
+pub use error::{AppError, AppResult, ValidationError, ValidationResult};
 
 pub fn launch(config: AppConfig) -> glib::ExitCode {
     TestructApplication::new(config).run()

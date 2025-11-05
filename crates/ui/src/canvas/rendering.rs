@@ -5,6 +5,7 @@
 
 use gtk4::cairo::{self, Context};
 use gtk4::pango;
+use gtk4::pango::prelude::*;
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 
@@ -395,7 +396,10 @@ pub fn draw_resize_handles(
     Ok(())
 }
 
-/// Draw a text element
+/// Text element rendering constants
+const TEXT_PADDING: f64 = 5.0;
+
+/// Draw a text element with line wrapping support
 pub fn draw_text_element(
     ctx: &Context,
     bounds: &Rect,
@@ -461,30 +465,29 @@ pub fn draw_text_element(
     };
     layout.set_alignment(pango_alignment);
 
-    // Apply underline
+    // Enable text wrapping by setting width constraint
+    // This makes canvas rendering consistent with PDF/SVG export
+    let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+    layout.set_width((available_width * pango::SCALE as f64) as i32);
+
+    // Apply text decorations
+    let mut attrs = pango::AttrList::new();
     if style.underline {
-        let mut attrs = pango::AttrList::new();
         let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
         attrs.insert(underline_attr);
-        layout.set_attributes(Some(&attrs));
     }
+    if style.strikethrough {
+        let strikethrough_attr = pango::AttrInt::new_strikethrough(true);
+        attrs.insert(strikethrough_attr);
+    }
+    layout.set_attributes(Some(&attrs));
 
-    // Set text color
+    // Set text color and position
     ctx.set_source_rgb(style.color.r as f64, style.color.g as f64, style.color.b as f64);
-    ctx.move_to(bounds.origin.x as f64 + 5.0, bounds.origin.y as f64 + 5.0);
+    ctx.translate(bounds.origin.x as f64 + TEXT_PADDING, bounds.origin.y as f64 + TEXT_PADDING);
 
     // Render layout
     pangocairo::functions::show_layout(ctx, &layout);
-
-    // Draw strikethrough if enabled
-    if style.strikethrough {
-        ctx.set_source_rgb(style.color.r as f64, style.color.g as f64, style.color.b as f64);
-        ctx.set_line_width(1.0);
-        let baseline_y = bounds.origin.y as f64 + 5.0 + (style.font_size as f64 / 2.0);
-        ctx.move_to(bounds.origin.x as f64 + 5.0, baseline_y);
-        ctx.line_to(bounds.origin.x as f64 + bounds.size.width as f64 - 5.0, baseline_y);
-        ctx.stroke()?;
-    }
 
     ctx.restore()?;
     Ok(())
@@ -496,22 +499,24 @@ pub fn draw_text_cursor(
     bounds: &Rect,
     _text: &str,
     cursor_pos: usize,
-    _style: &testruct_core::typography::TextStyle,
+    style: &testruct_core::typography::TextStyle,
 ) -> Result<(), cairo::Error> {
     ctx.save()?;
 
-    let x_offset = bounds.origin.x as f64 + 5.0;
-    let y_offset = bounds.origin.y as f64 + 5.0;
+    let x_offset = bounds.origin.x as f64 + TEXT_PADDING;
+    let y_offset = bounds.origin.y as f64 + TEXT_PADDING;
 
-    // Estimate cursor x position based on character count and average character width
-    let char_width = 8.0; // Approximate width per character
+    // Estimate cursor x position based on font size and character count
+    // Average character width is approximately 60% of font size for monospace
+    // and ~40-50% for proportional fonts. We use an approximation here.
+    let char_width = (style.font_size as f64) * 0.5;
     let cursor_x = x_offset + (cursor_pos as f64 * char_width);
 
-    // Draw text cursor as a thin vertical line (blinking cursor appearance)
+    // Draw text cursor as a thin vertical line
     ctx.set_source_rgb(0.0, 0.5, 1.0); // Blue cursor
     ctx.set_line_width(2.0);
     ctx.move_to(cursor_x, y_offset);
-    ctx.line_to(cursor_x, y_offset + (bounds.size.height as f64 - 10.0));
+    ctx.line_to(cursor_x, y_offset + (bounds.size.height as f64 - TEXT_PADDING));
     ctx.stroke()?;
 
     ctx.restore()?;
@@ -746,6 +751,43 @@ pub fn draw_arrow(
     ctx.close_path();
     ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
     ctx.fill()?;
+
+    Ok(())
+}
+
+/// Draw a polygon shape (pentagon by default)
+pub fn draw_polygon(
+    ctx: &Context,
+    bounds: &Rect,
+    stroke: &Option<Color>,
+) -> Result<(), cairo::Error> {
+    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
+
+    let center_x = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
+    let center_y = bounds.origin.y as f64 + bounds.size.height as f64 / 2.0;
+    let radius = (bounds.size.width as f64 / 2.0).min(bounds.size.height as f64 / 2.0);
+
+    // Draw a pentagon (5-sided polygon)
+    const SIDES: usize = 5;
+    let mut first = true;
+
+    for i in 0..SIDES {
+        let angle = (2.0 * std::f64::consts::PI * i as f64 / SIDES as f64) - std::f64::consts::PI / 2.0;
+        let x = center_x + radius * angle.cos();
+        let y = center_y + radius * angle.sin();
+
+        if first {
+            ctx.move_to(x, y);
+            first = false;
+        } else {
+            ctx.line_to(x, y);
+        }
+    }
+
+    ctx.close_path();
+    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_line_width(2.0);
+    ctx.stroke()?;
 
     Ok(())
 }

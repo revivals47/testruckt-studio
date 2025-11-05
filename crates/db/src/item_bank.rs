@@ -75,7 +75,7 @@ impl ItemBank {
              FROM items WHERE id = ?1"
         )?;
 
-        let item = stmt.query_row(params![id.to_string()], |row| {
+        let mut item = stmt.query_row(params![id.to_string()], |row| {
             let created_at_str = row.get::<_, String>(7)?;
             let updated_at_str = row.get::<_, String>(8)?;
 
@@ -94,14 +94,47 @@ impl ItemBank {
                 content: row.get(3)?,
                 item_type: parse_item_type(&row.get::<_, String>(4)?),
                 difficulty: parse_difficulty(&row.get::<_, String>(5)?),
-                skill_ids: Vec::new(), // TODO: Load from item_skills table
+                skill_ids: Vec::new(),
                 passage_id: row.get::<_, Option<String>>(6)?.map(|s| Uuid::parse_str(&s).unwrap()),
                 created_at,
                 updated_at,
             })
         }).ok();
 
+        // Load skill IDs from item_skills table
+        if let Some(ref mut item) = item {
+            let mut skill_stmt = self.conn.prepare(
+                "SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id"
+            )?;
+
+            let skills: Vec<Uuid> = skill_stmt.query_map(params![id.to_string()], |row| {
+                let skill_id_str: String = row.get(0)?;
+                Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+            item.skill_ids = skills;
+        }
+
         Ok(item)
+    }
+
+    /// Load skill IDs for items from the database
+    fn load_skill_ids(&self, items: &mut [Item]) -> Result<()> {
+        for item in items {
+            let mut skill_stmt = self.conn.prepare(
+                "SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id"
+            )?;
+
+            let skills: Vec<Uuid> = skill_stmt.query_map(params![item.id.to_string()], |row| {
+                let skill_id_str: String = row.get(0)?;
+                Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+            item.skill_ids = skills;
+        }
+        Ok(())
     }
 
     /// Get all items with optional filtering
@@ -111,7 +144,7 @@ impl ItemBank {
              FROM items ORDER BY created_at DESC LIMIT ?1"
         )?;
 
-        let items = stmt.query_map(params![limit.unwrap_or(1000)], |row| {
+        let mut items = stmt.query_map(params![limit.unwrap_or(1000)], |row| {
             let created_at_str = row.get::<_, String>(7)?;
             let updated_at_str = row.get::<_, String>(8)?;
 
@@ -137,6 +170,9 @@ impl ItemBank {
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
+
+        // Load skill IDs for all items
+        self.load_skill_ids(&mut items)?;
 
         Ok(items)
     }
@@ -151,7 +187,7 @@ impl ItemBank {
              FROM items WHERE title LIKE ?1 OR content LIKE ?1 ORDER BY created_at DESC LIMIT 100"
         )?;
 
-        let items = stmt.query_map(params![&search_pattern], |row| {
+        let mut items = stmt.query_map(params![&search_pattern], |row| {
             let created_at_str = row.get::<_, String>(7)?;
             let updated_at_str = row.get::<_, String>(8)?;
 
@@ -177,6 +213,9 @@ impl ItemBank {
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
+
+        // Load skill IDs for all search results
+        self.load_skill_ids(&mut items)?;
 
         Ok(items)
     }
@@ -190,7 +229,7 @@ impl ItemBank {
              FROM items WHERE difficulty = ?1 ORDER BY created_at DESC"
         )?;
 
-        let items = stmt.query_map(params![difficulty.as_str()], |row| {
+        let mut items = stmt.query_map(params![difficulty.as_str()], |row| {
             let created_at_str = row.get::<_, String>(7)?;
             let updated_at_str = row.get::<_, String>(8)?;
 
@@ -216,6 +255,9 @@ impl ItemBank {
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
+
+        // Load skill IDs for items filtered by difficulty
+        self.load_skill_ids(&mut items)?;
 
         Ok(items)
     }
