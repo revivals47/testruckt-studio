@@ -1,0 +1,22 @@
+[package]
+name = "testruct-ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+testruct-core = { path = "../core" }
+anyhow = { workspace = true }
+log = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+gtk4 = { version = "0.7", features = ["v4_10"] }
+glib = "0.18"
+gio = "0.18"
+cairo-rs = { version = "0.18", features = ["pdf", "png"] }
+pango = "0.18"
+pangocairo = "0.18"
