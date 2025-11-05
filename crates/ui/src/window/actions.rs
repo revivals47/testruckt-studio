@@ -327,9 +327,14 @@ pub fn register_window_actions(
         // TODO: Toggle block tools panel
     });
 
-    add_window_action(window, "settings", |_| {
+    let window_weak_settings = window.downgrade();
+    add_window_action(window, "settings", move |_| {
         tracing::info!("Action: show settings");
-        // TODO: Show settings dialog
+        if let Some(window) = window_weak_settings.upgrade() {
+            let window_base = window.clone().upcast::<gtk4::Window>();
+            crate::dialogs::show_project_settings(&window_base);
+            tracing::info!("✅ Settings dialog displayed");
+        }
     });
 
     // Help menu actions
