@@ -183,44 +183,83 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
     let width = shape.bounds.size.width as f64;
     let height = shape.bounds.size.height as f64;
 
-    // Set stroke color from shape, or default to black
-    if let Some(color) = &shape.stroke {
-        ctx.set_source_rgb(color.r as f64 / 255.0, color.g as f64 / 255.0, color.b as f64 / 255.0);
-    } else {
-        ctx.set_source_rgb(0.0, 0.0, 0.0);
-    }
-
+    // Render based on shape kind
     match shape.kind {
         ShapeKind::Rectangle => {
-            ctx.rectangle(x, y, width, height);
-            ctx.stroke()
-                .map_err(|e| anyhow!("Failed to stroke rectangle: {}", e))?;
+            // Draw fill color if present
+            if let Some(fill) = &shape.fill {
+                ctx.set_source_rgb(fill.r as f64, fill.g as f64, fill.b as f64);
+                ctx.rectangle(x, y, width, height);
+                ctx.fill()
+                    .map_err(|e| anyhow!("Failed to fill rectangle: {}", e))?;
+            }
+            // Draw stroke if present
+            if let Some(stroke) = &shape.stroke {
+                ctx.set_source_rgb(stroke.r as f64, stroke.g as f64, stroke.b as f64);
+                ctx.set_line_width(1.0);
+                ctx.rectangle(x, y, width, height);
+                ctx.stroke()
+                    .map_err(|e| anyhow!("Failed to stroke rectangle: {}", e))?;
+            }
         }
         ShapeKind::Ellipse => {
             ctx.save().map_err(|e| anyhow!("Failed to save context: {}", e))?;
             ctx.translate(x + width / 2.0, y + height / 2.0);
             ctx.scale(width / 2.0, height / 2.0);
             ctx.arc(0.0, 0.0, 1.0, 0.0, std::f64::consts::PI * 2.0);
+
+            // Draw fill if present
+            if let Some(fill) = &shape.fill {
+                ctx.set_source_rgb(fill.r as f64, fill.g as f64, fill.b as f64);
+                ctx.fill_preserve()
+                    .map_err(|e| anyhow!("Failed to fill ellipse: {}", e))?;
+            }
+            // Draw stroke if present
+            if let Some(stroke) = &shape.stroke {
+                ctx.set_source_rgb(stroke.r as f64, stroke.g as f64, stroke.b as f64);
+                ctx.set_line_width(1.0);
+                ctx.stroke()
+                    .map_err(|e| anyhow!("Failed to stroke ellipse: {}", e))?;
+            }
             ctx.restore().map_err(|e| anyhow!("Failed to restore context: {}", e))?;
-            ctx.stroke()
-                .map_err(|e| anyhow!("Failed to stroke ellipse: {}", e))?;
         }
         ShapeKind::Line => {
-            ctx.move_to(x, y);
-            ctx.line_to(x + width, y + height);
-            ctx.stroke()
-                .map_err(|e| anyhow!("Failed to stroke line: {}", e))?;
+            // Lines use stroke color
+            if let Some(stroke) = &shape.stroke {
+                ctx.set_source_rgb(stroke.r as f64, stroke.g as f64, stroke.b as f64);
+                ctx.set_line_width(1.0);
+                ctx.move_to(x, y);
+                ctx.line_to(x + width, y + height);
+                ctx.stroke()
+                    .map_err(|e| anyhow!("Failed to stroke line: {}", e))?;
+            }
         }
         ShapeKind::Arrow => {
-            ctx.move_to(x, y);
-            ctx.line_to(x + width, y + height);
-            ctx.stroke()
-                .map_err(|e| anyhow!("Failed to stroke arrow: {}", e))?;
+            // Arrows use stroke color for the line
+            if let Some(stroke) = &shape.stroke {
+                ctx.set_source_rgb(stroke.r as f64, stroke.g as f64, stroke.b as f64);
+                ctx.set_line_width(1.0);
+                ctx.move_to(x, y);
+                ctx.line_to(x + width, y + height);
+                ctx.stroke()
+                    .map_err(|e| anyhow!("Failed to stroke arrow: {}", e))?;
+            }
         }
         ShapeKind::Polygon => {
-            ctx.rectangle(x, y, width, height);
-            ctx.stroke()
-                .map_err(|e| anyhow!("Failed to stroke polygon: {}", e))?;
+            // Placeholder for polygon (same as rectangle)
+            if let Some(fill) = &shape.fill {
+                ctx.set_source_rgb(fill.r as f64, fill.g as f64, fill.b as f64);
+                ctx.rectangle(x, y, width, height);
+                ctx.fill()
+                    .map_err(|e| anyhow!("Failed to fill polygon: {}", e))?;
+            }
+            if let Some(stroke) = &shape.stroke {
+                ctx.set_source_rgb(stroke.r as f64, stroke.g as f64, stroke.b as f64);
+                ctx.set_line_width(1.0);
+                ctx.rectangle(x, y, width, height);
+                ctx.stroke()
+                    .map_err(|e| anyhow!("Failed to stroke polygon: {}", e))?;
+            }
         }
     }
 
