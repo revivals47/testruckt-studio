@@ -14,20 +14,15 @@ use crate::app::AppState;
 use crate::canvas::CanvasView;
 use crate::toolbar::ToolbarWidgets;
 
-/// Build the complete window layout
+/// Build the complete window layout (content only - menubar and toolbars are added separately)
 pub fn build_layout(
     app_state: AppState,
-    toolbar: ToolbarWidgets,
+    _toolbar: ToolbarWidgets,
 ) -> (GtkBox, CanvasView) {
     let main_container = GtkBox::new(Orientation::Vertical, 0);
 
-    // 1. Menubar
-    let menu_bar = crate::menu::build_menu_bar();
-    main_container.append(&menu_bar);
-
-    // 2. Toolbars
-    main_container.append(&toolbar.primary_toolbar);
-    main_container.append(&toolbar.secondary_toolbar);
+    // Note: Menubar and toolbars are added in layout.rs
+    // We only build the content pane here to avoid duplication
 
     // 3. Main horizontal layout: Tool Palette | Canvas | Properties
     let panes_box = GtkBox::new(Orientation::Horizontal, 0);

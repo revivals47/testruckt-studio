@@ -1,12 +1,14 @@
 use gtk4::{prelude::*, DrawingArea, EventControllerMotion, GestureClick, GestureDrag};
 use gtk4::gdk;
 use crate::canvas::{CanvasRenderState, tools::{ToolMode, ShapeFactory}};
+use crate::app::AppState;
 use testruct_core::layout::{Point, Rect, Size};
 
 /// Initialize pointer events for canvas
 pub fn wire_pointer_events(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
+    _app_state: &AppState,
 ) {
     drawing_area.set_focusable(true);
 

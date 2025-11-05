@@ -65,7 +65,7 @@ impl CanvasView {
         // Setup drawing function
         Self::setup_draw_func(&drawing_area, &app_state, &render_state);
 
-        input::wire_pointer_events(&drawing_area, &render_state);
+        input::wire_pointer_events(&drawing_area, &render_state, &app_state);
 
         Self {
             container,

@@ -5,7 +5,7 @@
 use gtk4::{gio, prelude::*};
 
 /// Register all window-level actions
-pub fn register_window_actions(window: &gtk4::ApplicationWindow, _state: crate::app::AppState) {
+pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
     // File menu actions
     add_window_action(window, "new", |_| {
         tracing::info!("Action: new document");
@@ -38,14 +38,26 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, _state: crate::
     }
 
     // Edit menu actions
-    add_window_action(window, "undo", |_| {
+    let undo_state = state.clone();
+    add_window_action(window, "undo", move |_| {
         tracing::info!("Action: undo");
-        // TODO: Perform undo operation
+        if undo_state.undo() {
+            tracing::info!("✅ Undo successful");
+            // TODO: Trigger canvas redraw
+        } else {
+            tracing::info!("⚠️  Nothing to undo");
+        }
     });
 
-    add_window_action(window, "redo", |_| {
+    let redo_state = state.clone();
+    add_window_action(window, "redo", move |_| {
         tracing::info!("Action: redo");
-        // TODO: Perform redo operation
+        if redo_state.redo() {
+            tracing::info!("✅ Redo successful");
+            // TODO: Trigger canvas redraw
+        } else {
+            tracing::info!("⚠️  Nothing to redo");
+        }
     });
 
     add_window_action(window, "select-all", |_| {
