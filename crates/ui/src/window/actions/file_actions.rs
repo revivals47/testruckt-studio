@@ -176,7 +176,7 @@ fn perform_save_document(state: &crate::app::AppState) {
 fn perform_save_as_document(window: &gtk4::ApplicationWindow, state: &crate::app::AppState) {
     tracing::info!("Saving document as");
 
-    if let Some(document) = state.active_document() {
+    if let Some(_document) = state.active_document() {
         let window_clone = window.clone();
         let state_clone = state.clone();
 

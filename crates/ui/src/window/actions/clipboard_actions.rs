@@ -3,7 +3,6 @@
 use super::common::add_window_action;
 use gtk4::prelude::*;
 use std::cell::RefCell;
-use std::rc::Rc;
 
 // Thread-local storage for clipboard data
 thread_local! {

@@ -60,7 +60,7 @@ fn create_layer_item(element: &testruct_core::document::DocumentElement, index: 
     item_box.append(&visibility_btn);
 
     // Get element type and name
-    let (type_name, type_label) = match element {
+    let (_type_name, type_label) = match element {
         testruct_core::document::DocumentElement::Text(text) => (
             "Text",
             format!("Text: {}", if text.content.len() > 15 {

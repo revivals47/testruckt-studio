@@ -1,7 +1,6 @@
 //! Layer management actions (reordering, visibility, deletion)
 
 use super::common::add_window_action;
-use gtk4::prelude::*;
 
 /// Register layer management actions
 pub fn register(

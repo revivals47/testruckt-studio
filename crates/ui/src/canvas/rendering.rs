@@ -5,7 +5,6 @@
 
 use gtk4::cairo::{self, Context};
 use gtk4::pango;
-use gtk4::pango::prelude::*;
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 

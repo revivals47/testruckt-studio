@@ -258,31 +258,3 @@ fn wire_line_height_signal(
         drawing_area.queue_draw();
     });
 }
-
-/// Apply text alignment to selected objects
-fn apply_alignment(app_state: &AppState, canvas_view: &CanvasView, alignment: TextAlignment) {
-    app_state.with_active_document(|doc| {
-        let selected = canvas_view.render_state().selected_ids.borrow();
-        if !selected.is_empty() {
-            if let Some(page) = doc.pages.first_mut() {
-                for element in &mut page.elements {
-                    match element {
-                        DocumentElement::Text(text) if selected.contains(&text.id) => {
-                            text.style.alignment = alignment;
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-    });
-
-    canvas_view.drawing_area().queue_draw();
-    let align_name = match alignment {
-        TextAlignment::Start => "Left",
-        TextAlignment::Center => "Center",
-        TextAlignment::End => "Right",
-        TextAlignment::Justified => "Justified",
-    };
-    tracing::info!("✅ Text alignment changed to: {}", align_name);
-}

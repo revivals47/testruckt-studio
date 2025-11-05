@@ -367,7 +367,7 @@ fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextEle
 
     // Apply underline and strikethrough decorations
     if style.underline || style.strikethrough {
-        let mut attrs = pango::AttrList::new();
+        let attrs = pango::AttrList::new();
         if style.underline {
             let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
             attrs.insert(underline_attr);

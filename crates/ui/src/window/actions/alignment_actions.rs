@@ -222,7 +222,7 @@ fn apply_alignment(
             };
 
             // Apply alignment to each selected element
-            for (element_id, bounds) in selected_bounds {
+            for (element_id, _bounds) in selected_bounds {
                 for element in &mut page.elements {
                     if element.id() == element_id {
                         let new_bounds = match alignment_type {

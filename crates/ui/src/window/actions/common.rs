@@ -13,22 +13,6 @@ where
     window.add_action(&action);
 }
 
-/// Add a window action with captured state
-pub fn add_window_action_with_capture<F, T>(
-    window: &gtk4::ApplicationWindow,
-    name: &str,
-    capture: T,
-    callback: F,
-) where
-    F: Fn(&gtk4::ApplicationWindow, T) + 'static,
-    T: Clone + 'static,
-{
-    let action = gio::SimpleAction::new(name, None);
-    let window_ref = window.clone();
-    action.connect_activate(move |_, _| callback(&window_ref, capture.clone()));
-    window.add_action(&action);
-}
-
 /// Set keyboard accelerators for window-level actions
 pub fn set_accelerators(window: &gtk4::ApplicationWindow) {
     let app = window.application().unwrap();
