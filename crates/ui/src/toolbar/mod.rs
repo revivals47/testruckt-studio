@@ -3,6 +3,8 @@
 //! Provides builders for the primary and secondary toolbars with all controls
 //! organized by functional groups.
 
+pub mod tools;
+
 use gtk4::prelude::*;
 use gtk4::{
     Button, Box as GtkBox, Label, MenuButton, Orientation, Popover, ScrolledWindow, Separator,
@@ -10,6 +12,7 @@ use gtk4::{
 };
 
 /// Container for all toolbar-related widgets
+#[derive(Clone)]
 pub struct ToolbarWidgets {
     /// Primary toolbar (document controls, history, workflow, view options, zoom)
     pub primary_toolbar: GtkBox,
@@ -26,6 +29,7 @@ pub struct ToolbarWidgets {
 }
 
 /// All toolbar buttons organized by function
+#[derive(Clone)]
 pub struct ToolbarButtons {
     // Document controls (Primary toolbar)
     pub new_btn: Button,

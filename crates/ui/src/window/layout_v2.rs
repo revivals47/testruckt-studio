@@ -1,0 +1,261 @@
+//! Complete window layout matching the original design
+//!
+//! Implements the 3-pane layout with:
+//! - Left: Tool Palette (fixed width)
+//! - Center: Canvas with overlay panels and page navigation
+//! - Right: Properties Panel (fixed width)
+//! - Bottom: Status Bar
+
+use gtk4::prelude::*;
+use gtk4::{
+    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator,
+};
+use crate::app::AppState;
+use crate::canvas::CanvasView;
+use crate::toolbar::ToolbarWidgets;
+
+/// Build the complete window layout
+pub fn build_layout(
+    app_state: AppState,
+    toolbar: ToolbarWidgets,
+) -> (GtkBox, CanvasView) {
+    let main_container = GtkBox::new(Orientation::Vertical, 0);
+
+    // 1. Menubar
+    let menu_bar = crate::menu::build_menu_bar();
+    main_container.append(&menu_bar);
+
+    // 2. Toolbars
+    main_container.append(&toolbar.primary_toolbar);
+    main_container.append(&toolbar.secondary_toolbar);
+
+    // 3. Main horizontal layout: Tool Palette | Canvas | Properties
+    let panes_box = GtkBox::new(Orientation::Horizontal, 0);
+    panes_box.set_vexpand(true);
+    panes_box.set_hexpand(true);
+
+    // LEFT: Tool Palette
+    let tool_palette = build_tool_palette();
+    panes_box.append(&tool_palette);
+
+    // CENTER: Canvas with overlays
+    let canvas_view = CanvasView::new(app_state);
+    let (canvas_section, _page_nav_bar) = build_canvas_section(&canvas_view);
+    panes_box.append(&canvas_section);
+
+    // RIGHT: Properties Panel
+    let properties_panel = build_properties_panel();
+    panes_box.append(&properties_panel);
+
+    main_container.append(&panes_box);
+
+    // 4. Status Bar
+    let status_bar = build_status_bar();
+    main_container.append(&status_bar);
+
+    (main_container, canvas_view)
+}
+
+/// Build the left tool palette
+fn build_tool_palette() -> GtkBox {
+    let palette = GtkBox::new(Orientation::Vertical, 6);
+    palette.add_css_class("tool-palette");
+    palette.set_width_request(180);  // Fixed width for tool palette
+    palette.set_margin_start(12);
+    palette.set_margin_end(12);
+    palette.set_margin_top(16);
+    palette.set_margin_bottom(16);
+
+    // Tools section
+    let tools_heading = Label::new(Some("ツール"));
+    tools_heading.add_css_class("section-heading");
+    tools_heading.set_halign(Align::Start);
+    palette.append(&tools_heading);
+
+    let select_btn = Button::with_label("選択");
+    select_btn.add_css_class("flat");
+    select_btn.set_halign(Align::Fill);
+    select_btn.set_tooltip_text(Some("選択ツール (V)"));
+    palette.append(&select_btn);
+
+    let text_btn = Button::with_label("テキスト");
+    text_btn.add_css_class("flat");
+    text_btn.set_halign(Align::Fill);
+    text_btn.set_tooltip_text(Some("テキストツール (T)"));
+    palette.append(&text_btn);
+
+    let image_btn = Button::with_label("画像");
+    image_btn.add_css_class("flat");
+    image_btn.set_halign(Align::Fill);
+    image_btn.set_tooltip_text(Some("画像ツール (I)"));
+    palette.append(&image_btn);
+
+    palette.append(&Separator::new(Orientation::Horizontal));
+
+    // Shapes section
+    let shapes_heading = Label::new(Some("基本図形"));
+    shapes_heading.add_css_class("section-heading");
+    shapes_heading.set_halign(Align::Start);
+    palette.append(&shapes_heading);
+
+    let rect_btn = Button::with_label("長方形");
+    rect_btn.add_css_class("flat");
+    rect_btn.set_halign(Align::Fill);
+    palette.append(&rect_btn);
+
+    let circle_btn = Button::with_label("円");
+    circle_btn.add_css_class("flat");
+    circle_btn.set_halign(Align::Fill);
+    palette.append(&circle_btn);
+
+    let line_btn = Button::with_label("直線");
+    line_btn.add_css_class("flat");
+    line_btn.set_halign(Align::Fill);
+    palette.append(&line_btn);
+
+    let arrow_btn = Button::with_label("矢印");
+    arrow_btn.add_css_class("flat");
+    arrow_btn.set_halign(Align::Fill);
+    palette.append(&arrow_btn);
+
+    palette
+}
+
+/// Build the center canvas section with page navigation
+fn build_canvas_section(canvas_view: &CanvasView) -> (GtkBox, GtkBox) {
+    let canvas_frame = GtkBox::new(Orientation::Vertical, 0);
+    canvas_frame.add_css_class("canvas-container");
+    canvas_frame.set_hexpand(true);
+    canvas_frame.set_vexpand(true);
+    canvas_frame.set_margin_start(16);
+    canvas_frame.set_margin_end(16);
+
+    // Canvas scroll area
+    let canvas_container = canvas_view.container();
+    canvas_frame.append(&canvas_container);
+
+    // Page navigation bar
+    let page_nav_bar = build_page_nav_bar();
+    canvas_frame.append(&page_nav_bar);
+
+    (canvas_frame, page_nav_bar)
+}
+
+/// Build the page navigation bar
+fn build_page_nav_bar() -> GtkBox {
+    let nav_bar = GtkBox::new(Orientation::Horizontal, 8);
+    nav_bar.add_css_class("page-nav-bar");
+    nav_bar.set_margin_start(12);
+    nav_bar.set_margin_end(12);
+    nav_bar.set_margin_top(6);
+    nav_bar.set_margin_bottom(6);
+    nav_bar.set_hexpand(true);
+
+    // Navigation buttons
+    let nav_buttons = GtkBox::new(Orientation::Horizontal, 0);
+    nav_buttons.add_css_class("linked");
+
+    let prev_btn = Button::with_label("◀");
+    prev_btn.add_css_class("flat");
+    prev_btn.set_tooltip_text(Some("前のページ (PageUp)"));
+    nav_buttons.append(&prev_btn);
+
+    let next_btn = Button::with_label("▶");
+    next_btn.add_css_class("flat");
+    next_btn.set_tooltip_text(Some("次のページ (PageDown)"));
+    nav_buttons.append(&next_btn);
+
+    nav_bar.append(&nav_buttons);
+
+    // Page list popover
+    let page_list_popover = Popover::new();
+    let page_list_btn = Button::with_label("一覧");
+    page_list_btn.add_css_class("flat");
+    page_list_btn.set_tooltip_text(Some("ページ一覧を開く"));
+    page_list_popover.set_parent(&page_list_btn);
+    nav_bar.append(&page_list_btn);
+
+    // Page count label
+    let page_label = Label::new(Some("ページ 1 / 1"));
+    page_label.add_css_class("dim-label");
+    page_label.set_hexpand(true);
+    page_label.set_halign(Align::Center);
+    nav_bar.append(&page_label);
+
+    // Page actions
+    let action_buttons = GtkBox::new(Orientation::Horizontal, 2);
+    action_buttons.add_css_class("linked");
+
+    let add_btn = Button::with_label("追加");
+    add_btn.add_css_class("flat");
+    add_btn.set_tooltip_text(Some("ページを追加 (Ctrl+Shift+N)"));
+    action_buttons.append(&add_btn);
+
+    let duplicate_btn = Button::with_label("複製");
+    duplicate_btn.add_css_class("flat");
+    duplicate_btn.set_tooltip_text(Some("現在のページを複製"));
+    action_buttons.append(&duplicate_btn);
+
+    let move_up_btn = Button::with_label("↑");
+    move_up_btn.add_css_class("flat");
+    move_up_btn.set_tooltip_text(Some("ページを上に移動"));
+    action_buttons.append(&move_up_btn);
+
+    let move_down_btn = Button::with_label("↓");
+    move_down_btn.add_css_class("flat");
+    move_down_btn.set_tooltip_text(Some("ページを下に移動"));
+    action_buttons.append(&move_down_btn);
+
+    let delete_btn = Button::with_label("削除");
+    delete_btn.add_css_class("flat");
+    delete_btn.set_tooltip_text(Some("現在のページを削除"));
+    action_buttons.append(&delete_btn);
+
+    nav_bar.append(&action_buttons);
+
+    nav_bar
+}
+
+/// Build the right properties panel
+fn build_properties_panel() -> GtkBox {
+    let properties = GtkBox::new(Orientation::Vertical, 0);
+    properties.add_css_class("properties-panel");
+    properties.set_width_request(240);  // Fixed width
+    properties.set_hexpand(false);
+
+    // Append properties content
+    let props_content = crate::panels::build_property_panel();
+    properties.append(&props_content);
+
+    properties
+}
+
+/// Build the status bar
+fn build_status_bar() -> GtkBox {
+    let status_bar = GtkBox::new(Orientation::Horizontal, 12);
+    status_bar.add_css_class("status-bar");
+    status_bar.set_margin_start(8);
+    status_bar.set_margin_end(8);
+    status_bar.set_margin_top(4);
+    status_bar.set_margin_bottom(4);
+
+    let status_label = Label::new(Some("準備完了"));
+    status_label.set_halign(Align::Start);
+    status_bar.append(&status_label);
+
+    let spacer = GtkBox::new(Orientation::Horizontal, 0);
+    spacer.set_hexpand(true);
+    status_bar.append(&spacer);
+
+    let page_label = Label::new(Some("ページ 1 / 1"));
+    page_label.add_css_class("dim-label");
+    status_bar.append(&page_label);
+
+    status_bar.append(&Separator::new(Orientation::Vertical));
+
+    let objects_label = Label::new(Some("オブジェクト 0個"));
+    objects_label.add_css_class("dim-label");
+    status_bar.append(&objects_label);
+
+    status_bar
+}

@@ -1,30 +1,41 @@
-use gtk4::{prelude::*, ListView, SignalListItemFactory, Window};
+use gtk4::{prelude::*, Box as GtkBox, Button, Label, Orientation, Window};
 
 pub fn show_template_browser(parent: &Window) {
-    // Note: Dialog is deprecated in GTK4 since 4.10, but kept for compatibility
-    // TODO: Migrate to modern GTK4 dialogs using AlertDialog or custom windows
-    let dialog = gtk4::Dialog::with_buttons(
-        Some("Templates"),
-        Some(parent),
-        gtk4::DialogFlags::MODAL,
-        &[(&"Close", gtk4::ResponseType::Close)],
-    );
+    // Create a simple dialog window for template browser
+    let dialog = gtk4::ApplicationWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title("Templates")
+        .default_width(400)
+        .default_height(300)
+        .build();
 
-    let factory = SignalListItemFactory::new();
-    factory.connect_setup(|_, item| {
-        let row = gtk4::Box::new(gtk4::Orientation::Horizontal, 12);
-        row.append(&gtk4::Label::new(Some("Template")));
-        item.downcast_ref::<gtk4::ListItem>().unwrap().set_child(Some(&row));
+    let main_box = GtkBox::new(Orientation::Vertical, 12);
+    main_box.set_margin_start(12);
+    main_box.set_margin_end(12);
+    main_box.set_margin_top(12);
+    main_box.set_margin_bottom(12);
+
+    let title = Label::new(Some("Templates"));
+    title.add_css_class("title-2");
+    main_box.append(&title);
+
+    let content = Label::new(Some("Template browser.\n\nUse the template manager from the Tools menu to browse available templates."));
+    content.set_wrap(true);
+    main_box.append(&content);
+
+    let button_box = GtkBox::new(Orientation::Horizontal, 6);
+    button_box.set_halign(gtk4::Align::End);
+    button_box.set_homogeneous(true);
+
+    let close_btn = Button::with_label("Close");
+    let dialog_ref = dialog.clone();
+    close_btn.connect_clicked(move |_| {
+        dialog_ref.close();
     });
+    button_box.append(&close_btn);
+    main_box.append(&button_box);
 
-    let model = gtk4::gio::ListStore::new::<gtk4::glib::Object>();
-    let selection = gtk4::SingleSelection::new(Some(model));
-    // Note: SingleSelection doesn't have set_selection_mode - it's always single selection
-
-    let list = ListView::new(Some(selection), Some(factory));
-    list.set_vexpand(true);
-    dialog.content_area().append(&list);
-
-    dialog.connect_response(|dialog, _| dialog.close());
-    dialog.show();
+    dialog.set_child(Some(&main_box));
+    dialog.present();
 }

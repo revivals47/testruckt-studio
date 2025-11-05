@@ -1,5 +1,7 @@
 mod bindings;
 mod layout;
+mod layout_v2;
+mod actions;
 
 use crate::app::AppState;
 use crate::canvas::CanvasView;
@@ -13,6 +15,7 @@ pub struct MainWindow {
 impl MainWindow {
     pub fn build(app: &Application, state: AppState) -> ApplicationWindow {
         let components = layout::build_widgets(app, state.clone());
+        actions::register_window_actions(&components.window, state.clone());
         bindings::bind_events(&components, state);
         components.window
     }

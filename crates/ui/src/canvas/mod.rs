@@ -4,6 +4,7 @@ pub mod rendering;
 pub mod mouse;
 pub mod keyboard;
 pub mod selection;
+pub mod tools;
 
 use gtk4::{prelude::*, DrawingArea, Overlay, ScrolledWindow};
 use std::cell::RefCell;
@@ -19,6 +20,7 @@ pub struct CanvasRenderState {
     pub ruler_config: Rc<RefCell<RulerConfig>>,
     pub selected_ids: Rc<RefCell<Vec<uuid::Uuid>>>,
     pub drag_box: Rc<RefCell<Option<testruct_core::layout::Rect>>>,
+    pub tool_state: Rc<RefCell<tools::ToolState>>,
 }
 
 impl Default for CanvasRenderState {
@@ -28,6 +30,7 @@ impl Default for CanvasRenderState {
             ruler_config: Rc::new(RefCell::new(RulerConfig::default())),
             selected_ids: Rc::new(RefCell::new(Vec::new())),
             drag_box: Rc::new(RefCell::new(None)),
+            tool_state: Rc::new(RefCell::new(tools::ToolState::default())),
         }
     }
 }
@@ -62,7 +65,7 @@ impl CanvasView {
         // Setup drawing function
         Self::setup_draw_func(&drawing_area, &app_state, &render_state);
 
-        input::wire_pointer_events(&drawing_area);
+        input::wire_pointer_events(&drawing_area, &render_state);
 
         Self {
             container,
@@ -277,5 +280,61 @@ impl CanvasView {
 
     pub fn render_state(&self) -> &CanvasRenderState {
         &self.render_state
+    }
+
+    /// Set the current tool mode
+    pub fn set_tool_mode(&self, tool: tools::ToolMode) {
+        self.render_state.tool_state.borrow_mut().current_tool = tool;
+        self.drawing_area.queue_draw();
+    }
+
+    /// Get the current tool mode
+    pub fn get_tool_mode(&self) -> tools::ToolMode {
+        self.render_state.tool_state.borrow().current_tool
+    }
+
+    /// Clear all selected objects
+    pub fn clear_selection(&self) {
+        self.render_state.selected_ids.borrow_mut().clear();
+        self.drawing_area.queue_draw();
+    }
+
+    /// Select a single object by ID
+    pub fn select_object(&self, id: uuid::Uuid) {
+        let mut selected = self.render_state.selected_ids.borrow_mut();
+        selected.clear();
+        selected.push(id);
+        drop(selected);
+        self.drawing_area.queue_draw();
+    }
+
+    /// Add an object to the selection
+    pub fn add_to_selection(&self, id: uuid::Uuid) {
+        let mut selected = self.render_state.selected_ids.borrow_mut();
+        if !selected.contains(&id) {
+            selected.push(id);
+        }
+        drop(selected);
+        self.drawing_area.queue_draw();
+    }
+
+    /// Remove an object from the selection
+    pub fn remove_from_selection(&self, id: uuid::Uuid) {
+        let mut selected = self.render_state.selected_ids.borrow_mut();
+        selected.retain(|&selected_id| selected_id != id);
+        drop(selected);
+        self.drawing_area.queue_draw();
+    }
+
+    /// Toggle object selection
+    pub fn toggle_selection(&self, id: uuid::Uuid) {
+        let mut selected = self.render_state.selected_ids.borrow_mut();
+        if let Some(pos) = selected.iter().position(|&selected_id| selected_id == id) {
+            selected.remove(pos);
+        } else {
+            selected.push(id);
+        }
+        drop(selected);
+        self.drawing_area.queue_draw();
     }
 }

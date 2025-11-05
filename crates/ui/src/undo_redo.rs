@@ -276,3 +276,89 @@ mod tests {
         assert_eq!(stack.undo_count(), 1); // Should be single batched command
     }
 }
+
+/// Delete command for removing document elements
+pub struct DeleteCommand {
+    document: std::rc::Rc<std::cell::RefCell<testruct_core::document::Document>>,
+    element_id: uuid::Uuid,
+    deleted_element: Option<testruct_core::document::DocumentElement>,
+    deleted_page_index: usize,
+}
+
+impl DeleteCommand {
+    /// Create a new delete command
+    pub fn new(
+        document: std::rc::Rc<std::cell::RefCell<testruct_core::document::Document>>,
+        element_id: uuid::Uuid,
+        page_index: usize,
+    ) -> Self {
+        Self {
+            document,
+            element_id,
+            deleted_element: None,
+            deleted_page_index: page_index,
+        }
+    }
+}
+
+impl Command for DeleteCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        let mut doc = self.document.borrow_mut();
+
+        if self.deleted_page_index >= doc.pages.len() {
+            return Err("Page index out of bounds".to_string());
+        }
+
+        let page = &mut doc.pages[self.deleted_page_index];
+
+        // Find and remove the element
+        if let Some(position) = page
+            .elements
+            .iter()
+            .position(|elem| elem_id(elem) == self.element_id)
+        {
+            self.deleted_element = Some(page.elements.remove(position));
+            Ok(format!("Deleted element {}", self.element_id))
+        } else {
+            Err(format!("Element {} not found", self.element_id))
+        }
+    }
+
+    fn undo(&mut self) -> Result<String, String> {
+        if let Some(element) = self.deleted_element.take() {
+            let mut doc = self.document.borrow_mut();
+
+            if self.deleted_page_index >= doc.pages.len() {
+                return Err("Page index out of bounds".to_string());
+            }
+
+            doc.pages[self.deleted_page_index].add_element(element);
+            Ok(format!("Restored element {}", self.element_id))
+        } else {
+            Err("No deleted element to restore".to_string())
+        }
+    }
+
+    fn description(&self) -> &str {
+        "Delete object"
+    }
+}
+
+impl std::fmt::Debug for DeleteCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DeleteCommand")
+            .field("element_id", &self.element_id)
+            .field("page_index", &self.deleted_page_index)
+            .finish()
+    }
+}
+
+/// Helper function to get element ID from DocumentElement enum
+fn elem_id(element: &testruct_core::document::DocumentElement) -> uuid::Uuid {
+    match element {
+        testruct_core::document::DocumentElement::Frame(f) => f.id,
+        testruct_core::document::DocumentElement::Text(t) => t.id,
+        testruct_core::document::DocumentElement::Image(i) => i.id,
+        testruct_core::document::DocumentElement::Shape(s) => s.id,
+    }
+}

@@ -1,14 +1,41 @@
-use gtk4::{prelude::*, Window};
+use gtk4::{prelude::*, Box as GtkBox, Button, Label, Orientation, Window};
 
 pub fn show_project_settings(parent: &Window) {
-    // Note: Dialog is deprecated in GTK4 since 4.10, but kept for compatibility
-    // TODO: Migrate to modern GTK4 dialogs using AlertDialog or custom windows
-    let dialog = gtk4::Dialog::with_buttons(
-        Some("Project Settings"),
-        Some(parent),
-        gtk4::DialogFlags::MODAL,
-        &[(&"Close", gtk4::ResponseType::Close)],
-    );
-    dialog.connect_response(|dialog, _| dialog.close());
-    dialog.show();
+    // Create a simple dialog window for project settings
+    let dialog = gtk4::ApplicationWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title("Project Settings")
+        .default_width(400)
+        .default_height(300)
+        .build();
+
+    let main_box = GtkBox::new(Orientation::Vertical, 12);
+    main_box.set_margin_start(12);
+    main_box.set_margin_end(12);
+    main_box.set_margin_top(12);
+    main_box.set_margin_bottom(12);
+
+    let title = Label::new(Some("Project Settings"));
+    title.add_css_class("title-2");
+    main_box.append(&title);
+
+    let content = Label::new(Some("Project settings UI.\n\nFull settings functionality will be implemented in future versions."));
+    content.set_wrap(true);
+    main_box.append(&content);
+
+    let button_box = GtkBox::new(Orientation::Horizontal, 6);
+    button_box.set_halign(gtk4::Align::End);
+    button_box.set_homogeneous(true);
+
+    let close_btn = Button::with_label("Close");
+    let dialog_ref = dialog.clone();
+    close_btn.connect_clicked(move |_| {
+        dialog_ref.close();
+    });
+    button_box.append(&close_btn);
+    main_box.append(&button_box);
+
+    dialog.set_child(Some(&main_box));
+    dialog.present();
 }

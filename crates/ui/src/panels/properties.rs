@@ -5,7 +5,7 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Adjustment, Box as GtkBox, Button, ComboBoxText, Label, Orientation, Scale, ScrolledWindow,
+    Adjustment, Box as GtkBox, Button, DropDown, Label, Orientation, Scale, ScrolledWindow,
     SpinButton, Switch,
 };
 
@@ -13,11 +13,11 @@ use gtk4::{
 pub struct PropertyPanelComponents {
     pub scrolled_window: ScrolledWindow,
     pub container: GtkBox,
-    pub font_family_combo: ComboBoxText,
+    pub font_family_combo: DropDown,
     pub font_size_spin: SpinButton,
     pub line_height_scale: Scale,
-    pub text_align_combo: ComboBoxText,
-    pub border_style_combo: ComboBoxText,
+    pub text_align_combo: DropDown,
+    pub border_style_combo: DropDown,
     pub auto_resize_switch: Switch,
     pub fill_color_button: Button,
     pub stroke_color_button: Button,
@@ -136,7 +136,7 @@ fn build_title_section(container: &GtkBox) {
 /// Build typography section (font family, size, line height, text alignment)
 fn build_typography_section(
     container: &GtkBox,
-) -> (ComboBoxText, SpinButton, Scale, ComboBoxText) {
+) -> (DropDown, SpinButton, Scale, DropDown) {
     // Header
     let typo_header = GtkBox::new(Orientation::Horizontal, 8);
     typo_header.set_margin_start(12);
@@ -163,21 +163,22 @@ fn build_typography_section(
     font_label.add_css_class("property-label");
     font_section.append(&font_label);
 
-    let font_family_combo = ComboBoxText::new();
-    font_family_combo.append(Some("noto-sans-jp"), "Noto Sans JP");
-    font_family_combo.append(Some("noto-serif-jp"), "Noto Serif JP");
-    font_family_combo.append(Some("noto-sans"), "Noto Sans");
-    font_family_combo.append(Some("noto-serif"), "Noto Serif");
-    font_family_combo.append(Some("noto-mono"), "Noto Sans Mono");
-    font_family_combo.append(Some("arial"), "Arial");
-    font_family_combo.append(Some("times"), "Times New Roman");
-    font_family_combo.append(Some("courier"), "Courier New");
-    font_family_combo.append(Some("georgia"), "Georgia");
-    font_family_combo.append(Some("verdana"), "Verdana");
-    font_family_combo.append(Some("helvetica"), "Helvetica");
-    font_family_combo.append(Some("liberation-mono"), "Liberation Mono");
-    font_family_combo.append(Some("dejavu-mono"), "DejaVu Sans Mono");
-    font_family_combo.set_active_id(Some("noto-sans-jp"));
+    let font_family_combo = DropDown::from_strings(&[
+        "Noto Sans JP",
+        "Noto Serif JP",
+        "Noto Sans",
+        "Noto Serif",
+        "Noto Sans Mono",
+        "Arial",
+        "Times New Roman",
+        "Courier New",
+        "Georgia",
+        "Verdana",
+        "Helvetica",
+        "Liberation Mono",
+        "DejaVu Sans Mono",
+    ]);
+    font_family_combo.set_selected(0); // Default to Noto Sans JP
     font_section.append(&font_family_combo);
     container.append(&font_section);
 
@@ -217,12 +218,13 @@ fn build_typography_section(
     align_label.add_css_class("heading");
     align_section.append(&align_label);
 
-    let text_align_combo = ComboBoxText::new();
-    text_align_combo.append(Some("left"), "左揃え");
-    text_align_combo.append(Some("center"), "中央揃え");
-    text_align_combo.append(Some("right"), "右揃え");
-    text_align_combo.append(Some("justify"), "両端揃え");
-    text_align_combo.set_active_id(Some("left"));
+    let text_align_combo = DropDown::from_strings(&[
+        "左揃え",
+        "中央揃え",
+        "右揃え",
+        "両端揃え",
+    ]);
+    text_align_combo.set_selected(0); // Default to left alignment
     align_section.append(&text_align_combo);
     container.append(&align_section);
 
@@ -268,7 +270,7 @@ fn build_text_options_section(container: &GtkBox) -> Switch {
 }
 
 /// Build border section
-fn build_border_section(container: &GtkBox) -> ComboBoxText {
+fn build_border_section(container: &GtkBox) -> DropDown {
     let border_header = GtkBox::new(Orientation::Horizontal, 8);
     border_header.set_margin_start(12);
     border_header.set_margin_top(20);
@@ -288,11 +290,12 @@ fn build_border_section(container: &GtkBox) -> ComboBoxText {
     border_section.set_margin_start(12);
     border_section.set_margin_end(12);
 
-    let border_style_combo = ComboBoxText::new();
-    border_style_combo.append(Some("none"), "なし");
-    border_style_combo.append(Some("thin"), "細い枠線");
-    border_style_combo.append(Some("thick"), "太い枠線");
-    border_style_combo.set_active_id(Some("none"));
+    let border_style_combo = DropDown::from_strings(&[
+        "なし",
+        "細い枠線",
+        "太い枠線",
+    ]);
+    border_style_combo.set_selected(0); // Default to none
     border_section.append(&border_style_combo);
     container.append(&border_section);
 
