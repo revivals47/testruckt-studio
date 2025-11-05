@@ -89,13 +89,13 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
         DocumentElement::Text(text) => {
             render_text_to_context(ctx, text)?;
         }
-        DocumentElement::Image(_image) => {
-            // TODO: Implement image rendering in SVG export
-            debug!("Image export not yet implemented");
+        DocumentElement::Image(image) => {
+            crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds)
+                .map_err(|e| anyhow::anyhow!("Failed to render image placeholder: {}", e))?;
+            debug!("Image rendered as placeholder: {}", image.id);
         }
-        DocumentElement::Frame(_frame) => {
-            // TODO: Implement frame rendering in SVG export
-            debug!("Frame export not yet implemented");
+        DocumentElement::Frame(frame) => {
+            render_frame_to_context(ctx, frame)?;
         }
     }
 
@@ -155,6 +155,29 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
         }
     }
 
+    Ok(())
+}
+
+/// Render a frame element (with recursive children)
+fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement) -> Result<()> {
+    let x = frame.bounds.origin.x as f64;
+    let y = frame.bounds.origin.y as f64;
+    let width = frame.bounds.size.width as f64;
+    let height = frame.bounds.size.height as f64;
+
+    // Draw frame border
+    ctx.set_source_rgb(0.9, 0.9, 0.9);
+    ctx.set_line_width(1.0);
+    ctx.rectangle(x, y, width, height);
+    ctx.stroke()
+        .map_err(|e| anyhow!("Failed to stroke frame: {}", e))?;
+
+    // Render frame children recursively
+    for child in &frame.children {
+        render_element_to_context(ctx, child)?;
+    }
+
+    debug!("Frame rendered with {} children", frame.children.len());
     Ok(())
 }
 

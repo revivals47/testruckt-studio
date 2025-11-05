@@ -5,6 +5,7 @@
 pub mod pdf;
 pub mod image;
 pub mod svg;
+pub mod image_utils;
 
 use std::path::Path;
 use anyhow::Result;

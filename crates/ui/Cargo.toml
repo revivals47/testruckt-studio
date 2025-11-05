@@ -23,3 +23,4 @@ pango = "0.18"
 pangocairo = "0.18"
 dirs = "5.0"
 chrono = { workspace = true, features = ["serde"] }
+image = { version = "0.24", features = ["jpeg", "png", "gif", "webp"] }
