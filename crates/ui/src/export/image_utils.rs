@@ -3,6 +3,25 @@
 use cairo::Context;
 use std::path::Path;
 use testruct_core::layout::Rect;
+use testruct_core::workspace::assets::{AssetRef, AssetCatalog};
+
+/// Render an image from AssetCatalog to a Cairo context
+///
+/// Resolves the asset reference to a file path and renders the image
+pub fn render_image_from_asset(
+    ctx: &Context,
+    asset_ref: AssetRef,
+    catalog: &AssetCatalog,
+    bounds: &Rect,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Get image metadata from catalog
+    if let Some(metadata) = catalog.get(asset_ref) {
+        render_image_to_context(ctx, &metadata.path, bounds)
+    } else {
+        // Asset not found in catalog - draw placeholder
+        draw_image_placeholder(ctx, bounds).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }
+}
 
 /// Load an image file and render it to a Cairo context
 ///

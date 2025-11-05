@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use cairo::{Context, SvgSurface};
 use std::path::Path;
 use testruct_core::Document;
+use testruct_core::workspace::assets::AssetCatalog;
 use tracing::{debug, info};
 
 /// Default page size (A4: 595.28 x 841.89 points)
@@ -13,7 +14,7 @@ const DEFAULT_PAGE_WIDTH: f64 = 595.28;
 const DEFAULT_PAGE_HEIGHT: f64 = 841.89;
 
 /// Render a document to SVG
-pub fn render_to_svg(document: &Document, output_path: &Path) -> Result<()> {
+pub fn render_to_svg(document: &Document, output_path: &Path, catalog: &AssetCatalog) -> Result<()> {
     info!("Exporting to SVG: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -36,7 +37,7 @@ pub fn render_to_svg(document: &Document, output_path: &Path) -> Result<()> {
     // Render each page
     for (page_index, page) in document.pages.iter().enumerate() {
         debug!("Rendering page {}", page_index + 1);
-        render_page_to_context(&ctx, page)?;
+        render_page_to_context(&ctx, page, catalog)?;
 
         // Move to next page (except for last page)
         if page_index < document.pages.len() - 1 {
@@ -53,7 +54,7 @@ pub fn render_to_svg(document: &Document, output_path: &Path) -> Result<()> {
 }
 
 /// Render a single page to Cairo context
-fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page) -> Result<()> {
+fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, catalog: &AssetCatalog) -> Result<()> {
     // Set white background
     ctx.set_source_rgb(1.0, 1.0, 1.0);
     ctx.paint()
@@ -72,14 +73,14 @@ fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page) -
 
     // Render all elements
     for element in &page.elements {
-        render_element_to_context(ctx, element)?;
+        render_element_to_context(ctx, element, catalog)?;
     }
 
     Ok(())
 }
 
 /// Render a single element to Cairo context
-fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement) -> Result<()> {
+fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement, catalog: &AssetCatalog) -> Result<()> {
     use testruct_core::document::DocumentElement;
 
     match element {
@@ -90,12 +91,20 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
             render_text_to_context(ctx, text)?;
         }
         DocumentElement::Image(image) => {
-            crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds)
-                .map_err(|e| anyhow::anyhow!("Failed to render image placeholder: {}", e))?;
-            debug!("Image rendered as placeholder: {}", image.id);
+            // Try to load image from catalog, fallback to placeholder if not found
+            match crate::export::image_utils::render_image_from_asset(ctx, image.source, catalog, &image.bounds) {
+                Ok(_) => {
+                    debug!("Image rendered from asset catalog: {}", image.id);
+                }
+                Err(e) => {
+                    // If loading fails, draw placeholder and log warning
+                    debug!("Failed to render image {}: {}, using placeholder", image.id, e);
+                    let _ = crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds);
+                }
+            }
         }
         DocumentElement::Frame(frame) => {
-            render_frame_to_context(ctx, frame)?;
+            render_frame_to_context(ctx, frame, catalog)?;
         }
     }
 
@@ -195,7 +204,7 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
 }
 
 /// Render a frame element (with recursive children)
-fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement) -> Result<()> {
+fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement, catalog: &AssetCatalog) -> Result<()> {
     let x = frame.bounds.origin.x as f64;
     let y = frame.bounds.origin.y as f64;
     let width = frame.bounds.size.width as f64;
@@ -210,7 +219,7 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
 
     // Render frame children recursively
     for child in &frame.children {
-        render_element_to_context(ctx, child)?;
+        render_element_to_context(ctx, child, catalog)?;
     }
 
     debug!("Frame rendered with {} children", frame.children.len());

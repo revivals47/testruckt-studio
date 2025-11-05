@@ -465,8 +465,12 @@ fn perform_pdf_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppS
         glib::spawn_future_local(async move {
             // Show export dialog
             if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, "pdf").await {
+                // Get asset catalog for image resources
+                let catalog = state_clone.asset_catalog();
+                let catalog_lock = catalog.lock().expect("Failed to lock asset catalog");
+
                 // Perform export
-                match crate::export::export_pdf(&state_clone.active_document().unwrap(), &path) {
+                match crate::export::export_pdf(&state_clone.active_document().unwrap(), &path, &catalog_lock) {
                     Ok(_) => {
                         tracing::info!("✅ PDF export completed: {}", path.display());
                     }
@@ -496,10 +500,14 @@ fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::Ap
         glib::spawn_future_local(async move {
             // Show export dialog
             if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, &format_str).await {
+                // Get asset catalog for image resources
+                let catalog = state_clone.asset_catalog();
+                let catalog_lock = catalog.lock().expect("Failed to lock asset catalog");
+
                 // Perform export
                 match format_str.as_str() {
                     "png" => {
-                        match crate::export::export_png(&state_clone.active_document().unwrap(), &path, 96.0) {
+                        match crate::export::export_png(&state_clone.active_document().unwrap(), &path, 96.0, &catalog_lock) {
                             Ok(_) => {
                                 tracing::info!("✅ PNG export completed: {}", path.display());
                             }
@@ -509,7 +517,7 @@ fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::Ap
                         }
                     }
                     "jpeg" => {
-                        match crate::export::export_jpeg(&state_clone.active_document().unwrap(), &path, 96.0, 85) {
+                        match crate::export::export_jpeg(&state_clone.active_document().unwrap(), &path, 96.0, 85, &catalog_lock) {
                             Ok(_) => {
                                 tracing::info!("✅ JPEG export completed: {}", path.display());
                             }
@@ -519,7 +527,7 @@ fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::Ap
                         }
                     }
                     "svg" => {
-                        match crate::export::export_svg(&state_clone.active_document().unwrap(), &path) {
+                        match crate::export::export_svg(&state_clone.active_document().unwrap(), &path, &catalog_lock) {
                             Ok(_) => {
                                 tracing::info!("✅ SVG export completed: {}", path.display());
                             }

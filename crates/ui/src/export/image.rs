@@ -6,13 +6,14 @@ use anyhow::{anyhow, Result};
 use cairo::{Context, Format, ImageSurface};
 use std::path::Path;
 use testruct_core::Document;
+use testruct_core::workspace::assets::AssetCatalog;
 use tracing::{debug, info};
 
 /// Default DPI for image export
 const DEFAULT_DPI: f64 = 96.0;
 
 /// Render a document to PNG format (one file per page)
-pub fn render_to_png(document: &Document, output_path: &Path, dpi: f64) -> Result<()> {
+pub fn render_to_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
     info!("Exporting to PNG: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -24,14 +25,14 @@ pub fn render_to_png(document: &Document, output_path: &Path, dpi: f64) -> Resul
 
     // If multi-page, save each as separate file
     if document.pages.len() > 1 {
-        export_multi_page_png(document, output_path, dpi)
+        export_multi_page_png(document, output_path, dpi, catalog)
     } else {
-        export_single_page_png(document, output_path, dpi)
+        export_single_page_png(document, output_path, dpi, catalog)
     }
 }
 
 /// Render a document to JPEG format (one file per page)
-pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality: i32) -> Result<()> {
+pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality: i32, catalog: &AssetCatalog) -> Result<()> {
     info!("Exporting to JPEG: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -46,17 +47,17 @@ pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality
     // Convert to PNG first, then to JPEG using image crate
     // For now, we'll just export as PNG (JPEG would require additional dependencies)
     info!("JPEG export currently uses PNG format. Full JPEG support requires additional setup.");
-    render_to_png(document, output_path, dpi)
+    render_to_png(document, output_path, dpi, catalog)
 }
 
 /// Export single-page document to PNG
-fn export_single_page_png(document: &Document, output_path: &Path, dpi: f64) -> Result<()> {
+fn export_single_page_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
     let page = &document.pages[0];
-    render_page_to_png(page, output_path, dpi)
+    render_page_to_png(page, output_path, dpi, catalog)
 }
 
 /// Export multi-page document to multiple PNG files
-fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64) -> Result<()> {
+fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
     for (index, page) in document.pages.iter().enumerate() {
         let page_num = index + 1;
 
@@ -75,7 +76,7 @@ fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64) -> R
             .join(&output_filename);
 
         debug!("Rendering page {} to: {}", page_num, page_path.display());
-        render_page_to_png(page, &page_path, dpi)?;
+        render_page_to_png(page, &page_path, dpi, catalog)?;
     }
 
     info!("PNG export completed: {} pages exported to {}", document.pages.len(), output_path.display());
@@ -83,7 +84,7 @@ fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64) -> R
 }
 
 /// Render a single page to PNG file
-fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path, dpi: f64) -> Result<()> {
+fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
     // Use default page dimensions (A4: 595.28 x 841.89 points)
     let width_points = 595.28;
     let height_points = 841.89;
@@ -111,7 +112,7 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
     ctx.scale(scale, scale);
 
     // Render page
-    render_page_to_context(&ctx, _page)?;
+    render_page_to_context(&ctx, _page, catalog)?;
 
     // Write to file
     let mut file = std::fs::File::create(output_path)
@@ -125,7 +126,7 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
 }
 
 /// Render a single page to Cairo context
-fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page) -> Result<()> {
+fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, catalog: &AssetCatalog) -> Result<()> {
     // Set white background
     ctx.set_source_rgb(1.0, 1.0, 1.0);
     ctx.paint()
@@ -144,14 +145,14 @@ fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page) -
 
     // Render all elements
     for element in &page.elements {
-        render_element_to_context(ctx, element)?;
+        render_element_to_context(ctx, element, catalog)?;
     }
 
     Ok(())
 }
 
 /// Render a single element to Cairo context
-fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement) -> Result<()> {
+fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement, catalog: &AssetCatalog) -> Result<()> {
     use testruct_core::document::DocumentElement;
 
     match element {
@@ -162,12 +163,20 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
             render_text_to_context(ctx, text)?;
         }
         DocumentElement::Image(image) => {
-            crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds)
-                .map_err(|e| anyhow::anyhow!("Failed to render image placeholder: {}", e))?;
-            debug!("Image rendered as placeholder: {}", image.id);
+            // Try to load image from catalog, fallback to placeholder if not found
+            match crate::export::image_utils::render_image_from_asset(ctx, image.source, catalog, &image.bounds) {
+                Ok(_) => {
+                    debug!("Image rendered from asset catalog: {}", image.id);
+                }
+                Err(e) => {
+                    // If loading fails, draw placeholder and log warning
+                    debug!("Failed to render image {}: {}, using placeholder", image.id, e);
+                    let _ = crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds);
+                }
+            }
         }
         DocumentElement::Frame(frame) => {
-            render_frame_to_context(ctx, frame)?;
+            render_frame_to_context(ctx, frame, catalog)?;
         }
     }
 
@@ -267,7 +276,7 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
 }
 
 /// Render a frame element (with recursive children)
-fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement) -> Result<()> {
+fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement, catalog: &AssetCatalog) -> Result<()> {
     let x = frame.bounds.origin.x as f64;
     let y = frame.bounds.origin.y as f64;
     let width = frame.bounds.size.width as f64;
@@ -282,7 +291,7 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
 
     // Render frame children recursively
     for child in &frame.children {
-        render_element_to_context(ctx, child)?;
+        render_element_to_context(ctx, child, catalog)?;
     }
 
     debug!("Frame rendered with {} children", frame.children.len());
