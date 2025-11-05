@@ -309,9 +309,49 @@ pub fn register_window_actions(
         );
     });
 
-    add_window_action(window, "templates", |_| {
+    let templates_state = state.clone();
+    let templates_window = window.clone();
+    add_window_action(window, "templates", move |_| {
         tracing::info!("Action: show templates");
-        // TODO: Show template manager
+
+        let window_ref = templates_window.clone();
+        let state_ref = templates_state.clone();
+
+        // Get window as base type
+        let window_as_base = window_ref.clone().upcast::<gtk4::Window>();
+
+        // Get templates from project
+        let project = state_ref.project();
+        let templates: Vec<_> = project.templates.iter().collect();
+
+        if templates.is_empty() {
+            tracing::warn!("⚠️  No templates available");
+            return;
+        }
+
+        // Show template browser dialog with callback
+        crate::dialogs::show_template_browser_async(
+            &window_as_base,
+            templates,
+            Box::new(move |selected_template| {
+                if let Some(template) = selected_template {
+                    tracing::info!("✅ Template selected: {}", template.name);
+
+                    // Apply template to create new document
+                    let project = state_ref.project();
+                    if let Some(new_doc) = project.apply_template(
+                        testruct_core::template::TemplateRef { id: template.id }
+                    ) {
+                        tracing::info!("✅ New document created from template");
+                        // TODO: Add new document to project and activate it
+                    } else {
+                        tracing::error!("❌ Failed to create document from template");
+                    }
+                } else {
+                    tracing::info!("⚠️  Template selection cancelled");
+                }
+            }),
+        );
     });
 
     let item_library_panel = properties_panel.clone();
