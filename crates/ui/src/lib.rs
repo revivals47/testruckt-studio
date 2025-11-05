@@ -3,6 +3,7 @@
 pub mod app;
 pub mod canvas;
 pub mod dialogs;
+pub mod export;
 pub mod io;
 pub mod menu;
 pub mod panels;

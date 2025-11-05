@@ -28,14 +28,41 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::a
     });
 
     // Export actions
-    for format in &["pdf", "png", "jpeg", "svg"] {
-        let action_name = format!("export-{}", format);
-        let format_str = format.to_string();
-        add_window_action_with_capture(window, &action_name, format_str, |_, format| {
-            tracing::info!("Action: export as {}", format);
-            // TODO: Export in specified format
-        });
-    }
+    let export_state = state.clone();
+    let window_weak_pdf = window.downgrade();
+    add_window_action(window, "export-pdf", move |_| {
+        tracing::info!("Action: export as PDF");
+        if let Some(window) = window_weak_pdf.upgrade() {
+            perform_pdf_export(&window, &export_state);
+        }
+    });
+
+    let export_state = state.clone();
+    let window_weak_png = window.downgrade();
+    add_window_action(window, "export-png", move |_| {
+        tracing::info!("Action: export as PNG");
+        if let Some(window) = window_weak_png.upgrade() {
+            perform_image_export(&window, &export_state, "png");
+        }
+    });
+
+    let export_state = state.clone();
+    let window_weak_jpeg = window.downgrade();
+    add_window_action(window, "export-jpeg", move |_| {
+        tracing::info!("Action: export as JPEG");
+        if let Some(window) = window_weak_jpeg.upgrade() {
+            perform_image_export(&window, &export_state, "jpeg");
+        }
+    });
+
+    let export_state = state.clone();
+    let window_weak_svg = window.downgrade();
+    add_window_action(window, "export-svg", move |_| {
+        tracing::info!("Action: export as SVG");
+        if let Some(window) = window_weak_svg.upgrade() {
+            perform_image_export(&window, &export_state, "svg");
+        }
+    });
 
     // Edit menu actions
     let undo_state = state.clone();
@@ -174,5 +201,33 @@ fn set_accelerators(window: &gtk4::ApplicationWindow) {
 
     for (action, accel) in &shortcuts {
         app.set_accels_for_action(action, &[accel]);
+    }
+}
+
+/// Perform PDF export
+fn perform_pdf_export(_window: &gtk4::ApplicationWindow, state: &crate::app::AppState) {
+    // Get active document
+    if let Some(_document) = state.active_document() {
+        tracing::info!("Exporting active document to PDF");
+
+        // For now, just log the action
+        // In a full implementation, would show file dialog and export
+        tracing::info!("✅ PDF export action triggered (dialog not yet implemented)");
+    } else {
+        tracing::warn!("No active document to export");
+    }
+}
+
+/// Perform image export (PNG/JPEG/SVG)
+fn perform_image_export(_window: &gtk4::ApplicationWindow, state: &crate::app::AppState, format: &str) {
+    // Get active document
+    if let Some(_document) = state.active_document() {
+        tracing::info!("Exporting active document to {}", format.to_uppercase());
+
+        // For now, just log the action
+        // In a full implementation, would show file dialog and export
+        tracing::info!("✅ {} export action triggered (dialog not yet implemented)", format.to_uppercase());
+    } else {
+        tracing::warn!("No active document to export");
     }
 }
