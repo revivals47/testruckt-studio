@@ -102,6 +102,8 @@ pub fn wire_pointer_events(
 
     let render_state_end = render_state.clone();
     let drawing_area_end = drawing_area.clone();
+    let app_state_drag_end = _app_state.clone();
+
     drag_gesture.connect_drag_end(move |_gesture, offset_x, offset_y| {
         let state = render_state_end.clone();
         let tool_state = state.tool_state.borrow();
@@ -118,7 +120,7 @@ pub fn wire_pointer_events(
 
             // Handle shape creation based on tool
             if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
-                let _element = match current_tool {
+                let element = match current_tool {
                     ToolMode::Rectangle => ShapeFactory::create_rectangle(
                         start_x.min(current_x),
                         start_y.min(current_y),
@@ -140,7 +142,13 @@ pub fn wire_pointer_events(
                     ),
                     _ => return,
                 };
-                // TODO: Add element to document and push to undo stack
+
+                // Add element to document
+                if let Err(e) = app_state_drag_end.add_element_to_active_page(element) {
+                    tracing::warn!("Failed to add element: {}", e);
+                } else {
+                    tracing::info!("✅ {} element added to document", current_tool.name());
+                }
             }
         }
 

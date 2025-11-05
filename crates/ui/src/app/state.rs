@@ -10,9 +10,25 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        Self {
+        let app_state = Self {
             inner: Arc::new(Mutex::new(AppShared::default())),
+        };
+
+        // Initialize with a default document
+        {
+            let mut inner = app_state.inner.lock().expect("state");
+            let doc = testruct_core::document::DocumentBuilder::new()
+                .with_title("Untitled")
+                .add_page(testruct_core::document::Page::empty())
+                .build()
+                .expect("document");
+
+            let doc_id = doc.id;
+            inner.project.add_document(doc);
+            inner.active_document = Some(doc_id);
         }
+
+        app_state
     }
 }
 
@@ -70,6 +86,29 @@ impl AppState {
     pub fn redo(&self) -> bool {
         self.with_undo_stack(|stack| stack.redo())
     }
+
+    pub fn push_command(&self, command: Box<dyn crate::undo_redo::Command>) {
+        let stack = {
+            let inner = self.inner.lock().expect("state");
+            inner.undo_redo_stack.clone()
+        };
+        let mut undo_stack = stack.lock().expect("undo stack");
+        undo_stack.push(command);
+    }
+
+    pub fn add_element_to_active_page(&self, element: testruct_core::document::DocumentElement) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if !doc.pages.is_empty() {
+                    doc.pages[0].add_element(element);
+                    return Ok(());
+                }
+            }
+        }
+        Err("No active document or pages".to_string())
+    }
+
 }
 
 #[derive(Default)]

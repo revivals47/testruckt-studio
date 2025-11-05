@@ -279,7 +279,7 @@ mod tests {
 
 /// Delete command for removing document elements
 pub struct DeleteCommand {
-    document: std::rc::Rc<std::cell::RefCell<testruct_core::document::Document>>,
+    document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
     element_id: uuid::Uuid,
     deleted_element: Option<testruct_core::document::DocumentElement>,
     deleted_page_index: usize,
@@ -288,7 +288,7 @@ pub struct DeleteCommand {
 impl DeleteCommand {
     /// Create a new delete command
     pub fn new(
-        document: std::rc::Rc<std::cell::RefCell<testruct_core::document::Document>>,
+        document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
         element_id: uuid::Uuid,
         page_index: usize,
     ) -> Self {
@@ -303,7 +303,7 @@ impl DeleteCommand {
 
 impl Command for DeleteCommand {
     fn execute(&mut self) -> Result<String, String> {
-        let mut doc = self.document.borrow_mut();
+        let mut doc = self.document.lock().expect("document lock");
 
         if self.deleted_page_index >= doc.pages.len() {
             return Err("Page index out of bounds".to_string());
@@ -326,7 +326,7 @@ impl Command for DeleteCommand {
 
     fn undo(&mut self) -> Result<String, String> {
         if let Some(element) = self.deleted_element.take() {
-            let mut doc = self.document.borrow_mut();
+            let mut doc = self.document.lock().expect("document lock");
 
             if self.deleted_page_index >= doc.pages.len() {
                 return Err("Page index out of bounds".to_string());
@@ -350,6 +350,79 @@ impl std::fmt::Debug for DeleteCommand {
             .field("element_id", &self.element_id)
             .field("page_index", &self.deleted_page_index)
             .finish()
+    }
+}
+
+/// Create command for adding new document elements
+#[derive(Debug)]
+pub struct CreateCommand {
+    document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+    element: Option<testruct_core::document::DocumentElement>,
+    element_id: Option<uuid::Uuid>,
+    page_index: usize,
+}
+
+impl CreateCommand {
+    /// Create a new create command
+    pub fn new(
+        document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+        element: testruct_core::document::DocumentElement,
+        page_index: usize,
+    ) -> Self {
+        let element_id = Some(elem_id(&element));
+        Self {
+            document,
+            element: Some(element),
+            element_id,
+            page_index,
+        }
+    }
+}
+
+impl Command for CreateCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        if let Some(element) = self.element.take() {
+            let element_id = elem_id(&element);
+            let mut doc = self.document.lock().expect("document lock");
+
+            if self.page_index >= doc.pages.len() {
+                return Err("Page index out of bounds".to_string());
+            }
+
+            doc.pages[self.page_index].add_element(element);
+            Ok(format!("Created element {}", element_id))
+        } else {
+            Err("No element to create".to_string())
+        }
+    }
+
+    fn undo(&mut self) -> Result<String, String> {
+        // Find and remove the element we created by ID
+        if let Some(element_id) = self.element_id {
+            let mut doc = self.document.lock().expect("document lock");
+
+            if self.page_index >= doc.pages.len() {
+                return Err("Page index out of bounds".to_string());
+            }
+
+            let page = &mut doc.pages[self.page_index];
+            if let Some(position) = page
+                .elements
+                .iter()
+                .position(|elem| elem_id(elem) == element_id)
+            {
+                self.element = Some(page.elements.remove(position));
+                Ok(format!("Removed element {}", element_id))
+            } else {
+                Err(format!("Element {} not found for undo", element_id))
+            }
+        } else {
+            Err("No element ID stored for undo".to_string())
+        }
+    }
+
+    fn description(&self) -> &str {
+        "Create object"
     }
 }
 
