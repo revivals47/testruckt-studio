@@ -333,14 +333,24 @@ pub fn register_window_actions(
     });
 
     // Help menu actions
-    add_window_action(window, "user-manual", |_| {
+    let window_weak_manual = window.downgrade();
+    add_window_action(window, "user-manual", move |_| {
         tracing::info!("Action: open user manual");
-        // TODO: Open user manual
+        if let Some(window) = window_weak_manual.upgrade() {
+            let window_base = window.clone().upcast::<gtk4::Window>();
+            crate::dialogs::show_user_manual_dialog(&window_base);
+            tracing::info!("✅ User manual dialog displayed");
+        }
     });
 
-    add_window_action(window, "about", |_| {
+    let window_weak_about = window.downgrade();
+    add_window_action(window, "about", move |_| {
         tracing::info!("Action: show about dialog");
-        // TODO: Show about dialog
+        if let Some(window) = window_weak_about.upgrade() {
+            let window_base = window.clone().upcast::<gtk4::Window>();
+            crate::dialogs::show_about_dialog(&window_base);
+            tracing::info!("✅ About dialog displayed");
+        }
     });
 
     // Set keyboard accelerators
