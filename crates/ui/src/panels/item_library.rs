@@ -1,6 +1,6 @@
 //! Item library panel for viewing and managing items from the database
 
-use gtk4::{prelude::*, ScrolledWindow, SearchEntry, Box as GtkBox, Label, ListBox, ListBoxRow};
+use gtk4::{prelude::*, ScrolledWindow, SearchEntry, Box as GtkBox, Label, ListBox, ListBoxRow, Orientation, Button};
 use std::sync::{Arc, Mutex};
 use testruct_db::ItemBank;
 
@@ -9,6 +9,7 @@ pub struct ItemLibraryComponents {
     pub container: GtkBox,
     pub search_entry: SearchEntry,
     pub item_list: ListBox,
+    pub add_button: Button,
 }
 
 /// Build the item library panel
@@ -27,11 +28,22 @@ pub fn build_item_library_panel(
     title.add_css_class("title-3");
     container.append(&title);
 
-    // Search box
+    // Search and action box
+    let search_action_box = GtkBox::new(Orientation::Horizontal, 6);
+    search_action_box.set_halign(gtk4::Align::Fill);
+
     let search_entry = SearchEntry::new();
     search_entry.set_placeholder_text(Some("Search items..."));
     search_entry.set_halign(gtk4::Align::Fill);
-    container.append(&search_entry);
+    search_entry.set_hexpand(true);
+    search_action_box.append(&search_entry);
+
+    let add_button = Button::with_label("+ 追加");
+    add_button.add_css_class("flat");
+    add_button.set_tooltip_text(Some("新しいアイテムを追加"));
+    search_action_box.append(&add_button);
+
+    container.append(&search_action_box);
 
     // Item list
     let item_list = ListBox::new();
@@ -65,6 +77,7 @@ pub fn build_item_library_panel(
         container,
         search_entry,
         item_list,
+        add_button,
     }
 }
 
