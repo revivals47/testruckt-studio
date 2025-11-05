@@ -34,10 +34,22 @@ impl TestructApplication {
     pub fn run(self) -> glib::ExitCode {
         let state = AppState::default();
         self.app.connect_activate(move |app| {
-            let window = MainWindow::build(app, state.clone());
-            window.present();
+            eprintln!("📌 Activate signal received - building window...");
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                MainWindow::build(app, state.clone())
+            })) {
+                Ok(window) => {
+                    eprintln!("✅ Window built successfully");
+                    window.present();
+                    eprintln!("✅ Window presented");
+                }
+                Err(_) => {
+                    eprintln!("❌ PANIC in window build!");
+                }
+            }
         });
 
+        eprintln!("🚀 Starting GTK application...");
         self.app.run()
     }
 }
