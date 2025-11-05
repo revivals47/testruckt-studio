@@ -102,6 +102,76 @@ pub fn register_window_actions(window: &gtk4::ApplicationWindow, state: crate::a
         // TODO: Select all objects on canvas
     });
 
+    // Page management actions
+    let page_state = state.clone();
+    add_window_action(window, "add-page", move |_| {
+        tracing::info!("Action: add page");
+        match page_state.add_page() {
+            Ok(_) => {
+                tracing::info!("✅ Page added. Total pages: {}", page_state.page_count());
+            }
+            Err(e) => {
+                tracing::warn!("⚠️  Failed to add page: {}", e);
+            }
+        }
+    });
+
+    let page_state = state.clone();
+    add_window_action(window, "delete-page", move |_| {
+        tracing::info!("Action: delete page");
+        // Delete current page (index 0 for now)
+        match page_state.delete_page(0) {
+            Ok(_) => {
+                tracing::info!("✅ Page deleted. Total pages: {}", page_state.page_count());
+            }
+            Err(e) => {
+                tracing::warn!("⚠️  Failed to delete page: {}", e);
+            }
+        }
+    });
+
+    let page_state = state.clone();
+    add_window_action(window, "duplicate-page", move |_| {
+        tracing::info!("Action: duplicate page");
+        // Duplicate current page (index 0 for now)
+        match page_state.duplicate_page(0) {
+            Ok(_) => {
+                tracing::info!("✅ Page duplicated. Total pages: {}", page_state.page_count());
+            }
+            Err(e) => {
+                tracing::warn!("⚠️  Failed to duplicate page: {}", e);
+            }
+        }
+    });
+
+    let page_state = state.clone();
+    add_window_action(window, "move-page-up", move |_| {
+        tracing::info!("Action: move page up");
+        // Move current page up (index 0 for now)
+        match page_state.move_page_up(0) {
+            Ok(_) => {
+                tracing::info!("✅ Page moved up");
+            }
+            Err(e) => {
+                tracing::warn!("⚠️  Failed to move page up: {}", e);
+            }
+        }
+    });
+
+    let page_state = state.clone();
+    add_window_action(window, "move-page-down", move |_| {
+        tracing::info!("Action: move page down");
+        // Move current page down (index 0 for now)
+        match page_state.move_page_down(0) {
+            Ok(_) => {
+                tracing::info!("✅ Page moved down");
+            }
+            Err(e) => {
+                tracing::warn!("⚠️  Failed to move page down: {}", e);
+            }
+        }
+    });
+
     // View menu actions
     add_window_action(window, "toggle-grid", |_| {
         tracing::info!("Action: toggle grid visibility");
@@ -204,6 +274,11 @@ fn set_accelerators(window: &gtk4::ApplicationWindow) {
         ("win.undo", "<Primary>z"),
         ("win.redo", "<Primary><Shift>z"),
         ("win.select-all", "<Primary>a"),
+        ("win.add-page", "<Primary><Shift>n"),
+        ("win.delete-page", "<Primary><Shift>d"),
+        ("win.duplicate-page", "<Primary><Shift>c"),
+        ("win.move-page-up", "<Primary><Shift>Page_Up"),
+        ("win.move-page-down", "<Primary><Shift>Page_Down"),
         ("win.toggle-grid", "F8"),
         ("win.toggle-guides", "F7"),
         ("win.toggle-rulers", "F6"),

@@ -123,6 +123,88 @@ impl AppState {
         inner.item_bank.clone()
     }
 
+    /// Add a new page to the active document
+    pub fn add_page(&self) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                doc.pages.push(testruct_core::document::Page::empty());
+                return Ok(());
+            }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Delete a page from the active document by index
+    pub fn delete_page(&self, index: usize) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if index < doc.pages.len() && doc.pages.len() > 1 {
+                    doc.pages.remove(index);
+                    return Ok(());
+                }
+                return Err("Cannot delete the only page".to_string());
+            }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Duplicate a page in the active document
+    pub fn duplicate_page(&self, index: usize) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if index < doc.pages.len() {
+                    let page_clone = doc.pages[index].clone();
+                    doc.pages.insert(index + 1, page_clone);
+                    return Ok(());
+                }
+                return Err("Page index out of bounds".to_string());
+            }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Move a page up in the active document
+    pub fn move_page_up(&self, index: usize) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if index > 0 && index < doc.pages.len() {
+                    doc.pages.swap(index, index - 1);
+                    return Ok(());
+                }
+                return Err("Cannot move page up from first position".to_string());
+            }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Move a page down in the active document
+    pub fn move_page_down(&self, index: usize) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if index < doc.pages.len() - 1 {
+                    doc.pages.swap(index, index + 1);
+                    return Ok(());
+                }
+                return Err("Cannot move page down from last position".to_string());
+            }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Get the total number of pages in the active document
+    pub fn page_count(&self) -> usize {
+        if let Some(doc) = self.active_document() {
+            doc.pages.len()
+        } else {
+            0
+        }
+    }
+
 }
 
 struct AppShared {
