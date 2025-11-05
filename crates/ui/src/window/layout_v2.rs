@@ -8,7 +8,7 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator,
+    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator, Notebook,
 };
 use crate::app::AppState;
 use crate::canvas::CanvasView;
@@ -46,12 +46,12 @@ pub fn build_layout(
     panes_box.append(&tool_palette);
 
     // CENTER: Canvas with overlays
-    let canvas_view = CanvasView::new(app_state);
+    let canvas_view = CanvasView::new(app_state.clone());
     let (canvas_section, _page_nav_bar) = build_canvas_section(&canvas_view);
     panes_box.append(&canvas_section);
 
-    // RIGHT: Properties Panel
-    let properties_panel = build_properties_panel();
+    // RIGHT: Properties Panel with Item Library
+    let properties_panel = build_properties_panel(&app_state);
     panes_box.append(&properties_panel);
 
     main_container.append(&panes_box);
@@ -233,16 +233,30 @@ fn build_page_nav_bar() -> GtkBox {
     nav_bar
 }
 
-/// Build the right properties panel
-fn build_properties_panel() -> GtkBox {
+/// Build the right properties panel with tabbed interface
+fn build_properties_panel(app_state: &AppState) -> GtkBox {
     let properties = GtkBox::new(Orientation::Vertical, 0);
     properties.add_css_class("properties-panel");
     properties.set_width_request(240);  // Fixed width
     properties.set_hexpand(false);
+    properties.set_vexpand(true);
 
-    // Append properties content
+    // Create notebook for tabs
+    let notebook = Notebook::new();
+    notebook.set_vexpand(true);
+    notebook.set_hexpand(true);
+    properties.append(&notebook);
+
+    // Tab 1: Properties
     let props_content = crate::panels::build_property_panel();
-    properties.append(&props_content);
+    let props_label = Label::new(Some("プロパティ"));
+    notebook.append_page(&props_content, Some(&props_label));
+
+    // Tab 2: Item Library
+    let item_bank = app_state.item_bank();
+    let item_lib_components = crate::panels::build_item_library_panel(item_bank);
+    let item_lib_label = Label::new(Some("アイテムライブラリ"));
+    notebook.append_page(&item_lib_components.container, Some(&item_lib_label));
 
     properties
 }
