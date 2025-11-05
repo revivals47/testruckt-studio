@@ -181,11 +181,101 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
     Ok(())
 }
 
-/// Render a text element
-fn render_text_to_context(_ctx: &Context, _text: &testruct_core::document::TextElement) -> Result<()> {
-    // NOTE: TextElement does not have bounds information
-    // Full text rendering requires more setup with Pango
-    debug!("Text rendering in SVG export: TextElement support pending");
+/// Render a text element with Pango layout
+fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextElement) -> Result<()> {
+    use pango::prelude::*;
+
+    ctx.save()
+        .map_err(|e| anyhow!("Failed to save context: {}", e))?;
+
+    let bounds = &text.bounds;
+    let style = &text.style;
+
+    // Draw background color if specified
+    if let Some(bg_color) = style.background_color {
+        ctx.set_source_rgb(bg_color.r as f64, bg_color.g as f64, bg_color.b as f64);
+        ctx.rectangle(
+            bounds.origin.x as f64,
+            bounds.origin.y as f64,
+            bounds.size.width as f64,
+            bounds.size.height as f64,
+        );
+        ctx.fill()
+            .map_err(|e| anyhow!("Failed to fill text background: {}", e))?;
+    }
+
+    // Translate to text origin
+    ctx.translate(bounds.origin.x as f64, bounds.origin.y as f64);
+
+    // Create clipping rectangle
+    ctx.rectangle(0.0, 0.0, bounds.size.width as f64, bounds.size.height as f64);
+    ctx.clip();
+
+    // Create Pango layout
+    let layout = pangocairo::functions::create_layout(ctx);
+    layout.set_text(&text.content);
+
+    // Set font with styling
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family(&style.font_family);
+    font_desc.set_size((style.font_size * pango::SCALE as f32) as i32);
+
+    // Apply font weight
+    let pango_weight = match style.weight {
+        testruct_core::typography::FontWeight::Thin => pango::Weight::Thin,
+        testruct_core::typography::FontWeight::Light => pango::Weight::Light,
+        testruct_core::typography::FontWeight::Regular => pango::Weight::Normal,
+        testruct_core::typography::FontWeight::Medium => pango::Weight::Medium,
+        testruct_core::typography::FontWeight::Bold => pango::Weight::Bold,
+        testruct_core::typography::FontWeight::Black => pango::Weight::Ultrabold,
+    };
+    font_desc.set_weight(pango_weight);
+
+    // Apply italic style
+    if style.italic {
+        font_desc.set_style(pango::Style::Italic);
+    }
+
+    layout.set_font_description(Some(&font_desc));
+
+    // Apply text alignment
+    let pango_alignment = match style.alignment {
+        testruct_core::typography::TextAlignment::Start => pango::Alignment::Left,
+        testruct_core::typography::TextAlignment::Center => pango::Alignment::Center,
+        testruct_core::typography::TextAlignment::End => pango::Alignment::Right,
+        testruct_core::typography::TextAlignment::Justified => pango::Alignment::Center,
+    };
+    layout.set_alignment(pango_alignment);
+    layout.set_width((bounds.size.width as f64 * pango::SCALE as f64) as i32);
+
+    // Apply underline and strikethrough decorations
+    if style.underline || style.strikethrough {
+        let mut attrs = pango::AttrList::new();
+        if style.underline {
+            let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
+            attrs.insert(underline_attr);
+        }
+        if style.strikethrough {
+            let strikethrough_attr = pango::AttrInt::new_strikethrough(true);
+            attrs.insert(strikethrough_attr);
+        }
+        layout.set_attributes(Some(&attrs));
+    }
+
+    // Set text color
+    ctx.set_source_rgb(
+        style.color.r as f64,
+        style.color.g as f64,
+        style.color.b as f64,
+    );
+
+    // Render the text using pangocairo
+    pangocairo::functions::show_layout(ctx, &layout);
+
+    ctx.restore()
+        .map_err(|e| anyhow!("Failed to restore context: {}", e))?;
+
+    debug!("Text rendered: '{}' in SVG", text.content);
     Ok(())
 }
 
