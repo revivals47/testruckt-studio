@@ -6,6 +6,7 @@ mod actions;
 use crate::app::AppState;
 use crate::canvas::CanvasView;
 use crate::toolbar::ToolbarWidgets;
+use crate::window::layout_v2::ToolPaletteButtons;
 use gtk4::{Application, ApplicationWindow};
 
 pub struct MainWindow {
@@ -28,6 +29,7 @@ pub struct WindowComponents {
     pub property_panel: gtk4::Box,
     pub menu_bar: gtk4::PopoverMenuBar,
     pub toolbar: ToolbarWidgets,
+    pub tool_palette_buttons: ToolPaletteButtons,
 }
 
 impl WindowComponents {
@@ -38,6 +40,7 @@ impl WindowComponents {
         property_panel: gtk4::Box,
         menu_bar: gtk4::PopoverMenuBar,
         toolbar: ToolbarWidgets,
+        tool_palette_buttons: ToolPaletteButtons,
     ) -> Self {
         Self {
             window,
@@ -46,6 +49,7 @@ impl WindowComponents {
             property_panel,
             menu_bar,
             toolbar,
+            tool_palette_buttons,
         }
     }
 }

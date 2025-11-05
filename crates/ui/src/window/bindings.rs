@@ -80,31 +80,61 @@ fn bind_toggle_button(button: &gtk4::ToggleButton, window: &gtk4::ApplicationWin
 
 /// Bind tool palette buttons to tool mode switching
 fn bind_tool_selection(components: &WindowComponents) {
+    use crate::canvas::tools::ToolMode;
+
     let canvas_view = &components.canvas_view;
     let render_state = canvas_view.render_state().clone();
-
-    // Tool buttons are in the left tool palette (built in layout_v2)
-    // For now, we'll connect to the toolbar tool buttons if available
-    // TODO: Connect to left palette buttons when available in layout
+    let tool_buttons = &components.tool_palette_buttons;
 
     // Select tool button
     let state_select = render_state.clone();
-    // TODO: Connect select_btn from tool palette to switching to Select mode
-    let _state = state_select; // Placeholder
+    tool_buttons.select_btn.connect_clicked(move |_| {
+        let mut tool_state = state_select.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Select;
+        tracing::debug!("Tool switched to: Select");
+    });
 
     // Rectangle tool button
     let state_rect = render_state.clone();
-    let _state = state_rect; // Placeholder
+    tool_buttons.rect_btn.connect_clicked(move |_| {
+        let mut tool_state = state_rect.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Rectangle;
+        tracing::debug!("Tool switched to: Rectangle");
+    });
 
     // Circle tool button
     let state_circle = render_state.clone();
-    let _state = state_circle; // Placeholder
+    tool_buttons.circle_btn.connect_clicked(move |_| {
+        let mut tool_state = state_circle.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Circle;
+        tracing::debug!("Tool switched to: Circle");
+    });
 
     // Text tool button
     let state_text = render_state.clone();
-    let _state = state_text; // Placeholder
+    tool_buttons.text_btn.connect_clicked(move |_| {
+        let mut tool_state = state_text.tool_state.borrow_mut();
+        tool_state.current_tool = ToolMode::Text;
+        tracing::debug!("Tool switched to: Text");
+    });
 
-    // Line tool button
+    // Line tool button (placeholder - not in ToolMode yet)
     let state_line = render_state.clone();
-    let _state = state_line; // Placeholder
+    tool_buttons.line_btn.connect_clicked(move |_| {
+        let _tool_state = state_line.tool_state.borrow_mut();
+        tracing::info!("Line tool: Not yet implemented");
+        // TODO: Implement line tool mode
+    });
+
+    // Arrow tool button (placeholder - not in ToolMode yet)
+    tool_buttons.arrow_btn.connect_clicked(move |_| {
+        tracing::info!("Arrow tool: Not yet implemented");
+        // TODO: Implement arrow tool mode
+    });
+
+    // Image tool button (placeholder - not in ToolMode yet)
+    tool_buttons.image_btn.connect_clicked(move |_| {
+        tracing::info!("Image tool: Not yet implemented");
+        // TODO: Implement image tool mode
+    });
 }

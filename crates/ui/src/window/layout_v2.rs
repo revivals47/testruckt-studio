@@ -14,11 +14,23 @@ use crate::app::AppState;
 use crate::canvas::CanvasView;
 use crate::toolbar::ToolbarWidgets;
 
+/// Tool palette button references
+#[derive(Clone)]
+pub struct ToolPaletteButtons {
+    pub select_btn: Button,
+    pub text_btn: Button,
+    pub image_btn: Button,
+    pub rect_btn: Button,
+    pub circle_btn: Button,
+    pub line_btn: Button,
+    pub arrow_btn: Button,
+}
+
 /// Build the complete window layout (content only - menubar and toolbars are added separately)
 pub fn build_layout(
     app_state: AppState,
     _toolbar: ToolbarWidgets,
-) -> (GtkBox, CanvasView) {
+) -> (GtkBox, CanvasView, ToolPaletteButtons) {
     let main_container = GtkBox::new(Orientation::Vertical, 0);
 
     // Note: Menubar and toolbars are added in layout.rs
@@ -30,7 +42,7 @@ pub fn build_layout(
     panes_box.set_hexpand(true);
 
     // LEFT: Tool Palette
-    let tool_palette = build_tool_palette();
+    let (tool_palette, tool_buttons) = build_tool_palette();
     panes_box.append(&tool_palette);
 
     // CENTER: Canvas with overlays
@@ -48,11 +60,11 @@ pub fn build_layout(
     let status_bar = build_status_bar();
     main_container.append(&status_bar);
 
-    (main_container, canvas_view)
+    (main_container, canvas_view, tool_buttons)
 }
 
 /// Build the left tool palette
-fn build_tool_palette() -> GtkBox {
+fn build_tool_palette() -> (GtkBox, ToolPaletteButtons) {
     let palette = GtkBox::new(Orientation::Vertical, 6);
     palette.add_css_class("tool-palette");
     palette.set_width_request(180);  // Fixed width for tool palette
@@ -113,7 +125,17 @@ fn build_tool_palette() -> GtkBox {
     arrow_btn.set_halign(Align::Fill);
     palette.append(&arrow_btn);
 
-    palette
+    let tool_buttons = ToolPaletteButtons {
+        select_btn,
+        text_btn,
+        image_btn,
+        rect_btn,
+        circle_btn,
+        line_btn,
+        arrow_btn,
+    };
+
+    (palette, tool_buttons)
 }
 
 /// Build the center canvas section with page navigation

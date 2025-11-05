@@ -26,7 +26,7 @@ pub fn build_widgets(app: &Application, app_state: AppState) -> WindowComponents
     root.append(&toolbar_widgets.secondary_toolbar);
 
     // Build main layout using layout_v2
-    let (main_content, canvas_view) = layout_v2::build_layout(app_state.clone(), toolbar_widgets.clone());
+    let (main_content, canvas_view, tool_palette_buttons) = layout_v2::build_layout(app_state.clone(), toolbar_widgets.clone());
     root.append(&main_content);
 
     window.set_child(Some(&root));
@@ -44,5 +44,6 @@ pub fn build_widgets(app: &Application, app_state: AppState) -> WindowComponents
         property_panel,
         menu_bar,
         toolbar_widgets,
+        tool_palette_buttons,
     )
 }
