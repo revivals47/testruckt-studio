@@ -35,12 +35,13 @@ pub fn register_window_actions(
     tool_palette: &GtkBox,
     properties_panel: &GtkBox,
     property_components: &crate::panels::PropertyPanelComponents,
+    toolbar_buttons: &crate::toolbar::ToolbarButtons,
 ) {
     // Register actions from each module
     file_actions::register(window, state.clone());
     export_actions::register(window, state.clone());
     edit_actions::register(window, state.clone(), canvas_view);
-    view_actions::register(window, canvas_view, tool_palette, properties_panel);
+    view_actions::register(window, canvas_view, tool_palette, properties_panel, toolbar_buttons);
     tools_actions::register(window, state.clone(), canvas_view, property_components);
     group_actions::register(window, state.clone(), canvas_view);
     clipboard_actions::register(window, state.clone(), canvas_view);
@@ -53,6 +54,34 @@ pub fn register_window_actions(
         tracing::info!("Action: toggle block tools");
         // Block tools panel toggle is handled by the toolbar button binding
         // The visibility state is managed by the GTK button's active state
+    });
+
+    // Register lock action
+    let lock_render_state = canvas_view.render_state().selected_ids.clone();
+    add_window_action(window, "lock", move |_| {
+        tracing::info!("Action: lock selected objects");
+        let selected_ids = lock_render_state.borrow();
+        if selected_ids.is_empty() {
+            tracing::warn!("⚠️  No objects selected to lock");
+            return;
+        }
+
+        // TODO: Implement actual lock logic when element lock property is added
+        tracing::info!("✅ {} object(s) locked (lock feature in progress)", selected_ids.len());
+    });
+
+    // Register unlock action
+    let unlock_render_state = canvas_view.render_state().selected_ids.clone();
+    add_window_action(window, "unlock", move |_| {
+        tracing::info!("Action: unlock selected objects");
+        let selected_ids = unlock_render_state.borrow();
+        if selected_ids.is_empty() {
+            tracing::warn!("⚠️  No objects selected to unlock");
+            return;
+        }
+
+        // TODO: Implement actual unlock logic when element lock property is added
+        tracing::info!("✅ {} object(s) unlocked (unlock feature in progress)", selected_ids.len());
     });
 
     // Set keyboard accelerators

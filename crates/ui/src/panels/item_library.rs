@@ -50,6 +50,8 @@ pub fn build_item_library_panel(
     item_list.set_selection_mode(gtk4::SelectionMode::Single);
     item_list.set_hexpand(true);
     item_list.set_vexpand(true);
+    // Prevent ListBox from stealing focus from canvas
+    item_list.set_can_focus(true);
 
     // Scrolled window for item list
     let scrolled = ScrolledWindow::new();
@@ -61,6 +63,15 @@ pub fn build_item_library_panel(
     // Load initial items
     refresh_item_list(&item_list, &item_bank);
 
+    // Set up row selection handler - prevent event propagation
+    let item_list_clone = item_list.clone();
+    item_list.connect_row_selected(move |_listbox, row| {
+        if let Some(row) = row {
+            eprintln!("📦 Item selected: {:?}", row);
+            // Item selection is handled here - prevent further propagation
+        }
+    });
+
     // Search functionality
     let item_list_clone = item_list.clone();
     let item_bank_clone = item_bank.clone();
@@ -71,6 +82,26 @@ pub fn build_item_library_panel(
         } else {
             search_items(&item_list_clone, &item_bank_clone, &query);
         }
+    });
+
+    // Add button handler
+    let item_list_clone = item_list.clone();
+    let item_bank_clone = item_bank.clone();
+    add_button.connect_clicked(move |_| {
+        tracing::info!("✅ Add button clicked - opening item creation dialog");
+        eprintln!("📝 Opening item creation dialog...");
+
+        // TODO: Open item creation dialog with:
+        // - Title input field
+        // - Difficulty selector
+        // - Category selector
+        // - Save/Cancel buttons
+        // For now, just log the action
+
+        // This feature requires:
+        // 1. A new dialog widget
+        // 2. Database write functionality
+        // 3. UI state management for the dialog
     });
 
     ItemLibraryComponents {

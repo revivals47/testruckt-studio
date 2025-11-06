@@ -12,6 +12,9 @@ pub fn bind_events(components: &WindowComponents, _state: AppState) {
     // Bind tool palette buttons to tool switching
     bind_tool_selection(components);
 
+    // Monitor tool state changes and update UI buttons accordingly
+    setup_tool_monitor(components);
+
     components.window.set_focus_visible(true);
 }
 
@@ -42,6 +45,20 @@ fn bind_toolbar_buttons(components: &WindowComponents) {
     bind_toggle_button(&toolbar.rulers_visible_btn, window, "win.toggle-rulers");
     bind_toggle_button(&toolbar.item_library_btn, window, "win.toggle-item-library");
     bind_toggle_button(&toolbar.block_tools_btn, window, "win.toggle-block-tools");
+
+    // Zoom controls
+    bind_button(&toolbar.zoom_out_btn, window, "win.zoom-out");
+    bind_button(&toolbar.zoom_100_btn, window, "win.zoom-100");
+    bind_button(&toolbar.zoom_in_btn, window, "win.zoom-in");
+
+    // Object operations (Secondary toolbar)
+    bind_button(&toolbar.group_btn, window, "win.group");
+    bind_button(&toolbar.ungroup_btn, window, "win.ungroup");
+    bind_button(&toolbar.lock_btn, window, "win.lock");
+    bind_button(&toolbar.unlock_btn, window, "win.unlock");
+
+    // Snap toggles
+    bind_toggle_button(&toolbar.snap_to_guides_toggle, window, "win.toggle-snap-guides");
 
     // Popover toggles
     bind_toggle_button(&toolbar.ruler_menu_toggle, window, "win.toggle-rulers");
@@ -90,77 +107,183 @@ fn bind_tool_selection(components: &WindowComponents) {
     // Select tool button
     let state_select = render_state.clone();
     let drawing_area_select = drawing_area.clone();
-    tool_buttons.select_btn.connect_clicked(move |_| {
-        let mut tool_state = state_select.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Select;
-        tracing::info!("🔧 Tool switched to: Select");
-        drop(tool_state);
-        drawing_area_select.queue_draw();
-    });
-
-    // Rectangle tool button
-    let state_rect = render_state.clone();
-    let drawing_area_rect = drawing_area.clone();
-    tool_buttons.rect_btn.connect_clicked(move |_| {
-        let mut tool_state = state_rect.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Rectangle;
-        tracing::info!("🔧 Tool switched to: Rectangle");
-        drop(tool_state);
-        drawing_area_rect.queue_draw();
-    });
-
-    // Circle tool button
-    let state_circle = render_state.clone();
-    let drawing_area_circle = drawing_area.clone();
-    tool_buttons.circle_btn.connect_clicked(move |_| {
-        let mut tool_state = state_circle.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Circle;
-        tracing::info!("🔧 Tool switched to: Circle");
-        drop(tool_state);
-        drawing_area_circle.queue_draw();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.select_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.text_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_select.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Select;
+            tracing::info!("✅ Tool switched to: Select");
+            drop(tool_state);
+            drawing_area_select.queue_draw();
+        }
     });
 
     // Text tool button
     let state_text = render_state.clone();
     let drawing_area_text = drawing_area.clone();
-    tool_buttons.text_btn.connect_clicked(move |_| {
-        let mut tool_state = state_text.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Text;
-        tracing::info!("🔧 📝 Tool switched to: Text");
-        drop(tool_state);
-        drawing_area_text.queue_draw();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.text_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_text.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Text;
+            tracing::info!("✅ Tool switched to: 📝 Text");
+            drop(tool_state);
+            drawing_area_text.queue_draw();
+        }
+    });
+
+    // Rectangle tool button
+    let state_rect = render_state.clone();
+    let drawing_area_rect = drawing_area.clone();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.rect_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.text_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_rect.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Rectangle;
+            tracing::info!("✅ Tool switched to: Rectangle");
+            drop(tool_state);
+            drawing_area_rect.queue_draw();
+        }
+    });
+
+    // Circle tool button
+    let state_circle = render_state.clone();
+    let drawing_area_circle = drawing_area.clone();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.circle_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.text_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_circle.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Circle;
+            tracing::info!("✅ Tool switched to: Circle");
+            drop(tool_state);
+            drawing_area_circle.queue_draw();
+        }
     });
 
     // Line tool button
     let state_line = render_state.clone();
     let drawing_area_line = drawing_area.clone();
-    tool_buttons.line_btn.connect_clicked(move |_| {
-        let mut tool_state = state_line.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Line;
-        tracing::info!("🔧 Tool switched to: Line");
-        drop(tool_state);
-        drawing_area_line.queue_draw();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.line_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.text_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_line.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Line;
+            tracing::info!("✅ Tool switched to: Line");
+            drop(tool_state);
+            drawing_area_line.queue_draw();
+        }
     });
 
     // Arrow tool button
     let state_arrow = render_state.clone();
     let drawing_area_arrow = drawing_area.clone();
-    tool_buttons.arrow_btn.connect_clicked(move |_| {
-        let mut tool_state = state_arrow.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Arrow;
-        tracing::info!("🔧 Tool switched to: Arrow");
-        drop(tool_state);
-        drawing_area_arrow.queue_draw();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.arrow_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.text_btn.set_active(false);
+            all_buttons.image_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            let mut tool_state = state_arrow.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Arrow;
+            tracing::info!("✅ Tool switched to: Arrow");
+            drop(tool_state);
+            drawing_area_arrow.queue_draw();
+        }
     });
 
     // Image tool button
     let state_image = render_state.clone();
     let drawing_area_image = drawing_area.clone();
-    tool_buttons.image_btn.connect_clicked(move |_| {
-        let mut tool_state = state_image.tool_state.borrow_mut();
-        tool_state.current_tool = ToolMode::Image;
-        tracing::info!("🔧 Tool switched to: Image");
-        drop(tool_state);
-        drawing_area_image.queue_draw();
+    let all_buttons = tool_buttons.clone();
+    tool_buttons.image_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            all_buttons.select_btn.set_active(false);
+            all_buttons.text_btn.set_active(false);
+            all_buttons.rect_btn.set_active(false);
+            all_buttons.circle_btn.set_active(false);
+            all_buttons.line_btn.set_active(false);
+            all_buttons.arrow_btn.set_active(false);
+            let mut tool_state = state_image.tool_state.borrow_mut();
+            tool_state.current_tool = ToolMode::Image;
+            tracing::info!("✅ Tool switched to: Image");
+            drop(tool_state);
+            drawing_area_image.queue_draw();
+        }
+    });
+}
+
+/// Monitor tool state changes and update UI buttons accordingly
+fn setup_tool_monitor(components: &WindowComponents) {
+    use gtk4::glib;
+    use crate::canvas::tools::ToolMode;
+
+    let render_state = components.canvas_view.render_state().clone();
+    let tool_buttons = components.tool_palette_buttons.clone();
+    let mut last_tool = ToolMode::Select;
+
+    // Set up a periodic check every 100ms to detect tool changes
+    glib::source::timeout_add_local(std::time::Duration::from_millis(100), move || {
+        let current_tool = render_state.tool_state.borrow().current_tool;
+
+        // Only update UI if tool has changed
+        if current_tool != last_tool {
+            last_tool = current_tool;
+
+            // Deactivate all buttons first
+            tool_buttons.select_btn.set_active(false);
+            tool_buttons.text_btn.set_active(false);
+            tool_buttons.image_btn.set_active(false);
+            tool_buttons.rect_btn.set_active(false);
+            tool_buttons.circle_btn.set_active(false);
+            tool_buttons.line_btn.set_active(false);
+            tool_buttons.arrow_btn.set_active(false);
+
+            // Activate the correct button for the current tool
+            match current_tool {
+                ToolMode::Select => tool_buttons.select_btn.set_active(true),
+                ToolMode::Text => tool_buttons.text_btn.set_active(true),
+                ToolMode::Image => tool_buttons.image_btn.set_active(true),
+                ToolMode::Rectangle => tool_buttons.rect_btn.set_active(true),
+                ToolMode::Circle => tool_buttons.circle_btn.set_active(true),
+                ToolMode::Line => tool_buttons.line_btn.set_active(true),
+                ToolMode::Arrow => tool_buttons.arrow_btn.set_active(true),
+                ToolMode::Pan => {}, // Pan tool doesn't have a button in the palette
+            }
+        }
+
+        glib::ControlFlow::Continue
     });
 }

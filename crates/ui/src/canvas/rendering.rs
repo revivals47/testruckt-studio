@@ -1,77 +1,17 @@
 //! Canvas rendering pipeline - Cairo drawing system
 //!
 //! This module provides the complete drawing implementation for the canvas,
-//! including rulers, grid, guides, and document objects.
+//! including document objects (shapes, text, images) and UI overlays.
+//!
+//! Grid, ruler, and guide rendering has been moved to the `grid_rendering` module.
 
 use gtk4::cairo::{self, Context};
 use gtk4::pango;
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 
-/// Configuration for ruler rendering
-#[derive(Clone, Debug)]
-pub struct RulerConfig {
-    pub size: f64,
-    pub bg_color: Color,
-    pub tick_color: Color,
-    pub text_color: Color,
-}
-
-impl Default for RulerConfig {
-    fn default() -> Self {
-        Self {
-            size: 20.0,
-            bg_color: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.95,
-                a: 1.0,
-            },
-            tick_color: Color {
-                r: 0.4,
-                g: 0.4,
-                b: 0.4,
-                a: 1.0,
-            },
-            text_color: Color {
-                r: 0.3,
-                g: 0.3,
-                b: 0.3,
-                a: 1.0,
-            },
-        }
-    }
-}
-
-/// Guide line orientation
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum GuideOrientation {
-    Horizontal,
-    Vertical,
-}
-
-/// A single guide line
-#[derive(Clone, Debug)]
-pub struct Guide {
-    pub orientation: GuideOrientation,
-    pub position: f32,
-    pub color: Color,
-}
-
-impl Guide {
-    pub fn new(orientation: GuideOrientation, position: f32) -> Self {
-        Self {
-            orientation,
-            position,
-            color: Color {
-                r: 0.2,
-                g: 0.6,
-                b: 1.0,
-                a: 0.6,
-            },
-        }
-    }
-}
+// Re-export types from grid_rendering for backward compatibility
+pub use super::grid_rendering::{Guide, GuideOrientation, RulerConfig};
 
 /// Canvas rendering state
 #[derive(Clone, Debug)]
@@ -165,160 +105,14 @@ pub fn draw_background(
 
     // Draw rulers if enabled
     if config.size > 0.0 {
-        draw_rulers(ctx, width, height, config)?;
+        super::grid_rendering::draw_rulers(ctx, width, height, config)?;
     }
 
     Ok(())
 }
 
-/// Draw horizontal and vertical rulers
-fn draw_rulers(
-    ctx: &Context,
-    canvas_width: f64,
-    canvas_height: f64,
-    config: &RulerConfig,
-) -> Result<(), cairo::Error> {
-    let size = config.size;
-
-    // Horizontal ruler background
-    ctx.set_source_rgb(
-        config.bg_color.r as f64,
-        config.bg_color.g as f64,
-        config.bg_color.b as f64,
-    );
-    ctx.rectangle(0.0, 0.0, canvas_width, size);
-    ctx.fill()?;
-
-    // Vertical ruler background
-    ctx.rectangle(0.0, 0.0, size, canvas_height);
-    ctx.fill()?;
-
-    // Ruler ticks and text
-    ctx.set_source_rgb(
-        config.tick_color.r as f64,
-        config.tick_color.g as f64,
-        config.tick_color.b as f64,
-    );
-    ctx.set_line_width(1.0);
-    ctx.set_font_size(9.0);
-
-    // Horizontal ruler markings
-    let mut x = 0.0;
-    while x <= canvas_width - size {
-        let screen_x = x + size;
-        let tick_height = if (x as i32) % 100 == 0 {
-            10.0
-        } else if (x as i32) % 50 == 0 {
-            7.0
-        } else if (x as i32) % 10 == 0 {
-            5.0
-        } else {
-            0.0
-        };
-
-        if tick_height > 0.0 {
-            ctx.move_to(screen_x, size - tick_height);
-            ctx.line_to(screen_x, size);
-            ctx.stroke()?;
-
-            // Draw measurement text
-            if (x as i32) % 100 == 0 && x > 0.0 {
-                ctx.set_source_rgb(
-                    config.text_color.r as f64,
-                    config.text_color.g as f64,
-                    config.text_color.b as f64,
-                );
-                let text = format!("{}", x as i32);
-                if let Ok(extents) = ctx.text_extents(&text) {
-                    ctx.move_to(screen_x - extents.width() / 2.0, 12.0);
-                    ctx.show_text(&text)?;
-                }
-                ctx.set_source_rgb(
-                    config.tick_color.r as f64,
-                    config.tick_color.g as f64,
-                    config.tick_color.b as f64,
-                );
-            }
-        }
-        x += 10.0;
-    }
-
-    // Vertical ruler markings
-    let mut y = 0.0;
-    while y <= canvas_height - size {
-        let screen_y = y + size;
-        let tick_width = if (y as i32) % 100 == 0 {
-            10.0
-        } else if (y as i32) % 50 == 0 {
-            7.0
-        } else if (y as i32) % 10 == 0 {
-            5.0
-        } else {
-            0.0
-        };
-
-        if tick_width > 0.0 {
-            ctx.move_to(size - tick_width, screen_y);
-            ctx.line_to(size, screen_y);
-            ctx.stroke()?;
-
-            // Draw measurement text
-            if (y as i32) % 100 == 0 && y > 0.0 {
-                ctx.set_source_rgb(
-                    config.text_color.r as f64,
-                    config.text_color.g as f64,
-                    config.text_color.b as f64,
-                );
-                let text = format!("{}", y as i32);
-                ctx.save()?;
-                ctx.move_to(6.0, screen_y + 3.0);
-                ctx.show_text(&text)?;
-                ctx.restore()?;
-                ctx.set_source_rgb(
-                    config.tick_color.r as f64,
-                    config.tick_color.g as f64,
-                    config.tick_color.b as f64,
-                );
-            }
-        }
-        y += 10.0;
-    }
-
-    // Translate context past rulers for content drawing
-    ctx.translate(size, size);
-
-    Ok(())
-}
-
-/// Draw the grid pattern
-pub fn draw_grid(
-    ctx: &Context,
-    page_size: &Size,
-) -> Result<(), cairo::Error> {
-    ctx.set_source_rgba(0.9, 0.9, 0.9, 0.5);
-    ctx.set_line_width(0.5);
-
-    let grid_spacing = 10.0;
-
-    // Vertical grid lines
-    let mut x = grid_spacing;
-    while x < page_size.width as f64 {
-        ctx.move_to(x, 0.0);
-        ctx.line_to(x, page_size.height as f64);
-        x += grid_spacing;
-    }
-
-    // Horizontal grid lines
-    let mut y = grid_spacing;
-    while y < page_size.height as f64 {
-        ctx.move_to(0.0, y);
-        ctx.line_to(page_size.width as f64, y);
-        y += grid_spacing;
-    }
-
-    ctx.stroke()?;
-    Ok(())
-}
+// Re-export draw_grid for backward compatibility
+pub use super::grid_rendering::draw_grid;
 
 /// Draw page border
 pub fn draw_page_border(
@@ -623,207 +417,13 @@ pub fn draw_image_placeholder(
     Ok(())
 }
 
-/// Draw a rectangle shape
-pub fn draw_rectangle(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-    fill: &Option<Color>,
-) -> Result<(), cairo::Error> {
-    if let Some(fill_color) = fill {
-        ctx.set_source_rgb(fill_color.r as f64, fill_color.g as f64, fill_color.b as f64);
-        ctx.rectangle(
-            bounds.origin.x as f64,
-            bounds.origin.y as f64,
-            bounds.size.width as f64,
-            bounds.size.height as f64
-        );
-        ctx.fill()?;
-    }
+// Re-export shape drawing functions for backward compatibility
+pub use super::shapes_rendering::{
+    draw_rectangle, draw_ellipse, draw_line, draw_arrow, draw_polygon
+};
 
-    if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-        ctx.set_line_width(2.0);
-        ctx.rectangle(
-            bounds.origin.x as f64,
-            bounds.origin.y as f64,
-            bounds.size.width as f64,
-            bounds.size.height as f64
-        );
-        ctx.stroke()?;
-    }
-
-    Ok(())
-}
-
-/// Draw a circle/ellipse shape
-pub fn draw_ellipse(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-    fill: &Option<Color>,
-) -> Result<(), cairo::Error> {
-    let cx = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
-    let cy = bounds.origin.y as f64 + bounds.size.height as f64 / 2.0;
-    let rx = bounds.size.width as f64 / 2.0;
-    let ry = bounds.size.height as f64 / 2.0;
-
-    // Draw ellipse path using arc approximation
-    ctx.save()?;
-    ctx.translate(cx, cy);
-    ctx.scale(rx, ry);
-    ctx.arc(0.0, 0.0, 1.0, 0.0, 2.0 * std::f64::consts::PI);
-    ctx.restore()?;
-
-    if let Some(fill_color) = fill {
-        ctx.set_source_rgb(fill_color.r as f64, fill_color.g as f64, fill_color.b as f64);
-        ctx.fill_preserve()?;
-    }
-
-    if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-        ctx.set_line_width(2.0);
-        ctx.stroke()?;
-    }
-
-    Ok(())
-}
-
-/// Draw a line shape
-pub fn draw_line(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-) -> Result<(), cairo::Error> {
-    if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-        ctx.set_line_width(2.0);
-        ctx.move_to(bounds.origin.x as f64, bounds.origin.y as f64);
-        ctx.line_to(
-            bounds.origin.x as f64 + bounds.size.width as f64,
-            bounds.origin.y as f64 + bounds.size.height as f64
-        );
-        ctx.stroke()?;
-    }
-
-    Ok(())
-}
-
-/// Draw an arrow shape
-pub fn draw_arrow(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-) -> Result<(), cairo::Error> {
-    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
-
-    let x1 = bounds.origin.x as f64;
-    let y1 = bounds.origin.y as f64;
-    let x2 = bounds.origin.x as f64 + bounds.size.width as f64;
-    let y2 = bounds.origin.y as f64 + bounds.size.height as f64;
-
-    // Draw the line
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-    ctx.set_line_width(2.0);
-    ctx.move_to(x1, y1);
-    ctx.line_to(x2, y2);
-    ctx.stroke()?;
-
-    // Draw the arrowhead
-    let arrow_size = 12.0;
-    let angle = (y2 - y1).atan2(x2 - x1);
-
-    // Calculate arrowhead points
-    let point1_x = x2 - arrow_size * angle.cos();
-    let point1_y = y2 - arrow_size * angle.sin();
-
-    let arrow_angle = std::f64::consts::PI / 6.0; // 30 degrees
-    let p1x = point1_x - arrow_size * (angle - arrow_angle).cos();
-    let p1y = point1_y - arrow_size * (angle - arrow_angle).sin();
-    let p2x = point1_x - arrow_size * (angle + arrow_angle).cos();
-    let p2y = point1_y - arrow_size * (angle + arrow_angle).sin();
-
-    // Draw arrowhead triangle
-    ctx.move_to(x2, y2);
-    ctx.line_to(p1x, p1y);
-    ctx.line_to(p2x, p2y);
-    ctx.close_path();
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-    ctx.fill()?;
-
-    Ok(())
-}
-
-/// Draw a polygon shape (pentagon by default)
-pub fn draw_polygon(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-) -> Result<(), cairo::Error> {
-    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
-
-    let center_x = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
-    let center_y = bounds.origin.y as f64 + bounds.size.height as f64 / 2.0;
-    let radius = (bounds.size.width as f64 / 2.0).min(bounds.size.height as f64 / 2.0);
-
-    // Draw a pentagon (5-sided polygon)
-    const SIDES: usize = 5;
-    let mut first = true;
-
-    for i in 0..SIDES {
-        let angle = (2.0 * std::f64::consts::PI * i as f64 / SIDES as f64) - std::f64::consts::PI / 2.0;
-        let x = center_x + radius * angle.cos();
-        let y = center_y + radius * angle.sin();
-
-        if first {
-            ctx.move_to(x, y);
-            first = false;
-        } else {
-            ctx.line_to(x, y);
-        }
-    }
-
-    ctx.close_path();
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
-    ctx.set_line_width(2.0);
-    ctx.stroke()?;
-
-    Ok(())
-}
-
-/// Draw guide lines on the canvas
-pub fn draw_guides(
-    ctx: &Context,
-    guides: &[Guide],
-    page_size: &Size,
-) -> Result<(), cairo::Error> {
-    for guide in guides {
-        ctx.set_source_rgba(
-            guide.color.r as f64,
-            guide.color.g as f64,
-            guide.color.b as f64,
-            guide.color.a as f64,
-        );
-        ctx.set_line_width(1.0);
-
-        match guide.orientation {
-            GuideOrientation::Vertical => {
-                // Vertical guide line
-                let x = guide.position as f64;
-                ctx.move_to(x, 0.0);
-                ctx.line_to(x, page_size.height as f64);
-            }
-            GuideOrientation::Horizontal => {
-                // Horizontal guide line
-                let y = guide.position as f64;
-                ctx.move_to(0.0, y);
-                ctx.line_to(page_size.width as f64, y);
-            }
-        }
-        ctx.stroke()?;
-    }
-    Ok(())
-}
+// Re-export draw_guides for backward compatibility
+pub use super::grid_rendering::draw_guides;
 
 /// Find the closest guide to a position
 pub fn snap_to_guide(

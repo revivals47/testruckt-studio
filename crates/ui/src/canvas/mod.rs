@@ -1,6 +1,8 @@
 pub mod input;
 pub mod overlays;
 pub mod rendering;
+pub mod grid_rendering;
+pub mod shapes_rendering;
 pub mod mouse;
 pub mod keyboard;
 pub mod selection;
@@ -14,7 +16,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::app::AppState;
-use rendering::{RenderConfig, RulerConfig};
+use rendering::RenderConfig;
+use grid_rendering::RulerConfig;
 use dirty_region::DirtyRegionTracker;
 
 /// Render state tracking
@@ -56,21 +59,31 @@ impl CanvasView {
             .build();
         drawing_area.set_hexpand(true);
         drawing_area.set_vexpand(true);
+        drawing_area.set_can_target(true);  // Enable mouse events - CRITICAL for GTK4
+        drawing_area.set_focusable(true);   // Enable keyboard focus
 
+        // Create overlay with drawing area (rulers will be drawn on canvas, not as overlay widgets)
         let overlay = Overlay::new();
         overlay.set_child(Some(&drawing_area));
-        overlays::add_ruler_overlay(&overlay);
+        // NOTE: Removed add_ruler_overlay() - rulers will be drawn directly on canvas instead
+        overlay.set_can_target(true);  // Ensure overlay also targets events
+        overlay.set_hexpand(true);
+        overlay.set_vexpand(true);
 
+        // TEST: Use overlay directly instead of ScrolledWindow to isolate event issue
+        // Wrap in ScrolledWindow for panning/zooming
         let container = ScrolledWindow::new();
         container.set_child(Some(&overlay));
         container.set_hexpand(true);
         container.set_vexpand(true);
+        container.set_can_target(true);  // Ensure ScrolledWindow also targets events
 
         let render_state = CanvasRenderState::default();
 
         // Setup drawing function
         Self::setup_draw_func(&drawing_area, &app_state, &render_state);
 
+        // Wire up all event handlers - must happen AFTER container setup
         input::wire_pointer_events(&drawing_area, &render_state, &app_state);
 
         Self {
@@ -139,17 +152,31 @@ impl CanvasView {
 
         // Draw grid if enabled
         if config.show_grid {
-            rendering::draw_grid(ctx, &page_size)?;
+            grid_rendering::draw_grid(ctx, &page_size)?;
         }
 
         // Draw guides if enabled
         if config.show_guides && !config.guides.is_empty() {
-            rendering::draw_guides(ctx, &config.guides, &page_size)?;
+            grid_rendering::draw_guides(ctx, &config.guides, &page_size)?;
         }
 
         // Draw page elements
         let selected = render_state.selected_ids.borrow();
         Self::draw_elements(ctx, page, &selected, render_state)?;
+        drop(selected);
+
+        // Draw drag preview box (blue outline while dragging)
+        if let Some(drag_rect) = render_state.drag_box.borrow().as_ref() {
+            ctx.set_source_rgb(0.05, 0.49, 0.86);  // Blue color
+            ctx.set_line_width(2.0 / config.zoom);  // Account for zoom
+            ctx.rectangle(
+                drag_rect.origin.x as f64,
+                drag_rect.origin.y as f64,
+                drag_rect.size.width as f64,
+                drag_rect.size.height as f64,
+            );
+            ctx.stroke()?;
+        }
 
         Ok(())
     }

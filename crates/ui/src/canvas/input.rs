@@ -1,5 +1,6 @@
 use gtk4::{prelude::*, DrawingArea, EventControllerMotion, GestureClick, GestureDrag, EventControllerKey};
 use gtk4::gdk;
+use gtk4::glib;
 use crate::canvas::{CanvasRenderState, tools::{ToolMode, ShapeFactory}, selection::HitTest, mouse::{test_resize_handle, calculate_resize_bounds, CanvasMousePos, ResizeHandle}, rendering::{snap_rect_to_grid, snap_to_guide, GuideOrientation}};
 use crate::app::AppState;
 use testruct_core::layout::{Point, Rect, Size};
@@ -227,9 +228,10 @@ pub fn wire_pointer_events(
                         return gtk4::glib::Propagation::Stop;
                     }
                     _ => {
-                        // Try to handle as text input
+                        // Try to handle as text input (support both ASCII and Unicode characters)
                         if let Some(ch) = keyval.to_unicode() {
-                            if ch.is_ascii() && !ch.is_control() {
+                            // Accept any printable character (not just ASCII)
+                            if !ch.is_control() {
                                 app_state_kbd.with_active_document(|doc| {
                                     if let Some(page) = doc.pages.first_mut() {
                                         for element in &mut page.elements {
@@ -380,6 +382,8 @@ pub fn wire_pointer_events(
     // Click gesture for object selection
     let click_gesture = GestureClick::new();
     click_gesture.set_button(gdk::BUTTON_PRIMARY);
+    click_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
+
     let render_state_click = render_state.clone();
     let app_state_click = _app_state.clone();
     let drawing_area_click = drawing_area.clone();
@@ -389,8 +393,6 @@ pub fn wire_pointer_events(
         let tool_state = state.tool_state.borrow();
         let current_tool = tool_state.current_tool;
         drop(tool_state);
-
-        tracing::debug!("canvas click at ({}, {}), tool: {:?}, n_press: {}", x, y, current_tool, n_press);
 
         if current_tool == ToolMode::Select {
             // Get modifier key state
@@ -402,7 +404,9 @@ pub fn wire_pointer_events(
             let ctrl_pressed = modifier_state.contains(gdk::ModifierType::CONTROL_MASK);
 
             // Check for double-click (n_press == 2) for text editing
+            eprintln!("🖱️  Click: n_press={}, tool=Select", n_press);
             if n_press == 2 {
+                eprintln!("🔍 Double-click detected at ({:.0}, {:.0})", x, y);
                 // Try to find a text element at this position
                 if let Some(document) = app_state_click.active_document() {
                     if let Some(page) = document.pages.first() {
@@ -582,6 +586,8 @@ pub fn wire_pointer_events(
     // Drag gesture for shape creation and object movement
     let drag_gesture = GestureDrag::new();
     drag_gesture.set_button(gdk::BUTTON_PRIMARY);
+    drag_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
+
     let render_state_drag = render_state.clone();
     let drawing_area_drag = drawing_area.clone();
 
@@ -590,8 +596,6 @@ pub fn wire_pointer_events(
         let tool_state = state.tool_state.borrow();
         let current_tool = tool_state.current_tool;
         drop(tool_state);
-
-        tracing::info!("🎬 drag start at ({:.0}, {:.0}), tool: {:?}", x, y, current_tool);
 
         // Store drag start position
         let mut tool_state = state.tool_state.borrow_mut();
@@ -642,19 +646,31 @@ pub fn wire_pointer_events(
 
     drag_gesture.connect_drag_end(move |_gesture, offset_x, offset_y| {
         let state = render_state_end.clone();
-        let tool_state = state.tool_state.borrow();
 
-        if let Some((start_x, start_y)) = tool_state.drag_start {
+        // Extract all values we need from tool_state, then drop the borrow immediately
+        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle, resize_original_bounds) = {
+            let tool_state = state.tool_state.borrow();
+            if let Some((start_x, start_y)) = tool_state.drag_start {
+                (
+                    start_x,
+                    start_y,
+                    tool_state.current_tool,
+                    tool_state.resizing_object_id.is_some(),
+                    tool_state.resizing_object_id,
+                    tool_state.resize_handle,
+                    tool_state.resize_original_bounds,
+                )
+            } else {
+                return;
+            }
+        }; // tool_state borrow is dropped here
+
+        {
             let current_x = start_x + offset_x;
             let current_y = start_y + offset_y;
-            let current_tool = tool_state.current_tool;
-            let is_resizing = tool_state.resizing_object_id.is_some();
-            let resizing_object_id = tool_state.resizing_object_id;
-            let resize_handle = tool_state.resize_handle;
-            let resize_original_bounds = tool_state.resize_original_bounds;
 
-            tracing::info!(
-                "🎯 drag end: tool={:?}, offset=({:.1}, {:.1}), from ({}, {}) to ({}, {})",
+            eprintln!(
+                "🎯 drag end: tool={:?}, offset=({:.1}, {:.1}), from ({:.0}, {:.0}) to ({:.0}, {:.0})",
                 current_tool, offset_x, offset_y, start_x, start_y, current_x, current_y
             );
 
@@ -845,22 +861,31 @@ pub fn wire_pointer_events(
                     tracing::warn!("❌ Failed to add element: {}", e);
                 } else {
                     tracing::info!("✅ {} element added to document", current_tool.name());
+
+                    // Auto-switch back to Select tool after creating an element
+                    let mut tool_state_auto = state.tool_state.borrow_mut();
+                    tool_state_auto.current_tool = ToolMode::Select;
+                    tracing::info!("🔄 Tool auto-switched to Select");
+                    drop(tool_state_auto);
+
+                    // Trigger redraw to update UI
+                    drawing_area_end.queue_draw();
                 }
             } else {
                 tracing::debug!("⚠️  Drag ignored: tool={:?}, offset=({:.1}, {:.1}), threshold=5.0px",
                     current_tool, offset_x, offset_y);
             }
-        }
+        } // End of scope block
 
-        // Clear drag state
-        drop(tool_state);
+        // Clear drag state (now safe - all borrows from above are dropped)
         let mut tool_state = state.tool_state.borrow_mut();
         tool_state.drag_start = None;
         tool_state.resizing_object_id = None;
         tool_state.resize_handle = None;
         tool_state.resize_original_bounds = None;
-        *state.drag_box.borrow_mut() = None;
+        drop(tool_state);
 
+        *state.drag_box.borrow_mut() = None;
         drawing_area_end.queue_draw();
     });
 

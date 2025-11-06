@@ -389,7 +389,7 @@ impl ToolbarBuilder {
         group_btn.set_tooltip_text(Some("グループ化 (Alt+G)"));
         ops_box.append(&group_btn);
 
-        let ungroup_btn = Button::with_label("解除");
+        let ungroup_btn = Button::with_label("グループ解除");
         ungroup_btn.add_css_class("flat");
         ungroup_btn.set_tooltip_text(Some("グループ解除"));
         ops_box.append(&ungroup_btn);
@@ -399,7 +399,7 @@ impl ToolbarBuilder {
         lock_btn.set_tooltip_text(Some("選択オブジェクトをロック"));
         ops_box.append(&lock_btn);
 
-        let unlock_btn = Button::with_label("解除");
+        let unlock_btn = Button::with_label("ロック解除");
         unlock_btn.add_css_class("flat");
         unlock_btn.set_tooltip_text(Some("ロック解除"));
         ops_box.append(&unlock_btn);

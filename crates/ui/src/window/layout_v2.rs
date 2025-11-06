@@ -8,7 +8,7 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator, Notebook,
+    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator, Notebook, ToggleButton,
 };
 use crate::app::AppState;
 use crate::canvas::CanvasView;
@@ -17,13 +17,13 @@ use crate::toolbar::ToolbarWidgets;
 /// Tool palette button references
 #[derive(Clone)]
 pub struct ToolPaletteButtons {
-    pub select_btn: Button,
-    pub text_btn: Button,
-    pub image_btn: Button,
-    pub rect_btn: Button,
-    pub circle_btn: Button,
-    pub line_btn: Button,
-    pub arrow_btn: Button,
+    pub select_btn: ToggleButton,
+    pub text_btn: ToggleButton,
+    pub image_btn: ToggleButton,
+    pub rect_btn: ToggleButton,
+    pub circle_btn: ToggleButton,
+    pub line_btn: ToggleButton,
+    pub arrow_btn: ToggleButton,
 }
 
 /// Build the complete window layout (content only - menubar and toolbars are added separately)
@@ -79,20 +79,21 @@ fn build_tool_palette() -> (GtkBox, ToolPaletteButtons) {
     tools_heading.set_halign(Align::Start);
     palette.append(&tools_heading);
 
-    let select_btn = Button::with_label("選択");
-    select_btn.add_css_class("flat");
+    let select_btn = ToggleButton::with_label("選択");
+    select_btn.add_css_class("tool-button");
     select_btn.set_halign(Align::Fill);
     select_btn.set_tooltip_text(Some("選択ツール (V)"));
+    select_btn.set_active(true); // Select tool is active by default
     palette.append(&select_btn);
 
-    let text_btn = Button::with_label("テキスト");
-    text_btn.add_css_class("flat");
+    let text_btn = ToggleButton::with_label("テキスト");
+    text_btn.add_css_class("tool-button");
     text_btn.set_halign(Align::Fill);
     text_btn.set_tooltip_text(Some("テキストツール (T)"));
     palette.append(&text_btn);
 
-    let image_btn = Button::with_label("画像");
-    image_btn.add_css_class("flat");
+    let image_btn = ToggleButton::with_label("画像");
+    image_btn.add_css_class("tool-button");
     image_btn.set_halign(Align::Fill);
     image_btn.set_tooltip_text(Some("画像ツール (I)"));
     palette.append(&image_btn);
@@ -105,23 +106,23 @@ fn build_tool_palette() -> (GtkBox, ToolPaletteButtons) {
     shapes_heading.set_halign(Align::Start);
     palette.append(&shapes_heading);
 
-    let rect_btn = Button::with_label("長方形");
-    rect_btn.add_css_class("flat");
+    let rect_btn = ToggleButton::with_label("長方形");
+    rect_btn.add_css_class("tool-button");
     rect_btn.set_halign(Align::Fill);
     palette.append(&rect_btn);
 
-    let circle_btn = Button::with_label("円");
-    circle_btn.add_css_class("flat");
+    let circle_btn = ToggleButton::with_label("円");
+    circle_btn.add_css_class("tool-button");
     circle_btn.set_halign(Align::Fill);
     palette.append(&circle_btn);
 
-    let line_btn = Button::with_label("直線");
-    line_btn.add_css_class("flat");
+    let line_btn = ToggleButton::with_label("直線");
+    line_btn.add_css_class("tool-button");
     line_btn.set_halign(Align::Fill);
     palette.append(&line_btn);
 
-    let arrow_btn = Button::with_label("矢印");
-    arrow_btn.add_css_class("flat");
+    let arrow_btn = ToggleButton::with_label("矢印");
+    arrow_btn.add_css_class("tool-button");
     arrow_btn.set_halign(Align::Fill);
     palette.append(&arrow_btn);
 
