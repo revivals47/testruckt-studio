@@ -10,9 +10,12 @@ use gtk4::{
 };
 
 /// UI components created during property panel setup
+#[derive(Clone)]
 pub struct PropertyPanelComponents {
     pub scrolled_window: ScrolledWindow,
     pub container: GtkBox,
+    pub text_content_buffer: gtk4::TextBuffer,
+    pub text_content_view: gtk4::TextView,
     pub font_family_combo: DropDown,
     pub font_size_spin: SpinButton,
     pub line_height_scale: Scale,
@@ -66,6 +69,9 @@ fn build_property_panel_components() -> PropertyPanelComponents {
     // Title section
     build_title_section(&container);
 
+    // Text content editing section
+    let (text_content_buffer, text_content_view) = build_text_content_section(&container);
+
     // Typography section
     let (font_family_combo, font_size_spin, line_height_scale, text_align_combo) =
         build_typography_section(&container);
@@ -97,6 +103,8 @@ fn build_property_panel_components() -> PropertyPanelComponents {
     PropertyPanelComponents {
         scrolled_window,
         container,
+        text_content_buffer,
+        text_content_view,
         font_family_combo,
         font_size_spin,
         line_height_scale,
@@ -527,4 +535,38 @@ fn build_shape_styling_section(container: &GtkBox) -> (Button, Button, SpinButto
     container.append(&shape_section);
 
     (fill_color_button, stroke_color_button, stroke_width_spin)
+}
+
+/// Build text content editing section
+fn build_text_content_section(container: &GtkBox) -> (gtk4::TextBuffer, gtk4::TextView) {
+    // Header
+    let content_header = GtkBox::new(Orientation::Horizontal, 8);
+    content_header.set_margin_start(12);
+    content_header.set_margin_top(12);
+
+    let content_icon = Label::new(Some("📝"));
+    let content_label = Label::new(Some("テキストコンテンツ"));
+    content_label.set_hexpand(true);
+    content_label.set_halign(gtk4::Align::Start);
+
+    content_header.append(&content_icon);
+    content_header.append(&content_label);
+    container.append(&content_header);
+
+    // Text editor section
+    let content_section = GtkBox::new(Orientation::Vertical, 8);
+    content_section.set_margin_start(12);
+    content_section.set_margin_end(12);
+    content_section.set_margin_bottom(8);
+
+    // Create text buffer and view for editing text content
+    let text_buffer = gtk4::TextBuffer::new(None);
+    let text_view = gtk4::TextView::with_buffer(&text_buffer);
+    text_view.set_height_request(80);
+    text_view.set_wrap_mode(gtk4::WrapMode::WordChar);
+
+    content_section.append(&text_view);
+    container.append(&content_section);
+
+    (text_buffer, text_view)
 }

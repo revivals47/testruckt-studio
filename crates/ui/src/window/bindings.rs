@@ -2,7 +2,7 @@ use super::WindowComponents;
 use crate::app::AppState;
 use gtk4::prelude::*;
 
-pub fn bind_events(components: &WindowComponents, _state: AppState) {
+pub fn bind_events(components: &WindowComponents, state: AppState) {
     // CanvasView is already configured with event handlers and draw function
     // during CanvasView::new() in layout::build_widgets()
 
@@ -14,6 +14,9 @@ pub fn bind_events(components: &WindowComponents, _state: AppState) {
 
     // Monitor tool state changes and update UI buttons accordingly
     setup_tool_monitor(components);
+
+    // Monitor selection changes to update property panel
+    setup_selection_monitor(components, state);
 
     components.window.set_focus_visible(true);
 }
@@ -282,6 +285,31 @@ fn setup_tool_monitor(components: &WindowComponents) {
                 ToolMode::Arrow => tool_buttons.arrow_btn.set_active(true),
                 ToolMode::Pan => {}, // Pan tool doesn't have a button in the palette
             }
+        }
+
+        glib::ControlFlow::Continue
+    });
+}
+
+/// Monitor selection changes and update property panel accordingly
+fn setup_selection_monitor(components: &WindowComponents, app_state: AppState) {
+    use gtk4::glib;
+
+    let render_state = components.canvas_view.render_state().clone();
+    let property_components = components.property_components.clone();
+    let mut last_selection: Vec<uuid::Uuid> = Vec::new();
+
+    // Set up a periodic check every 50ms to detect selection changes
+    glib::source::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        let current_selection = render_state.selected_ids.borrow().clone();
+
+        // Only update property panel if selection has changed
+        if current_selection != last_selection {
+            last_selection = current_selection.clone();
+            tracing::debug!("✅ Selection changed, updating property panel");
+
+            // Update the property panel text buffer with the selected element's content
+            crate::panels::update_property_panel_on_selection(&property_components, &app_state, &current_selection);
         }
 
         glib::ControlFlow::Continue
