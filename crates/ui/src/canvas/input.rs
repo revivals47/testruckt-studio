@@ -227,6 +227,27 @@ pub fn wire_pointer_events(
                         tracing::debug!("Cursor moved to end");
                         return gtk4::glib::Propagation::Stop;
                     }
+                    gtk4::gdk::Key::Return => {
+                        // Insert newline character for multiline support
+                        app_state_kbd.with_active_document(|doc| {
+                            if let Some(page) = doc.pages.first_mut() {
+                                for element in &mut page.elements {
+                                    if let DocumentElement::Text(text) = element {
+                                        if text.id == text_id {
+                                            text.content.insert(cursor_pos, '\n');
+                                            cursor_pos += 1;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        let mut tool_state = render_state_kbd.tool_state.borrow_mut();
+                        tool_state.editing_cursor_pos = cursor_pos;
+                        drop(tool_state);
+                        drawing_area_keyboard.queue_draw();
+                        tracing::info!("✅ Inserted newline at position {}", cursor_pos - 1);
+                        return gtk4::glib::Propagation::Stop;
+                    }
                     _ => {
                         // Try to handle as text input (support both ASCII and Unicode characters)
                         if let Some(ch) = keyval.to_unicode() {

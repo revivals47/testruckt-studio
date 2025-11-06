@@ -290,7 +290,7 @@ pub fn draw_text_element(
 pub fn draw_text_cursor(
     ctx: &Context,
     bounds: &Rect,
-    _text: &str,
+    text: &str,
     cursor_pos: usize,
     style: &testruct_core::typography::TextStyle,
 ) -> Result<(), cairo::Error> {
@@ -299,17 +299,54 @@ pub fn draw_text_cursor(
     let x_offset = bounds.origin.x as f64 + TEXT_PADDING;
     let y_offset = bounds.origin.y as f64 + TEXT_PADDING;
 
-    // Estimate cursor x position based on font size and character count
-    // Average character width is approximately 60% of font size for monospace
-    // and ~40-50% for proportional fonts. We use an approximation here.
-    let char_width = (style.font_size as f64) * 0.5;
-    let cursor_x = x_offset + (cursor_pos as f64 * char_width);
+    // Create Pango layout to get accurate text metrics
+    let layout = pangocairo::functions::create_layout(ctx);
+
+    // Calculate cursor position by measuring text up to cursor position
+    let text_before_cursor = text.chars().take(cursor_pos).collect::<String>();
+
+    // Set font with styling
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family(&style.font_family);
+    font_desc.set_size((style.font_size * pango::SCALE as f32) as i32);
+
+    // Apply font weight
+    let pango_weight = match style.weight {
+        testruct_core::typography::FontWeight::Thin => pango::Weight::Thin,
+        testruct_core::typography::FontWeight::Light => pango::Weight::Light,
+        testruct_core::typography::FontWeight::Regular => pango::Weight::Normal,
+        testruct_core::typography::FontWeight::Medium => pango::Weight::Medium,
+        testruct_core::typography::FontWeight::Bold => pango::Weight::Bold,
+        testruct_core::typography::FontWeight::Black => pango::Weight::Ultrabold,
+    };
+    font_desc.set_weight(pango_weight);
+
+    // Apply italic style
+    if style.italic {
+        font_desc.set_style(pango::Style::Italic);
+    }
+
+    layout.set_font_description(Some(&font_desc));
+
+    // Set width constraint to match text rendering
+    let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+    layout.set_width((available_width * pango::SCALE as f64) as i32);
+
+    // Measure the width of text before cursor to position cursor accurately
+    layout.set_text(&text_before_cursor);
+    let (ink_rect, _logical_rect) = layout.pixel_extents();
+
+    let cursor_x = x_offset + ink_rect.width() as f64;
+    let cursor_y = y_offset;
+
+    // Line height is approximately 1.2 times the font size, adjusted by Pango metrics
+    let line_height = (style.font_size as f64 * 1.2).max(ink_rect.height() as f64 + 2.0);
 
     // Draw text cursor as a thin vertical line
     ctx.set_source_rgb(0.0, 0.5, 1.0); // Blue cursor
     ctx.set_line_width(2.0);
-    ctx.move_to(cursor_x, y_offset);
-    ctx.line_to(cursor_x, y_offset + (bounds.size.height as f64 - TEXT_PADDING));
+    ctx.move_to(cursor_x, cursor_y);
+    ctx.line_to(cursor_x, cursor_y + line_height);
     ctx.stroke()?;
 
     ctx.restore()?;
