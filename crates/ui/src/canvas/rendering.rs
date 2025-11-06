@@ -65,13 +65,30 @@ impl ResizeHandle {
     pub fn position(self, bounds: &Rect) -> Point {
         match self {
             ResizeHandle::TopLeft => Point::new(bounds.origin.x, bounds.origin.y),
-            ResizeHandle::Top => Point::new(bounds.origin.x + bounds.size.width / 2.0, bounds.origin.y),
-            ResizeHandle::TopRight => Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y),
-            ResizeHandle::Right => Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height / 2.0),
-            ResizeHandle::BottomRight => Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height),
-            ResizeHandle::Bottom => Point::new(bounds.origin.x + bounds.size.width / 2.0, bounds.origin.y + bounds.size.height),
-            ResizeHandle::BottomLeft => Point::new(bounds.origin.x, bounds.origin.y + bounds.size.height),
-            ResizeHandle::Left => Point::new(bounds.origin.x, bounds.origin.y + bounds.size.height / 2.0),
+            ResizeHandle::Top => {
+                Point::new(bounds.origin.x + bounds.size.width / 2.0, bounds.origin.y)
+            }
+            ResizeHandle::TopRight => {
+                Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y)
+            }
+            ResizeHandle::Right => Point::new(
+                bounds.origin.x + bounds.size.width,
+                bounds.origin.y + bounds.size.height / 2.0,
+            ),
+            ResizeHandle::BottomRight => Point::new(
+                bounds.origin.x + bounds.size.width,
+                bounds.origin.y + bounds.size.height,
+            ),
+            ResizeHandle::Bottom => Point::new(
+                bounds.origin.x + bounds.size.width / 2.0,
+                bounds.origin.y + bounds.size.height,
+            ),
+            ResizeHandle::BottomLeft => {
+                Point::new(bounds.origin.x, bounds.origin.y + bounds.size.height)
+            }
+            ResizeHandle::Left => {
+                Point::new(bounds.origin.x, bounds.origin.y + bounds.size.height / 2.0)
+            }
         }
     }
 
@@ -115,10 +132,7 @@ pub fn draw_background(
 pub use super::grid_rendering::draw_grid;
 
 /// Draw page border
-pub fn draw_page_border(
-    ctx: &Context,
-    page_size: &Size,
-) -> Result<(), cairo::Error> {
+pub fn draw_page_border(ctx: &Context, page_size: &Size) -> Result<(), cairo::Error> {
     ctx.set_source_rgb(0.8, 0.8, 0.8);
     ctx.set_line_width(1.0);
     ctx.rectangle(0.0, 0.0, page_size.width as f64, page_size.height as f64);
@@ -132,23 +146,32 @@ pub fn draw_selection_box(
     bounds: &Rect,
     stroke_color: &Color,
 ) -> Result<(), cairo::Error> {
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_source_rgb(
+        stroke_color.r as f64,
+        stroke_color.g as f64,
+        stroke_color.b as f64,
+    );
     ctx.set_line_width(2.0);
     ctx.rectangle(
         bounds.origin.x as f64,
         bounds.origin.y as f64,
         bounds.size.width as f64,
-        bounds.size.height as f64
+        bounds.size.height as f64,
     );
     ctx.stroke()?;
 
     // Semi-transparent fill
-    ctx.set_source_rgba(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64, 0.1);
+    ctx.set_source_rgba(
+        stroke_color.r as f64,
+        stroke_color.g as f64,
+        stroke_color.b as f64,
+        0.1,
+    );
     ctx.rectangle(
         bounds.origin.x as f64,
         bounds.origin.y as f64,
         bounds.size.width as f64,
-        bounds.size.height as f64
+        bounds.size.height as f64,
     );
     ctx.fill()?;
 
@@ -165,7 +188,11 @@ pub fn draw_resize_handles(
         let pos = handle.position(bounds);
         let half_size = ResizeHandle::SIZE / 2.0;
 
-        ctx.set_source_rgb(handle_color.r as f64, handle_color.g as f64, handle_color.b as f64);
+        ctx.set_source_rgb(
+            handle_color.r as f64,
+            handle_color.g as f64,
+            handle_color.b as f64,
+        );
         ctx.rectangle(
             pos.x as f64 - half_size,
             pos.y as f64 - half_size,
@@ -208,7 +235,7 @@ pub fn draw_text_element(
             bounds.origin.x as f64,
             bounds.origin.y as f64,
             bounds.size.width as f64,
-            bounds.size.height as f64
+            bounds.size.height as f64,
         );
         ctx.fill()?;
     }
@@ -218,7 +245,7 @@ pub fn draw_text_element(
         bounds.origin.x as f64,
         bounds.origin.y as f64,
         bounds.size.width as f64,
-        bounds.size.height as f64
+        bounds.size.height as f64,
     );
     ctx.clip();
 
@@ -276,14 +303,93 @@ pub fn draw_text_element(
     layout.set_attributes(Some(&attrs));
 
     // Set text color and position
-    ctx.set_source_rgb(style.color.r as f64, style.color.g as f64, style.color.b as f64);
-    ctx.translate(bounds.origin.x as f64 + TEXT_PADDING, bounds.origin.y as f64 + TEXT_PADDING);
+    ctx.set_source_rgb(
+        style.color.r as f64,
+        style.color.g as f64,
+        style.color.b as f64,
+    );
+    ctx.translate(
+        bounds.origin.x as f64 + TEXT_PADDING,
+        bounds.origin.y as f64 + TEXT_PADDING,
+    );
 
     // Render layout
     pangocairo::functions::show_layout(ctx, &layout);
 
     ctx.restore()?;
     Ok(())
+}
+
+/// Measure the height of a text block for a given width and style.
+///
+/// This mirrors the rendering configuration (padding, font settings, alignment)
+/// so that layout calculations are consistent between draw and measurement.
+pub fn measure_text_height(
+    text: &str,
+    style: &testruct_core::typography::TextStyle,
+    width: f32,
+) -> f32 {
+    // Use an off-screen surface to create a Pango layout consistent with canvas rendering.
+    let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 1, 1)
+        .expect("Failed to create surface for text measurement");
+    let ctx = Context::new(&surface).expect("Failed to create Cairo context for text measurement");
+
+    let layout = pangocairo::functions::create_layout(&ctx);
+    layout.set_text(text);
+
+    // Configure font description to match canvas rendering
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family(&style.font_family);
+    font_desc.set_size((style.font_size * pango::SCALE as f32) as i32);
+
+    let weight = match style.weight {
+        testruct_core::typography::FontWeight::Thin => pango::Weight::Thin,
+        testruct_core::typography::FontWeight::Light => pango::Weight::Light,
+        testruct_core::typography::FontWeight::Regular => pango::Weight::Normal,
+        testruct_core::typography::FontWeight::Medium => pango::Weight::Medium,
+        testruct_core::typography::FontWeight::Bold => pango::Weight::Bold,
+        testruct_core::typography::FontWeight::Black => pango::Weight::Ultrabold,
+    };
+    font_desc.set_weight(weight);
+
+    if style.italic {
+        font_desc.set_style(pango::Style::Italic);
+    }
+
+    layout.set_font_description(Some(&font_desc));
+
+    let alignment = match style.alignment {
+        testruct_core::typography::TextAlignment::Start => pango::Alignment::Left,
+        testruct_core::typography::TextAlignment::Center => pango::Alignment::Center,
+        testruct_core::typography::TextAlignment::End => pango::Alignment::Right,
+        testruct_core::typography::TextAlignment::Justified => pango::Alignment::Center,
+    };
+    layout.set_alignment(alignment);
+
+    let attrs = pango::AttrList::new();
+    if style.underline {
+        let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
+        attrs.insert(underline_attr);
+    }
+    if style.strikethrough {
+        let strike_attr = pango::AttrInt::new_strikethrough(true);
+        attrs.insert(strike_attr);
+    }
+    layout.set_attributes(Some(&attrs));
+
+    // Account for the same padding used during draw
+    let available_width = (width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+    layout.set_width((available_width * pango::SCALE as f64) as i32);
+    layout.set_wrap(pango::WrapMode::WordChar);
+
+    // Measure logical height in device pixels
+    let (_, logical_rect) = layout.pixel_extents();
+    let layout_height = logical_rect.height().max(0) as f64;
+
+    let padded_height = layout_height + (TEXT_PADDING * 2.0);
+    let min_height = (style.font_size as f64) + (TEXT_PADDING * 2.0);
+
+    padded_height.max(min_height) as f32
 }
 
 /// Draw a text cursor for editing mode
@@ -354,10 +460,7 @@ pub fn draw_text_cursor(
 }
 
 /// Draw a frame to indicate text editing mode
-pub fn draw_text_editing_frame(
-    ctx: &Context,
-    bounds: &Rect,
-) -> Result<(), cairo::Error> {
+pub fn draw_text_editing_frame(ctx: &Context, bounds: &Rect) -> Result<(), cairo::Error> {
     ctx.save()?;
 
     // Draw a dashed border to indicate editing mode
@@ -377,10 +480,7 @@ pub fn draw_text_editing_frame(
 }
 
 /// Draw a placeholder for image elements
-pub fn draw_image_placeholder(
-    ctx: &Context,
-    bounds: &Rect,
-) -> Result<(), cairo::Error> {
+pub fn draw_image_placeholder(ctx: &Context, bounds: &Rect) -> Result<(), cairo::Error> {
     ctx.save()?;
 
     // Draw background with subtle gradient effect
@@ -420,7 +520,13 @@ pub fn draw_image_placeholder(
     ctx.stroke()?;
 
     // Draw circle (representing sun)
-    ctx.arc(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size * 0.2, 0.0, std::f64::consts::PI * 2.0);
+    ctx.arc(
+        cx - icon_size * 0.5,
+        cy - icon_size * 0.5,
+        icon_size * 0.2,
+        0.0,
+        std::f64::consts::PI * 2.0,
+    );
     ctx.stroke()?;
 
     // Draw "Image" text with better styling
@@ -456,7 +562,7 @@ pub fn draw_image_placeholder(
 
 // Re-export shape drawing functions for backward compatibility
 pub use super::shapes_rendering::{
-    draw_rectangle, draw_ellipse, draw_line, draw_arrow, draw_polygon
+    draw_arrow, draw_ellipse, draw_line, draw_polygon, draw_rectangle,
 };
 
 // Re-export draw_guides for backward compatibility
@@ -514,10 +620,7 @@ pub fn snap_point_to_grid(point: &Point, spacing: f32) -> Point {
 
 /// Snap a rectangle's origin to the grid
 pub fn snap_rect_to_grid(rect: &Rect, spacing: f32) -> Rect {
-    Rect::new(
-        snap_point_to_grid(&rect.origin, spacing),
-        rect.size.clone(),
-    )
+    Rect::new(snap_point_to_grid(&rect.origin, spacing), rect.size.clone())
 }
 
 #[cfg(test)]
@@ -528,7 +631,7 @@ mod tests {
     fn test_resize_handle_positions() {
         let bounds = Rect::new(
             Point::new(10.0, 20.0),
-            testruct_core::layout::Size::new(100.0, 80.0)
+            testruct_core::layout::Size::new(100.0, 80.0),
         );
 
         let tl = ResizeHandle::TopLeft.position(&bounds);
@@ -543,6 +646,7 @@ mod tests {
         assert_eq!(center.x, 60.0);
         assert_eq!(center.y, 20.0);
     }
+
 
     #[test]
     fn test_ruler_config_default() {

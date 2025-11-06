@@ -1,24 +1,24 @@
+pub mod dirty_region;
+pub mod grid_rendering;
 pub mod input;
+pub mod keyboard;
+pub mod mouse;
 pub mod overlays;
 pub mod rendering;
-pub mod grid_rendering;
-pub mod shapes_rendering;
-pub mod mouse;
-pub mod keyboard;
 pub mod selection;
-pub mod tools;
-pub mod text_editor;
+pub mod shapes_rendering;
 pub mod snapping;
-pub mod dirty_region;
+pub mod text_editor;
+pub mod tools;
 
 use gtk4::{prelude::*, DrawingArea, Overlay, ScrolledWindow};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::app::AppState;
-use rendering::RenderConfig;
-use grid_rendering::RulerConfig;
 use dirty_region::DirtyRegionTracker;
+use grid_rendering::RulerConfig;
+use rendering::RenderConfig;
 
 /// Render state tracking
 #[derive(Clone)]
@@ -59,14 +59,14 @@ impl CanvasView {
             .build();
         drawing_area.set_hexpand(true);
         drawing_area.set_vexpand(true);
-        drawing_area.set_can_target(true);  // Enable mouse events - CRITICAL for GTK4
-        drawing_area.set_focusable(true);   // Enable keyboard focus
+        drawing_area.set_can_target(true); // Enable mouse events - CRITICAL for GTK4
+        drawing_area.set_focusable(true); // Enable keyboard focus
 
         // Create overlay with drawing area (rulers will be drawn on canvas, not as overlay widgets)
         let overlay = Overlay::new();
         overlay.set_child(Some(&drawing_area));
         // NOTE: Removed add_ruler_overlay() - rulers will be drawn directly on canvas instead
-        overlay.set_can_target(true);  // Ensure overlay also targets events
+        overlay.set_can_target(true); // Ensure overlay also targets events
         overlay.set_hexpand(true);
         overlay.set_vexpand(true);
 
@@ -76,7 +76,7 @@ impl CanvasView {
         container.set_child(Some(&overlay));
         container.set_hexpand(true);
         container.set_vexpand(true);
-        container.set_can_target(true);  // Ensure ScrolledWindow also targets events
+        container.set_can_target(true); // Ensure ScrolledWindow also targets events
 
         let render_state = CanvasRenderState::default();
 
@@ -147,7 +147,10 @@ impl CanvasView {
         rendering::draw_page_border(ctx, &page_size)?;
 
         // Apply zoom and pan
-        ctx.translate(ruler_config.size + config.pan_x, ruler_config.size + config.pan_y);
+        ctx.translate(
+            ruler_config.size + config.pan_x,
+            ruler_config.size + config.pan_y,
+        );
         ctx.scale(config.zoom, config.zoom);
 
         // Draw grid if enabled
@@ -167,8 +170,8 @@ impl CanvasView {
 
         // Draw drag preview box (blue outline while dragging)
         if let Some(drag_rect) = render_state.drag_box.borrow().as_ref() {
-            ctx.set_source_rgb(0.05, 0.49, 0.86);  // Blue color
-            ctx.set_line_width(2.0 / config.zoom);  // Account for zoom
+            ctx.set_source_rgb(0.05, 0.49, 0.86); // Blue color
+            ctx.set_line_width(2.0 / config.zoom); // Account for zoom
             ctx.rectangle(
                 drag_rect.origin.x as f64,
                 drag_rect.origin.y as f64,
@@ -246,12 +249,7 @@ impl CanvasView {
                 let cursor_pos = tool_state.editing_cursor_pos;
                 drop(tool_state);
 
-                rendering::draw_text_element(
-                    ctx,
-                    text_bounds,
-                    &text.content,
-                    &text.style,
-                )?;
+                rendering::draw_text_element(ctx, text_bounds, &text.content, &text.style)?;
 
                 if is_editing {
                     // Draw editing frame
@@ -276,7 +274,8 @@ impl CanvasView {
                 }
             }
             DocumentElement::Image(image) => {
-                // Draw image placeholder with visual feedback
+                // Draw image placeholder for now
+                // TODO: Implement actual image loading from asset catalog
                 rendering::draw_image_placeholder(ctx, &image.bounds)?;
 
                 let is_selected = selected_ids.contains(&image.id);
@@ -294,20 +293,10 @@ impl CanvasView {
             DocumentElement::Shape(shape) => {
                 match shape.kind {
                     ShapeKind::Rectangle => {
-                        rendering::draw_rectangle(
-                            ctx,
-                            &shape.bounds,
-                            &shape.stroke,
-                            &shape.fill,
-                        )?;
+                        rendering::draw_rectangle(ctx, &shape.bounds, &shape.stroke, &shape.fill)?;
                     }
                     ShapeKind::Ellipse => {
-                        rendering::draw_ellipse(
-                            ctx,
-                            &shape.bounds,
-                            &shape.stroke,
-                            &shape.fill,
-                        )?;
+                        rendering::draw_ellipse(ctx, &shape.bounds, &shape.stroke, &shape.fill)?;
                     }
                     ShapeKind::Line => {
                         rendering::draw_line(ctx, &shape.bounds, &shape.stroke)?;
