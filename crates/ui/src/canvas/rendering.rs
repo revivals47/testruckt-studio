@@ -470,7 +470,7 @@ pub fn draw_text_element(
     layout.set_width((available_width * pango::SCALE as f64) as i32);
 
     // Apply text decorations
-    let mut attrs = pango::AttrList::new();
+    let attrs = pango::AttrList::new();
     if style.underline {
         let underline_attr = pango::AttrInt::new_underline(pango::Underline::Single);
         attrs.insert(underline_attr);

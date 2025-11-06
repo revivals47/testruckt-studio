@@ -98,7 +98,7 @@ impl SnapEngine {
     pub fn snap_rect(&self, bounds: &Rect) -> SnapResult {
         let snapped = self.snap_position(bounds.origin);
 
-        let snapped_bounds = Rect {
+        let _snapped_bounds = Rect {
             origin: snapped.position,
             size: bounds.size,
         };

@@ -228,8 +228,6 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
 
 /// Render a text element with Pango layout
 fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextElement) -> Result<()> {
-    use pango::prelude::*;
-
     ctx.save()
         .map_err(|e| anyhow!("Failed to save context: {}", e))?;
 

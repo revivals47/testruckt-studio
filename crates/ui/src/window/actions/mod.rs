@@ -24,7 +24,6 @@ mod help_actions;
 mod layer_actions;
 mod alignment_actions;
 
-use gtk4::prelude::*;
 use gtk4::Box as GtkBox;
 use crate::window::actions::common::add_window_action;
 
