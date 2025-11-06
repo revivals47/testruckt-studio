@@ -591,7 +591,7 @@ pub fn wire_pointer_events(
         let current_tool = tool_state.current_tool;
         drop(tool_state);
 
-        tracing::debug!("drag start at ({}, {}), tool: {:?}", x, y, current_tool);
+        tracing::info!("🎬 drag start at ({:.0}, {:.0}), tool: {:?}", x, y, current_tool);
 
         // Store drag start position
         let mut tool_state = state.tool_state.borrow_mut();
@@ -605,10 +605,11 @@ pub fn wire_pointer_events(
         if let Some((start_x, start_y)) = tool_state.drag_start {
             let current_x = start_x + offset_x;
             let current_y = start_y + offset_y;
+            let current_tool = tool_state.current_tool;
 
-            tracing::debug!(
-                "drag update: from ({}, {}) to ({}, {})",
-                start_x, start_y, current_x, current_y
+            tracing::info!(
+                "📍 drag update [{:?}]: from ({:.0}, {:.0}) to ({:.0}, {:.0}), offset=({:.1}, {:.1})",
+                current_tool, start_x, start_y, current_x, current_y, offset_x, offset_y
             );
 
             // Update drag box for preview rendering
@@ -776,47 +777,60 @@ pub fn wire_pointer_events(
                 }
             } else if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Shape/Text creation based on tool
+                // Convert screen coordinates to document coordinates
+                let config = state.config.borrow();
+                let pan_x = config.pan_x;
+                let pan_y = config.pan_y;
+                let zoom = config.zoom;
+                drop(config);
+
+                // Convert to document coordinates (accounting for pan and zoom)
+                let doc_start_x = (start_x / zoom) - pan_x;
+                let doc_start_y = (start_y / zoom) - pan_y;
+                let doc_current_x = (current_x / zoom) - pan_x;
+                let doc_current_y = (current_y / zoom) - pan_y;
+
                 tracing::info!("📐 Creating {} element with drag offset ({:.1}, {:.1})", current_tool.name(), offset_x, offset_y);
 
                 let element = match current_tool {
                     ToolMode::Rectangle => ShapeFactory::create_rectangle(
-                        start_x.min(current_x),
-                        start_y.min(current_y),
-                        (start_x - current_x).abs(),
-                        (start_y - current_y).abs(),
+                        doc_start_x.min(doc_current_x),
+                        doc_start_y.min(doc_current_y),
+                        (doc_start_x - doc_current_x).abs(),
+                        (doc_start_y - doc_current_y).abs(),
                     ),
                     ToolMode::Circle => ShapeFactory::create_circle(
-                        start_x.min(current_x),
-                        start_y.min(current_y),
-                        (start_x - current_x).abs(),
-                        (start_y - current_y).abs(),
+                        doc_start_x.min(doc_current_x),
+                        doc_start_y.min(doc_current_y),
+                        (doc_start_x - doc_current_x).abs(),
+                        (doc_start_y - doc_current_y).abs(),
                     ),
                     ToolMode::Line => ShapeFactory::create_line(
-                        start_x,
-                        start_y,
-                        current_x,
-                        current_y,
+                        doc_start_x,
+                        doc_start_y,
+                        doc_current_x,
+                        doc_current_y,
                     ),
                     ToolMode::Arrow => ShapeFactory::create_arrow(
-                        start_x,
-                        start_y,
-                        current_x,
-                        current_y,
+                        doc_start_x,
+                        doc_start_y,
+                        doc_current_x,
+                        doc_current_y,
                     ),
                     ToolMode::Image => ShapeFactory::create_image(
-                        start_x.min(current_x),
-                        start_y.min(current_y),
-                        (start_x - current_x).abs(),
-                        (start_y - current_y).abs(),
+                        doc_start_x.min(doc_current_x),
+                        doc_start_y.min(doc_current_y),
+                        (doc_start_x - doc_current_x).abs(),
+                        (doc_start_y - doc_current_y).abs(),
                     ),
                     ToolMode::Text => {
-                        tracing::info!("📝 Creating text box at ({:.0}, {:.0}) size ({:.0}x{:.0})",
-                            start_x, start_y, (start_x - current_x).abs(), (start_y - current_y).abs());
+                        tracing::info!("📝 Creating text box at ({:.0}, {:.0}) size ({:.0}x{:.0}) (document coords)",
+                            doc_start_x, doc_start_y, (doc_start_x - doc_current_x).abs(), (doc_start_y - doc_current_y).abs());
                         ShapeFactory::create_text(
-                            start_x,
-                            start_y,
-                            (start_x - current_x).abs(),
-                            (start_y - current_y).abs(),
+                            doc_start_x,
+                            doc_start_y,
+                            (doc_start_x - doc_current_x).abs(),
+                            (doc_start_y - doc_current_y).abs(),
                             "テキストを入力".to_string(),
                         )
                     },
