@@ -87,8 +87,14 @@ fn build_property_panel_components() -> PropertyPanelComponents {
         build_layer_section(&container);
 
     // Alignment section
-    let (align_left_btn, align_center_h_btn, align_right_btn, align_top_btn, align_center_v_btn, align_bottom_btn) =
-        build_alignment_section(&container);
+    let (
+        align_left_btn,
+        align_center_h_btn,
+        align_right_btn,
+        align_top_btn,
+        align_center_v_btn,
+        align_bottom_btn,
+    ) = build_alignment_section(&container);
 
     // Group section
     let (group_status_label, group_name_entry, ungroup_btn) = build_group_section(&container);
@@ -148,9 +154,7 @@ fn build_title_section(container: &GtkBox) {
 }
 
 /// Build typography section (font family, size, line height, text alignment)
-fn build_typography_section(
-    container: &GtkBox,
-) -> (DropDown, SpinButton, Scale, DropDown) {
+fn build_typography_section(container: &GtkBox) -> (DropDown, SpinButton, Scale, DropDown) {
     // Header
     let typo_header = GtkBox::new(Orientation::Horizontal, 8);
     typo_header.set_margin_start(12);
@@ -232,17 +236,17 @@ fn build_typography_section(
     align_label.add_css_class("heading");
     align_section.append(&align_label);
 
-    let text_align_combo = DropDown::from_strings(&[
-        "左揃え",
-        "中央揃え",
-        "右揃え",
-        "両端揃え",
-    ]);
+    let text_align_combo = DropDown::from_strings(&["左揃え", "中央揃え", "右揃え", "両端揃え"]);
     text_align_combo.set_selected(0); // Default to left alignment
     align_section.append(&text_align_combo);
     container.append(&align_section);
 
-    (font_family_combo, font_size_spin, line_height_scale, text_align_combo)
+    (
+        font_family_combo,
+        font_size_spin,
+        line_height_scale,
+        text_align_combo,
+    )
 }
 
 /// Build text options section (auto-resize)
@@ -304,11 +308,7 @@ fn build_border_section(container: &GtkBox) -> DropDown {
     border_section.set_margin_start(12);
     border_section.set_margin_end(12);
 
-    let border_style_combo = DropDown::from_strings(&[
-        "なし",
-        "細い枠線",
-        "太い枠線",
-    ]);
+    let border_style_combo = DropDown::from_strings(&["なし", "細い枠線", "太い枠線"]);
     border_style_combo.set_selected(0); // Default to none
     border_section.append(&border_style_combo);
     container.append(&border_section);
@@ -342,10 +342,12 @@ fn build_layer_section(container: &GtkBox) -> (Button, Button, Button, Button) {
 
     let bring_to_front_btn = Button::with_label("最前面へ");
     bring_to_front_btn.set_tooltip_text(Some("Ctrl+Shift+]"));
+    bring_to_front_btn.set_sensitive(false);
     top_row.append(&bring_to_front_btn);
 
     let bring_forward_btn = Button::with_label("前面へ");
     bring_forward_btn.set_tooltip_text(Some("Ctrl+]"));
+    bring_forward_btn.set_sensitive(false);
     top_row.append(&bring_forward_btn);
 
     layer_buttons_box.append(&top_row);
@@ -355,22 +357,27 @@ fn build_layer_section(container: &GtkBox) -> (Button, Button, Button, Button) {
 
     let send_to_back_btn = Button::with_label("最背面へ");
     send_to_back_btn.set_tooltip_text(Some("Ctrl+Shift+["));
+    send_to_back_btn.set_sensitive(false);
     bottom_row.append(&send_to_back_btn);
 
     let send_backward_btn = Button::with_label("背面へ");
     send_backward_btn.set_tooltip_text(Some("Ctrl+["));
+    send_backward_btn.set_sensitive(false);
     bottom_row.append(&send_backward_btn);
 
     layer_buttons_box.append(&bottom_row);
     container.append(&layer_buttons_box);
 
-    (bring_to_front_btn, bring_forward_btn, send_to_back_btn, send_backward_btn)
+    (
+        bring_to_front_btn,
+        bring_forward_btn,
+        send_to_back_btn,
+        send_backward_btn,
+    )
 }
 
 /// Build alignment section with 6 alignment buttons
-fn build_alignment_section(
-    container: &GtkBox,
-) -> (Button, Button, Button, Button, Button, Button) {
+fn build_alignment_section(container: &GtkBox) -> (Button, Button, Button, Button, Button, Button) {
     let align_header = GtkBox::new(Orientation::Horizontal, 8);
     align_header.set_margin_start(12);
     align_header.set_margin_top(12);
@@ -395,14 +402,17 @@ fn build_alignment_section(
 
     let align_left_btn = Button::with_label("左");
     align_left_btn.set_tooltip_text(Some("左揃え"));
+    align_left_btn.set_sensitive(false);
     align_h_row.append(&align_left_btn);
 
     let align_center_h_btn = Button::with_label("中央\n(横)");
     align_center_h_btn.set_tooltip_text(Some("中央揃え（水平）"));
+    align_center_h_btn.set_sensitive(false);
     align_h_row.append(&align_center_h_btn);
 
     let align_right_btn = Button::with_label("右");
     align_right_btn.set_tooltip_text(Some("右揃え"));
+    align_right_btn.set_sensitive(false);
     align_h_row.append(&align_right_btn);
 
     align_buttons_box.append(&align_h_row);
@@ -412,20 +422,30 @@ fn build_alignment_section(
 
     let align_top_btn = Button::with_label("上");
     align_top_btn.set_tooltip_text(Some("上揃え"));
+    align_top_btn.set_sensitive(false);
     align_v_row.append(&align_top_btn);
 
     let align_center_v_btn = Button::with_label("中央\n(縦)");
     align_center_v_btn.set_tooltip_text(Some("中央揃え（垂直）"));
+    align_center_v_btn.set_sensitive(false);
     align_v_row.append(&align_center_v_btn);
 
     let align_bottom_btn = Button::with_label("下");
     align_bottom_btn.set_tooltip_text(Some("下揃え"));
+    align_bottom_btn.set_sensitive(false);
     align_v_row.append(&align_bottom_btn);
 
     align_buttons_box.append(&align_v_row);
     container.append(&align_buttons_box);
 
-    (align_left_btn, align_center_h_btn, align_right_btn, align_top_btn, align_center_v_btn, align_bottom_btn)
+    (
+        align_left_btn,
+        align_center_h_btn,
+        align_right_btn,
+        align_top_btn,
+        align_center_v_btn,
+        align_bottom_btn,
+    )
 }
 
 /// Build group section

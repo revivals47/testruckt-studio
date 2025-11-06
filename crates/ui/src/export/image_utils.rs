@@ -3,7 +3,7 @@
 use cairo::Context;
 use std::path::Path;
 use testruct_core::layout::Rect;
-use testruct_core::workspace::assets::{AssetRef, AssetCatalog};
+use testruct_core::workspace::assets::{AssetCatalog, AssetRef};
 
 /// Render an image from AssetCatalog to a Cairo context
 ///
@@ -118,10 +118,7 @@ pub fn is_image_available(image_path: &Path) -> bool {
 }
 
 /// Draw a placeholder when image is not available
-pub fn draw_image_placeholder(
-    ctx: &Context,
-    bounds: &Rect,
-) -> Result<(), cairo::Error> {
+pub fn draw_image_placeholder(ctx: &Context, bounds: &Rect) -> Result<(), cairo::Error> {
     ctx.save()?;
 
     // Draw gray background

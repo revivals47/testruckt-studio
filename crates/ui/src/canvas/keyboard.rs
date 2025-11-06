@@ -75,16 +75,13 @@ pub fn detect_keyboard_command(
         KEY_DELETE => Some(KeyboardCommand::Delete),
 
         // Ctrl+Z: Undo
-        KEY_Z if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Undo)
-        }
+        KEY_Z if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Undo),
 
         // Ctrl+Y or Ctrl+Shift+Z: Redo
-        KEY_Y if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Redo)
-        }
-        KEY_Z if state.contains(gdk::ModifierType::CONTROL_MASK)
-            && state.contains(gdk::ModifierType::SHIFT_MASK) =>
+        KEY_Y if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Redo),
+        KEY_Z
+            if state.contains(gdk::ModifierType::CONTROL_MASK)
+                && state.contains(gdk::ModifierType::SHIFT_MASK) =>
         {
             Some(KeyboardCommand::Redo)
         }
@@ -103,19 +100,13 @@ pub fn detect_keyboard_command(
         }
 
         // Ctrl+C: Copy
-        KEY_C if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Copy)
-        }
+        KEY_C if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Copy),
 
         // Ctrl+V: Paste
-        KEY_V if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Paste)
-        }
+        KEY_V if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Paste),
 
         // Ctrl+X: Cut
-        KEY_X if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Cut)
-        }
+        KEY_X if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Cut),
 
         // Ctrl++: Zoom In
         KEY_PLUS | KEY_EQUAL if state.contains(gdk::ModifierType::CONTROL_MASK) => {
@@ -139,9 +130,7 @@ pub fn detect_keyboard_command(
         KEY_DOWN => Some(KeyboardCommand::MoveDown),
 
         // Ctrl+G: Group
-        KEY_G if state.contains(gdk::ModifierType::CONTROL_MASK) => {
-            Some(KeyboardCommand::Group)
-        }
+        KEY_G if state.contains(gdk::ModifierType::CONTROL_MASK) => Some(KeyboardCommand::Group),
 
         // Ctrl+Shift+G: Ungroup
         KEY_G
@@ -161,13 +150,7 @@ mod tests {
 
     #[test]
     fn test_keyboard_command_names() {
-        assert_eq!(
-            format!("{:?}", KeyboardCommand::Delete),
-            "Delete"
-        );
-        assert_eq!(
-            format!("{:?}", KeyboardCommand::Undo),
-            "Undo"
-        );
+        assert_eq!(format!("{:?}", KeyboardCommand::Delete), "Delete");
+        assert_eq!(format!("{:?}", KeyboardCommand::Undo), "Undo");
     }
 }

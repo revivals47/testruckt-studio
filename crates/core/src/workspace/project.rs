@@ -79,7 +79,8 @@ impl Default for ProjectSettings {
     fn default() -> Self {
         Self {
             autosave_minutes: 5,
-            workspace_root: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
+            workspace_root: std::env::current_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from(".")),
             default_canvas_width: 595.0,
             default_canvas_height: 842.0,
             grid_size: 10.0,

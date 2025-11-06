@@ -1,8 +1,8 @@
-mod state;
 mod actions;
+mod state;
 
-use gtk4::{gio, glib, prelude::*, Application};
 use crate::window::MainWindow;
+use gtk4::{gio, glib, prelude::*, Application};
 
 pub use state::AppState;
 

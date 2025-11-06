@@ -6,13 +6,13 @@
 //! - Right: Properties Panel (fixed width)
 //! - Bottom: Status Bar
 
-use gtk4::prelude::*;
-use gtk4::{
-    Align, Box as GtkBox, Button, Label, Orientation, Popover, Separator, Notebook, ToggleButton,
-};
 use crate::app::AppState;
 use crate::canvas::CanvasView;
 use crate::toolbar::ToolbarWidgets;
+use gtk4::prelude::*;
+use gtk4::{
+    Align, Box as GtkBox, Button, Label, Notebook, Orientation, Popover, Separator, ToggleButton,
+};
 
 /// Tool palette button references
 #[derive(Clone)]
@@ -30,7 +30,14 @@ pub struct ToolPaletteButtons {
 pub fn build_layout(
     app_state: AppState,
     _toolbar: ToolbarWidgets,
-) -> (GtkBox, CanvasView, ToolPaletteButtons, GtkBox, GtkBox, crate::panels::PropertyPanelComponents) {
+) -> (
+    GtkBox,
+    CanvasView,
+    ToolPaletteButtons,
+    GtkBox,
+    GtkBox,
+    crate::panels::PropertyPanelComponents,
+) {
     let main_container = GtkBox::new(Orientation::Vertical, 0);
 
     // Note: Menubar and toolbars are added in layout.rs
@@ -60,14 +67,21 @@ pub fn build_layout(
     let status_bar = build_status_bar();
     main_container.append(&status_bar);
 
-    (main_container, canvas_view, tool_buttons, tool_palette, properties_panel, property_components)
+    (
+        main_container,
+        canvas_view,
+        tool_buttons,
+        tool_palette,
+        properties_panel,
+        property_components,
+    )
 }
 
 /// Build the left tool palette
 fn build_tool_palette() -> (GtkBox, ToolPaletteButtons) {
     let palette = GtkBox::new(Orientation::Vertical, 6);
     palette.add_css_class("tool-palette");
-    palette.set_width_request(180);  // Fixed width for tool palette
+    palette.set_width_request(180); // Fixed width for tool palette
     palette.set_margin_start(12);
     palette.set_margin_end(12);
     palette.set_margin_top(16);
@@ -235,10 +249,12 @@ fn build_page_nav_bar() -> GtkBox {
 }
 
 /// Build the right properties panel with tabbed interface
-fn build_properties_panel(app_state: &AppState) -> (GtkBox, crate::panels::PropertyPanelComponents) {
+fn build_properties_panel(
+    app_state: &AppState,
+) -> (GtkBox, crate::panels::PropertyPanelComponents) {
     let properties = GtkBox::new(Orientation::Vertical, 0);
     properties.add_css_class("properties-panel");
-    properties.set_width_request(240);  // Fixed width
+    properties.set_width_request(240); // Fixed width
     properties.set_hexpand(false);
     properties.set_vexpand(true);
 
@@ -249,7 +265,8 @@ fn build_properties_panel(app_state: &AppState) -> (GtkBox, crate::panels::Prope
     properties.append(&notebook);
 
     // Tab 1: Properties
-    let (props_content, property_components) = crate::panels::build_property_panel_with_components();
+    let (props_content, property_components) =
+        crate::panels::build_property_panel_with_components();
     let props_label = Label::new(Some("プロパティ"));
     notebook.append_page(&props_content, Some(&props_label));
 

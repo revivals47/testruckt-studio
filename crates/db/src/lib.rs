@@ -7,7 +7,7 @@ pub mod models;
 pub mod schema;
 
 pub use item_bank::ItemBank;
-pub use models::{Item, Passage, Choice, Tag};
+pub use models::{Choice, Item, Passage, Tag};
 
 use anyhow::Result;
 use std::path::Path;

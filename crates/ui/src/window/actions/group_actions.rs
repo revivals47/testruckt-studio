@@ -8,6 +8,7 @@ pub fn register(
     window: &gtk4::ApplicationWindow,
     state: crate::app::AppState,
     canvas_view: &crate::canvas::CanvasView,
+    property_components: &crate::panels::PropertyPanelComponents,
 ) {
     let group_state = state.clone();
     let group_drawing_area = canvas_view.drawing_area();
@@ -81,7 +82,9 @@ pub fn register(
                 group.children.reverse();
 
                 // Add group to page
-                page.add_element(testruct_core::document::DocumentElement::Frame(group.clone()));
+                page.add_element(testruct_core::document::DocumentElement::Frame(
+                    group.clone(),
+                ));
 
                 tracing::info!("✅ Grouped {} objects", group.children.len());
             }
@@ -132,12 +135,27 @@ pub fn register(
                 // Add children back to page
                 page.elements.extend(children_to_add.clone());
 
-                tracing::info!("✅ Ungrouped {} groups with {} objects", indices_to_ungroup.len(), children_to_add.len());
+                tracing::info!(
+                    "✅ Ungrouped {} groups with {} objects",
+                    indices_to_ungroup.len(),
+                    children_to_add.len()
+                );
             }
         });
 
         // Clear selection and redraw
         ungroup_render_state.borrow_mut().clear();
         let _ = ungroup_drawing_area.queue_draw();
+    });
+
+    // Wire property panel ungroup button to the same action
+    let ungroup_button = property_components.ungroup_btn.clone();
+    let window_for_button = window.clone();
+    ungroup_button.connect_clicked(move |_| {
+        if let Some(action) = window_for_button.lookup_action("ungroup") {
+            action.activate(None);
+        } else {
+            tracing::warn!("⚠️  Ungroup action not found on window");
+        }
     });
 }

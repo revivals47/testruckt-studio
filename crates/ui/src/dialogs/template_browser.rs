@@ -1,8 +1,11 @@
 use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, Button, Label, Orientation, Window, SearchEntry, ListBox, ListBoxRow, ScrolledWindow, Align};
-use testruct_core::template::Template;
+use gtk4::{
+    Align, Box as GtkBox, Button, Label, ListBox, ListBoxRow, Orientation, ScrolledWindow,
+    SearchEntry, Window,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
+use testruct_core::template::Template;
 
 /// Show the Template Manager dialog with callback
 pub fn show_template_browser_async(

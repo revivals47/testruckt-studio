@@ -7,7 +7,7 @@ pub mod tools;
 
 use gtk4::prelude::*;
 use gtk4::{
-    Button, Box as GtkBox, Label, MenuButton, Orientation, Popover, ScrolledWindow, Separator,
+    Box as GtkBox, Button, Label, MenuButton, Orientation, Popover, ScrolledWindow, Separator,
     ToggleButton,
 };
 

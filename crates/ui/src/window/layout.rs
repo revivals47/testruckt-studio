@@ -1,8 +1,11 @@
-use super::{WindowComponents, layout_v2};
+use super::{layout_v2, WindowComponents};
 use crate::app::AppState;
 use crate::menu::build_menu_bar;
 use crate::toolbar::build_toolbar;
-use gtk4::{prelude::*, Application, ApplicationWindow, Box as GtkBox, BuilderListItemFactory, ListView, NoSelection, Orientation};
+use gtk4::{
+    prelude::*, Application, ApplicationWindow, Box as GtkBox, BuilderListItemFactory, ListView,
+    NoSelection, Orientation,
+};
 
 pub fn build_widgets(app: &Application, app_state: AppState) -> WindowComponents {
     let start = std::time::Instant::now();
@@ -37,7 +40,14 @@ pub fn build_widgets(app: &Application, app_state: AppState) -> WindowComponents
     // Build main layout using layout_v2
     eprintln!("🎨 Building main layout...");
     let t3 = std::time::Instant::now();
-    let (main_content, canvas_view, tool_palette_buttons, tool_palette, properties_panel, property_components) = layout_v2::build_layout(app_state.clone(), toolbar_widgets.clone());
+    let (
+        main_content,
+        canvas_view,
+        tool_palette_buttons,
+        tool_palette,
+        properties_panel,
+        property_components,
+    ) = layout_v2::build_layout(app_state.clone(), toolbar_widgets.clone());
     eprintln!("⏱️  Main layout built: {}ms", t3.elapsed().as_millis());
     root.append(&main_content);
 
@@ -47,7 +57,10 @@ pub fn build_widgets(app: &Application, app_state: AppState) -> WindowComponents
     // Create a dummy layer panel (ListView) - placeholder for future implementation
     let layer_panel: ListView = ListView::new(None::<NoSelection>, None::<BuilderListItemFactory>);
 
-    eprintln!("✅ Total widget build time: {}ms", start.elapsed().as_millis());
+    eprintln!(
+        "✅ Total widget build time: {}ms",
+        start.elapsed().as_millis()
+    );
     WindowComponents::new(
         window,
         canvas_view,

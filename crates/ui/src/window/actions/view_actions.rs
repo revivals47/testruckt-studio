@@ -21,7 +21,11 @@ pub fn register(
         let new_state = config.show_grid;
         drop(config);
         tracing::info!("✅ Grid visibility toggled: {}", new_state);
-        grid_btn.set_label(if new_state { "グリッド: ON" } else { "グリッド: OFF" });
+        grid_btn.set_label(if new_state {
+            "グリッド: ON"
+        } else {
+            "グリッド: OFF"
+        });
         let _ = grid_drawing_area.queue_draw();
     });
 
@@ -35,7 +39,11 @@ pub fn register(
         let new_state = config.show_guides;
         drop(config);
         tracing::info!("✅ Guides visibility toggled: {}", new_state);
-        guides_btn.set_label(if new_state { "ガイド: ON" } else { "ガイド: OFF" });
+        guides_btn.set_label(if new_state {
+            "ガイド: ON"
+        } else {
+            "ガイド: OFF"
+        });
         let _ = guides_drawing_area.queue_draw();
     });
 
@@ -49,7 +57,11 @@ pub fn register(
         let new_state = config.show_rulers;
         drop(config);
         tracing::info!("✅ Rulers visibility toggled: {}", new_state);
-        rulers_btn.set_label(if new_state { "ルーラー: ON" } else { "ルーラー: OFF" });
+        rulers_btn.set_label(if new_state {
+            "ルーラー: ON"
+        } else {
+            "ルーラー: OFF"
+        });
         let _ = rulers_drawing_area.queue_draw();
     });
 
@@ -75,7 +87,7 @@ pub fn register(
     add_window_action(window, "zoom-out", move |_| {
         tracing::info!("Action: zoom out");
         let mut config = zoom_out_state.config.borrow_mut();
-        let new_zoom = (config.zoom * 0.8).max(0.1);  // Minimum 10% zoom
+        let new_zoom = (config.zoom * 0.8).max(0.1); // Minimum 10% zoom
         config.zoom = new_zoom;
         drop(config);
         tracing::info!("✅ Zoom set to {:.0}%", new_zoom * 100.0);
@@ -98,7 +110,7 @@ pub fn register(
     add_window_action(window, "zoom-in", move |_| {
         tracing::info!("Action: zoom in");
         let mut config = zoom_in_state.config.borrow_mut();
-        let new_zoom = (config.zoom * 1.25).min(4.0);  // Maximum 400% zoom
+        let new_zoom = (config.zoom * 1.25).min(4.0); // Maximum 400% zoom
         config.zoom = new_zoom;
         drop(config);
         tracing::info!("✅ Zoom set to {:.0}%", new_zoom * 100.0);

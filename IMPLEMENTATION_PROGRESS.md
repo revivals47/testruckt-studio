@@ -240,7 +240,7 @@ rendering.rs (Cairo drawing)
 **Priority: High**
 - [ ] Window setup and layout (2,097行)
 - [ ] Toolbar functionality (500行)
-- [ ] Property panel (522行)
+- [ ] Property panel (522行) — 塗り潰し/枠線色ダイアログ、テキスト自動リサイズなど主要シグナルは実装済。残タスク: グループ名編集、詳細スタイル編集。
 - [ ] Menu system
 - [ ] Main window integration
 

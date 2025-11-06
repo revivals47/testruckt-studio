@@ -4,9 +4,7 @@
 //! selecting, and creating documents from templates.
 
 use gtk4::prelude::*;
-use gtk4::{
-    Box as GtkBox, Button, ListBox, ListBoxRow, Orientation, ScrolledWindow, SearchEntry,
-};
+use gtk4::{Box as GtkBox, Button, ListBox, ListBoxRow, Orientation, ScrolledWindow, SearchEntry};
 use std::cell::RefCell;
 use std::rc::Rc;
 use testruct_core::template::Template;

@@ -2,7 +2,7 @@
 //!
 //! Allows applying different text styles to different regions of text.
 
-use super::{TextStyle, FontWeight};
+use super::{FontWeight, TextStyle};
 use serde::{Deserialize, Serialize};
 
 /// A run of text with consistent formatting
@@ -31,7 +31,11 @@ impl RichText {
 
     /// Get the complete text without formatting
     pub fn get_plain_text(&self) -> String {
-        self.runs.iter().map(|run| run.text.as_str()).collect::<Vec<_>>().join("")
+        self.runs
+            .iter()
+            .map(|run| run.text.as_str())
+            .collect::<Vec<_>>()
+            .join("")
     }
 
     /// Get the total text length in characters

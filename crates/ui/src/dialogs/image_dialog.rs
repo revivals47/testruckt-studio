@@ -64,10 +64,7 @@ pub fn show_image_chooser(parent: &Window) -> Option<PathBuf> {
 /// Show image selection dialog with callback
 ///
 /// Handles asynchronous file selection
-pub fn show_image_chooser_async(
-    parent: &Window,
-    on_selected: Box<dyn Fn(PathBuf)>,
-) {
+pub fn show_image_chooser_async(parent: &Window, on_selected: Box<dyn Fn(PathBuf)>) {
     let dialog = FileChooserNative::new(
         Some("画像を選択"),
         Some(parent),

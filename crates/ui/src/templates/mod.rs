@@ -2,9 +2,9 @@
 //!
 //! Provides functionality to save, load, and manage document templates.
 
-use testruct_core::document::Document;
 use std::fs;
 use std::path::PathBuf;
+use testruct_core::document::Document;
 
 /// Get the templates directory path
 pub fn templates_dir() -> PathBuf {

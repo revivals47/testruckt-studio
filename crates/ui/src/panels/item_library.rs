@@ -1,6 +1,9 @@
 //! Item library panel for viewing and managing items from the database
 
-use gtk4::{prelude::*, ScrolledWindow, SearchEntry, Box as GtkBox, Label, ListBox, ListBoxRow, Orientation, Button};
+use gtk4::{
+    prelude::*, Box as GtkBox, Button, Label, ListBox, ListBoxRow, Orientation, ScrolledWindow,
+    SearchEntry,
+};
 use std::sync::{Arc, Mutex};
 use testruct_db::ItemBank;
 
@@ -13,9 +16,7 @@ pub struct ItemLibraryComponents {
 }
 
 /// Build the item library panel
-pub fn build_item_library_panel(
-    item_bank: Arc<Mutex<ItemBank>>,
-) -> ItemLibraryComponents {
+pub fn build_item_library_panel(item_bank: Arc<Mutex<ItemBank>>) -> ItemLibraryComponents {
     // Main container
     let container = GtkBox::new(gtk4::Orientation::Vertical, 6);
     container.set_margin_top(12);
@@ -121,32 +122,26 @@ fn refresh_item_list(list: &ListBox, item_bank: &Arc<Mutex<ItemBank>>) {
 
     // Load items from database
     match item_bank.lock() {
-        Ok(bank) => {
-            match bank.get_all_items(Some(100)) {
-                Ok(items) => {
-                    for item in items {
-                        let row_label = format!(
-                            "{}\n{}",
-                            item.title,
-                            item.difficulty.as_str()
-                        );
-                        let row = ListBoxRow::new();
-                        let label = Label::new(Some(&row_label));
-                        label.set_wrap(true);
-                        label.set_margin_top(6);
-                        label.set_margin_bottom(6);
-                        label.set_margin_start(6);
-                        label.set_margin_end(6);
-                        label.set_halign(gtk4::Align::Start);
-                        row.set_child(Some(&label));
-                        list.insert(&row, -1);
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to load items: {}", e);
+        Ok(bank) => match bank.get_all_items(Some(100)) {
+            Ok(items) => {
+                for item in items {
+                    let row_label = format!("{}\n{}", item.title, item.difficulty.as_str());
+                    let row = ListBoxRow::new();
+                    let label = Label::new(Some(&row_label));
+                    label.set_wrap(true);
+                    label.set_margin_top(6);
+                    label.set_margin_bottom(6);
+                    label.set_margin_start(6);
+                    label.set_margin_end(6);
+                    label.set_halign(gtk4::Align::Start);
+                    row.set_child(Some(&label));
+                    list.insert(&row, -1);
                 }
             }
-        }
+            Err(e) => {
+                tracing::warn!("Failed to load items: {}", e);
+            }
+        },
         Err(e) => {
             tracing::warn!("Failed to lock item bank: {}", e);
         }
@@ -162,32 +157,26 @@ fn search_items(list: &ListBox, item_bank: &Arc<Mutex<ItemBank>>, query: &str) {
 
     // Search items
     match item_bank.lock() {
-        Ok(bank) => {
-            match bank.search_items(query) {
-                Ok(items) => {
-                    for item in items {
-                        let row_label = format!(
-                            "{}\n{}",
-                            item.title,
-                            item.difficulty.as_str()
-                        );
-                        let row = ListBoxRow::new();
-                        let label = Label::new(Some(&row_label));
-                        label.set_wrap(true);
-                        label.set_margin_top(6);
-                        label.set_margin_bottom(6);
-                        label.set_margin_start(6);
-                        label.set_margin_end(6);
-                        label.set_halign(gtk4::Align::Start);
-                        row.set_child(Some(&label));
-                        list.insert(&row, -1);
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!("Search failed: {}", e);
+        Ok(bank) => match bank.search_items(query) {
+            Ok(items) => {
+                for item in items {
+                    let row_label = format!("{}\n{}", item.title, item.difficulty.as_str());
+                    let row = ListBoxRow::new();
+                    let label = Label::new(Some(&row_label));
+                    label.set_wrap(true);
+                    label.set_margin_top(6);
+                    label.set_margin_bottom(6);
+                    label.set_margin_start(6);
+                    label.set_margin_end(6);
+                    label.set_halign(gtk4::Align::Start);
+                    row.set_child(Some(&label));
+                    list.insert(&row, -1);
                 }
             }
-        }
+            Err(e) => {
+                tracing::warn!("Search failed: {}", e);
+            }
+        },
         Err(e) => {
             tracing::warn!("Failed to lock item bank: {}", e);
         }

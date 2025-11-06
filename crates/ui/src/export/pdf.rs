@@ -5,8 +5,8 @@
 use anyhow::{anyhow, Result};
 use cairo::{Context, PdfSurface};
 use std::path::Path;
-use testruct_core::Document;
 use testruct_core::workspace::assets::AssetCatalog;
+use testruct_core::Document;
 use tracing::{debug, info};
 
 /// Default page size (A4: 595.28 x 841.89 points)
@@ -14,7 +14,11 @@ const DEFAULT_PAGE_WIDTH: f64 = 595.28;
 const DEFAULT_PAGE_HEIGHT: f64 = 841.89;
 
 /// Render a document to PDF
-pub fn render_to_pdf(document: &Document, output_path: &Path, catalog: &AssetCatalog) -> Result<()> {
+pub fn render_to_pdf(
+    document: &Document,
+    output_path: &Path,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     info!("Exporting to PDF: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -31,8 +35,8 @@ pub fn render_to_pdf(document: &Document, output_path: &Path, catalog: &AssetCat
     let surface = PdfSurface::new(width, height, output_path)
         .map_err(|e| anyhow!("Failed to create PDF surface: {}", e))?;
 
-    let ctx = Context::new(&surface)
-        .map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
+    let ctx =
+        Context::new(&surface).map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
 
     // Render each page
     for (page_index, page) in document.pages.iter().enumerate() {
@@ -54,7 +58,11 @@ pub fn render_to_pdf(document: &Document, output_path: &Path, catalog: &AssetCat
 }
 
 /// Render a single page to Cairo context
-fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, catalog: &AssetCatalog) -> Result<()> {
+fn render_page_to_context(
+    ctx: &Context,
+    page: &testruct_core::document::Page,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     // Set white background
     ctx.set_source_rgb(1.0, 1.0, 1.0);
     ctx.paint()
@@ -80,7 +88,11 @@ fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, c
 }
 
 /// Render a single element to Cairo context
-fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement, catalog: &AssetCatalog) -> Result<()> {
+fn render_element_to_context(
+    ctx: &Context,
+    element: &testruct_core::document::DocumentElement,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     use testruct_core::document::DocumentElement;
 
     match element {
@@ -92,13 +104,21 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
         }
         DocumentElement::Image(image) => {
             // Try to load image from catalog, fallback to placeholder if not found
-            match crate::export::image_utils::render_image_from_asset(ctx, image.source, catalog, &image.bounds) {
+            match crate::export::image_utils::render_image_from_asset(
+                ctx,
+                image.source,
+                catalog,
+                &image.bounds,
+            ) {
                 Ok(_) => {
                     debug!("Image rendered from asset catalog: {}", image.id);
                 }
                 Err(e) => {
                     // If loading fails, draw placeholder and log warning
-                    debug!("Failed to render image {}: {}, using placeholder", image.id, e);
+                    debug!(
+                        "Failed to render image {}: {}, using placeholder",
+                        image.id, e
+                    );
                     let _ = crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds);
                 }
             }
@@ -112,7 +132,10 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
 }
 
 /// Render a shape element
-fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::ShapeElement) -> Result<()> {
+fn render_shape_to_context(
+    ctx: &Context,
+    shape: &testruct_core::document::ShapeElement,
+) -> Result<()> {
     use testruct_core::document::ShapeKind;
 
     let x = shape.bounds.origin.x as f64;
@@ -140,7 +163,8 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
             }
         }
         ShapeKind::Ellipse => {
-            ctx.save().map_err(|e| anyhow!("Failed to save context: {}", e))?;
+            ctx.save()
+                .map_err(|e| anyhow!("Failed to save context: {}", e))?;
             ctx.translate(x + width / 2.0, y + height / 2.0);
             ctx.scale(width / 2.0, height / 2.0);
             ctx.arc(0.0, 0.0, 1.0, 0.0, std::f64::consts::PI * 2.0);
@@ -158,7 +182,8 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
                 ctx.stroke()
                     .map_err(|e| anyhow!("Failed to stroke ellipse: {}", e))?;
             }
-            ctx.restore().map_err(|e| anyhow!("Failed to restore context: {}", e))?;
+            ctx.restore()
+                .map_err(|e| anyhow!("Failed to restore context: {}", e))?;
         }
         ShapeKind::Line => {
             // Lines use stroke color
@@ -204,7 +229,11 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
 }
 
 /// Render a frame element (with recursive children)
-fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement, catalog: &AssetCatalog) -> Result<()> {
+fn render_frame_to_context(
+    ctx: &Context,
+    frame: &testruct_core::document::FrameElement,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     let x = frame.bounds.origin.x as f64;
     let y = frame.bounds.origin.y as f64;
     let width = frame.bounds.size.width as f64;
@@ -227,7 +256,10 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
 }
 
 /// Render a text element with Pango layout
-fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextElement) -> Result<()> {
+fn render_text_to_context(
+    ctx: &Context,
+    text: &testruct_core::document::TextElement,
+) -> Result<()> {
     ctx.save()
         .map_err(|e| anyhow!("Failed to save context: {}", e))?;
 
@@ -251,7 +283,12 @@ fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextEle
     ctx.translate(bounds.origin.x as f64, bounds.origin.y as f64);
 
     // Create clipping rectangle
-    ctx.rectangle(0.0, 0.0, bounds.size.width as f64, bounds.size.height as f64);
+    ctx.rectangle(
+        0.0,
+        0.0,
+        bounds.size.width as f64,
+        bounds.size.height as f64,
+    );
     ctx.clip();
 
     // Create Pango layout

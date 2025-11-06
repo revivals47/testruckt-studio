@@ -3,9 +3,9 @@
 //! Allows users to view the current document structure in JSON format
 //! and make direct edits to the JSON representation.
 
+use crate::app::AppState;
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Button, Dialog, Label, Orientation, ScrolledWindow, TextView, Window};
-use crate::app::AppState;
 
 /// Show the JSON editor dialog for the active document
 pub fn show_json_editor(parent: &Window, app_state: AppState) {

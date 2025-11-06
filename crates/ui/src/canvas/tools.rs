@@ -2,8 +2,10 @@
 //!
 //! Provides tool modes (Select, Rectangle, Circle, Text) and shape creation functionality.
 
-use testruct_core::document::{DocumentElement, ShapeElement, ShapeKind, TextElement, ImageElement};
-use testruct_core::layout::{Rect, Point, Size};
+use testruct_core::document::{
+    DocumentElement, ImageElement, ShapeElement, ShapeKind, TextElement,
+};
+use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::workspace::assets::AssetRef;
 use uuid::Uuid;
 
@@ -122,6 +124,7 @@ impl ShapeFactory {
                     height: height as f32,
                 },
             },
+            auto_resize_height: false,
         })
     }
 

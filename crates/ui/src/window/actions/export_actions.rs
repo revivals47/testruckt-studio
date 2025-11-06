@@ -51,11 +51,17 @@ fn perform_pdf_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppS
         let state_clone = state.clone();
 
         glib::spawn_future_local(async move {
-            if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, "pdf").await {
+            if let Some(path) =
+                crate::io::file_dialog::show_export_dialog(&window_clone, "pdf").await
+            {
                 let catalog = state_clone.asset_catalog();
                 let catalog_lock = catalog.lock().expect("Failed to lock asset catalog");
 
-                match crate::export::export_pdf(&state_clone.active_document().unwrap(), &path, &catalog_lock) {
+                match crate::export::export_pdf(
+                    &state_clone.active_document().unwrap(),
+                    &path,
+                    &catalog_lock,
+                ) {
                     Ok(_) => {
                         tracing::info!("✅ PDF export completed: {}", path.display());
                     }
@@ -73,7 +79,11 @@ fn perform_pdf_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppS
 }
 
 /// Perform image export (PNG/JPEG/SVG)
-fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::AppState, format: &str) {
+fn perform_image_export(
+    window: &gtk4::ApplicationWindow,
+    state: &crate::app::AppState,
+    format: &str,
+) {
     if state.active_document().is_some() {
         tracing::info!("Exporting active document to {}", format.to_uppercase());
 
@@ -82,20 +92,41 @@ fn perform_image_export(window: &gtk4::ApplicationWindow, state: &crate::app::Ap
         let format_str = format.to_string();
 
         glib::spawn_future_local(async move {
-            if let Some(path) = crate::io::file_dialog::show_export_dialog(&window_clone, &format_str).await {
+            if let Some(path) =
+                crate::io::file_dialog::show_export_dialog(&window_clone, &format_str).await
+            {
                 let catalog = state_clone.asset_catalog();
                 let catalog_lock = catalog.lock().expect("Failed to lock asset catalog");
 
                 let result = match format_str.as_str() {
-                    "png" => crate::export::export_png(&state_clone.active_document().unwrap(), &path, 96.0, &catalog_lock),
-                    "jpeg" => crate::export::export_jpeg(&state_clone.active_document().unwrap(), &path, 96.0, 95, &catalog_lock),
-                    "svg" => crate::export::export_svg(&state_clone.active_document().unwrap(), &path, &catalog_lock),
+                    "png" => crate::export::export_png(
+                        &state_clone.active_document().unwrap(),
+                        &path,
+                        96.0,
+                        &catalog_lock,
+                    ),
+                    "jpeg" => crate::export::export_jpeg(
+                        &state_clone.active_document().unwrap(),
+                        &path,
+                        96.0,
+                        95,
+                        &catalog_lock,
+                    ),
+                    "svg" => crate::export::export_svg(
+                        &state_clone.active_document().unwrap(),
+                        &path,
+                        &catalog_lock,
+                    ),
                     _ => Err(anyhow::anyhow!("Unknown format: {}", format_str)),
                 };
 
                 match result {
                     Ok(_) => {
-                        tracing::info!("✅ {} export completed: {}", format_str.to_uppercase(), path.display());
+                        tracing::info!(
+                            "✅ {} export completed: {}",
+                            format_str.to_uppercase(),
+                            path.display()
+                        );
                     }
                     Err(e) => {
                         tracing::error!("❌ {} export failed: {}", format_str.to_uppercase(), e);

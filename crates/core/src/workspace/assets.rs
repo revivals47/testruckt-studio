@@ -31,6 +31,12 @@ impl AssetCatalog {
     }
 }
 
+impl Default for AssetCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AssetRef(uuid::Uuid);
 

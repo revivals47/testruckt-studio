@@ -22,7 +22,9 @@ impl CanvasLayout {
     }
 
     pub fn section_at(&self, point: Point) -> Option<&LayoutSection> {
-        self.sections.iter().find(|section| section.bounds.contains(point))
+        self.sections
+            .iter()
+            .find(|section| section.bounds.contains(point))
     }
 }
 

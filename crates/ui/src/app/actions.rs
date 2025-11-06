@@ -17,7 +17,11 @@ pub fn register_global_actions(app: &gtk4::Application) {
 
     for (name, accel) in actions {
         let name_owned = name.to_string();
-        add_action(app, name, move |_| tracing::info!(action = %name_owned, "triggered"));
+        add_action(
+            app,
+            name,
+            move |_| tracing::info!(action = %name_owned, "triggered"),
+        );
         if let Some(accel) = accel {
             app.set_accels_for_action(&format!("app.{name}"), &[accel]);
         }

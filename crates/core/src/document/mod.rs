@@ -10,8 +10,7 @@ use std::fmt;
 pub use builder::{DocumentBuilder, DocumentBuilderError};
 pub use metadata::{DocumentMetadata, PageMetadata};
 pub use page::{
-    Page, PageId, DocumentElement, ShapeKind,
-    FrameElement, TextElement, ImageElement, ShapeElement
+    DocumentElement, FrameElement, ImageElement, Page, PageId, ShapeElement, ShapeKind, TextElement,
 };
 pub use page_size::PageSize;
 
@@ -37,6 +36,8 @@ pub struct Document {
     pub pages: Vec<Page>,
     #[serde(default)]
     pub styles: HashMap<String, String>,
+    #[serde(default)]
+    pub assets: crate::workspace::AssetCatalog,
 }
 
 impl Document {

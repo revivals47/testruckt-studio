@@ -12,20 +12,20 @@
 //! - Clipboard operations (copy, paste)
 //! - Help operations (manual, about, settings)
 
-mod common;
-mod file_actions;
-mod export_actions;
-mod edit_actions;
-mod view_actions;
-mod tools_actions;
-mod group_actions;
+mod alignment_actions;
 mod clipboard_actions;
+mod common;
+mod edit_actions;
+mod export_actions;
+mod file_actions;
+mod group_actions;
 mod help_actions;
 mod layer_actions;
-mod alignment_actions;
+mod tools_actions;
+mod view_actions;
 
-use gtk4::Box as GtkBox;
 use crate::window::actions::common::add_window_action;
+use gtk4::Box as GtkBox;
 
 /// Register all window-level actions
 pub fn register_window_actions(
@@ -41,12 +41,18 @@ pub fn register_window_actions(
     file_actions::register(window, state.clone());
     export_actions::register(window, state.clone());
     edit_actions::register(window, state.clone(), canvas_view);
-    view_actions::register(window, canvas_view, tool_palette, properties_panel, toolbar_buttons);
+    view_actions::register(
+        window,
+        canvas_view,
+        tool_palette,
+        properties_panel,
+        toolbar_buttons,
+    );
     tools_actions::register(window, state.clone(), canvas_view, property_components);
-    group_actions::register(window, state.clone(), canvas_view);
+    group_actions::register(window, state.clone(), canvas_view, property_components);
     clipboard_actions::register(window, state.clone(), canvas_view);
     layer_actions::register(window, state.clone(), canvas_view);
-    alignment_actions::register(window, state.clone(), canvas_view);
+    alignment_actions::register(window, state.clone(), canvas_view, property_components);
     help_actions::register(window, state.clone());
 
     // Register block tools toggle action
@@ -67,7 +73,10 @@ pub fn register_window_actions(
         }
 
         // TODO: Implement actual lock logic when element lock property is added
-        tracing::info!("✅ {} object(s) locked (lock feature in progress)", selected_ids.len());
+        tracing::info!(
+            "✅ {} object(s) locked (lock feature in progress)",
+            selected_ids.len()
+        );
     });
 
     // Register unlock action
@@ -81,7 +90,10 @@ pub fn register_window_actions(
         }
 
         // TODO: Implement actual unlock logic when element lock property is added
-        tracing::info!("✅ {} object(s) unlocked (unlock feature in progress)", selected_ids.len());
+        tracing::info!(
+            "✅ {} object(s) unlocked (unlock feature in progress)",
+            selected_ids.len()
+        );
     });
 
     // Set keyboard accelerators

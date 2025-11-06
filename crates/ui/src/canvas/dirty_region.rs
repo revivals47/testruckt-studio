@@ -3,9 +3,9 @@
 //! Tracks which areas of the canvas have changed and need to be redrawn.
 //! This allows for efficient partial redraws instead of redrawing the entire canvas.
 
-use testruct_core::layout::Rect;
 use std::cell::RefCell;
 use std::rc::Rc;
+use testruct_core::layout::Rect;
 
 /// Represents a region that needs to be redrawn
 #[derive(Clone, Debug, Default)]
@@ -89,10 +89,7 @@ impl DirtyRegion {
         let max_y = (r1.origin.y + r1.size.height).max(r2.origin.y + r2.size.height);
 
         Rect {
-            origin: testruct_core::layout::Point {
-                x: min_x,
-                y: min_y,
-            },
+            origin: testruct_core::layout::Point { x: min_x, y: min_y },
             size: testruct_core::layout::Size {
                 width: max_x - min_x,
                 height: max_y - min_y,

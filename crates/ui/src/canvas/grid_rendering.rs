@@ -195,10 +195,7 @@ pub fn draw_rulers(
 /// Draw the grid pattern
 ///
 /// Renders a regular grid of lines across the page.
-pub fn draw_grid(
-    ctx: &Context,
-    page_size: &Size,
-) -> Result<(), cairo::Error> {
+pub fn draw_grid(ctx: &Context, page_size: &Size) -> Result<(), cairo::Error> {
     ctx.set_source_rgba(0.9, 0.9, 0.9, 0.5);
     ctx.set_line_width(0.5);
 
@@ -227,11 +224,7 @@ pub fn draw_grid(
 /// Draw guide lines
 ///
 /// Renders user-defined guide lines (vertical or horizontal).
-pub fn draw_guides(
-    ctx: &Context,
-    guides: &[Guide],
-    page_size: &Size,
-) -> Result<(), cairo::Error> {
+pub fn draw_guides(ctx: &Context, guides: &[Guide], page_size: &Size) -> Result<(), cairo::Error> {
     for guide in guides {
         ctx.set_source_rgba(
             guide.color.r as f64,

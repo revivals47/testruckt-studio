@@ -149,11 +149,7 @@ pub struct HitTest;
 
 impl HitTest {
     /// Find object at position
-    pub fn hit_test(
-        objects: &[(uuid::Uuid, &Rect)],
-        pos_x: f64,
-        pos_y: f64,
-    ) -> Option<uuid::Uuid> {
+    pub fn hit_test(objects: &[(uuid::Uuid, &Rect)], pos_x: f64, pos_y: f64) -> Option<uuid::Uuid> {
         // Test in reverse order (top-to-bottom) for proper layering
         for (id, bounds) in objects.iter().rev() {
             if pos_x >= bounds.origin.x as f64

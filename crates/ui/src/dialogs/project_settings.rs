@@ -1,6 +1,9 @@
-use gtk4::{prelude::*, Box as GtkBox, Button, Label, Orientation, Window, SpinButton, CheckButton, Adjustment};
-use gtk4::Align;
 use crate::app::AppState;
+use gtk4::Align;
+use gtk4::{
+    prelude::*, Adjustment, Box as GtkBox, Button, CheckButton, Label, Orientation, SpinButton,
+    Window,
+};
 
 pub fn show_project_settings(parent: &Window, app_state: AppState) {
     // Create dialog window for project settings

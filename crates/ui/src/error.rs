@@ -140,8 +140,14 @@ mod tests {
 
     #[test]
     fn test_error_severity() {
-        assert_eq!(AppError::FileError("test".to_string()).severity(), ErrorSeverity::Critical);
-        assert_eq!(AppError::ElementNotFound("id".to_string()).severity(), ErrorSeverity::Warning);
+        assert_eq!(
+            AppError::FileError("test".to_string()).severity(),
+            ErrorSeverity::Critical
+        );
+        assert_eq!(
+            AppError::ElementNotFound("id".to_string()).severity(),
+            ErrorSeverity::Warning
+        );
     }
 
     #[test]

@@ -1,10 +1,17 @@
-use gtk4::{prelude::*, DrawingArea, EventControllerMotion, GestureClick, GestureDrag, EventControllerKey};
-use gtk4::gdk;
-use gtk4::glib;
-use crate::canvas::{CanvasRenderState, tools::{ToolMode, ShapeFactory}, selection::HitTest, mouse::{test_resize_handle, calculate_resize_bounds, CanvasMousePos, ResizeHandle}, rendering::{snap_rect_to_grid, snap_to_guide, GuideOrientation}};
 use crate::app::AppState;
-use testruct_core::layout::{Point, Rect, Size};
+use crate::canvas::{
+    mouse::{calculate_resize_bounds, test_resize_handle, CanvasMousePos, ResizeHandle},
+    rendering::{snap_rect_to_grid, snap_to_guide, GuideOrientation},
+    selection::HitTest,
+    tools::{ShapeFactory, ToolMode},
+    CanvasRenderState,
+};
+use gtk4::gdk;
+use gtk4::{
+    prelude::*, DrawingArea, EventControllerKey, EventControllerMotion, GestureClick, GestureDrag,
+};
 use testruct_core::document::DocumentElement;
+use testruct_core::layout::{Point, Rect, Size};
 
 /// Initialize pointer events for canvas
 pub fn wire_pointer_events(
@@ -41,7 +48,10 @@ pub fn wire_pointer_events(
                         source: testruct_core::workspace::assets::AssetRef::new(),
                         bounds: testruct_core::layout::Rect {
                             origin: testruct_core::layout::Point { x: 100.0, y: 100.0 },
-                            size: testruct_core::layout::Size { width: 200.0, height: 150.0 },
+                            size: testruct_core::layout::Size {
+                                width: 200.0,
+                                height: 150.0,
+                            },
                         },
                     });
                     page.elements.push(image);
@@ -55,7 +65,9 @@ pub fn wire_pointer_events(
         // Handle Ctrl+Shift+S to save as template
         if ctrl_pressed && shift_pressed && keyval == gtk4::gdk::Key::s {
             if let Some(document) = app_state_keyboard.active_document() {
-                let template_name = chrono::Local::now().format("template_%Y%m%d_%H%M%S").to_string();
+                let template_name = chrono::Local::now()
+                    .format("template_%Y%m%d_%H%M%S")
+                    .to_string();
                 match crate::templates::save_template(&template_name, &document) {
                     Ok(_) => {
                         tracing::info!("✅ Document saved as template: {}", template_name);
@@ -129,7 +141,9 @@ pub fn wire_pointer_events(
                                     for element in &mut page.elements {
                                         if let DocumentElement::Text(text) = element {
                                             if text.id == text_id {
-                                                if cursor_pos <= text.content.len() && cursor_pos > 0 {
+                                                if cursor_pos <= text.content.len()
+                                                    && cursor_pos > 0
+                                                {
                                                     text.content.remove(cursor_pos - 1);
                                                     cursor_pos -= 1;
                                                 }
@@ -142,7 +156,10 @@ pub fn wire_pointer_events(
                             tool_state.editing_cursor_pos = cursor_pos;
                             drop(tool_state);
                             drawing_area_keyboard.queue_draw();
-                            tracing::info!("✅ Deleted character at cursor position {}", cursor_pos);
+                            tracing::info!(
+                                "✅ Deleted character at cursor position {}",
+                                cursor_pos
+                            );
                         }
                         return gtk4::glib::Propagation::Stop;
                     }
@@ -269,7 +286,11 @@ pub fn wire_pointer_events(
                                 tool_state.editing_cursor_pos = cursor_pos;
                                 drop(tool_state);
                                 drawing_area_keyboard.queue_draw();
-                                tracing::debug!("✅ Inserted character '{}' at position {}", ch, cursor_pos - 1);
+                                tracing::debug!(
+                                    "✅ Inserted character '{}' at position {}",
+                                    ch,
+                                    cursor_pos - 1
+                                );
                                 return gtk4::glib::Propagation::Stop;
                             }
                         }
@@ -285,7 +306,12 @@ pub fn wire_pointer_events(
         let handled = match keyval {
             gtk4::gdk::Key::Left => {
                 if !in_text_editing {
-                    move_selected_objects(&render_state_keyboard, &app_state_keyboard, -movement_amount, 0.0);
+                    move_selected_objects(
+                        &render_state_keyboard,
+                        &app_state_keyboard,
+                        -movement_amount,
+                        0.0,
+                    );
                     drawing_area_keyboard.queue_draw();
                     tracing::info!("✅ Move left ({}px)", movement_amount as i32);
                     true
@@ -295,7 +321,12 @@ pub fn wire_pointer_events(
             }
             gtk4::gdk::Key::Right => {
                 if !in_text_editing {
-                    move_selected_objects(&render_state_keyboard, &app_state_keyboard, movement_amount, 0.0);
+                    move_selected_objects(
+                        &render_state_keyboard,
+                        &app_state_keyboard,
+                        movement_amount,
+                        0.0,
+                    );
                     drawing_area_keyboard.queue_draw();
                     tracing::info!("✅ Move right ({}px)", movement_amount as i32);
                     true
@@ -305,7 +336,12 @@ pub fn wire_pointer_events(
             }
             gtk4::gdk::Key::Up => {
                 if !in_text_editing {
-                    move_selected_objects(&render_state_keyboard, &app_state_keyboard, 0.0, -movement_amount);
+                    move_selected_objects(
+                        &render_state_keyboard,
+                        &app_state_keyboard,
+                        0.0,
+                        -movement_amount,
+                    );
                     drawing_area_keyboard.queue_draw();
                     tracing::info!("✅ Move up ({}px)", movement_amount as i32);
                     true
@@ -315,7 +351,12 @@ pub fn wire_pointer_events(
             }
             gtk4::gdk::Key::Down => {
                 if !in_text_editing {
-                    move_selected_objects(&render_state_keyboard, &app_state_keyboard, 0.0, movement_amount);
+                    move_selected_objects(
+                        &render_state_keyboard,
+                        &app_state_keyboard,
+                        0.0,
+                        movement_amount,
+                    );
                     drawing_area_keyboard.queue_draw();
                     tracing::info!("✅ Move down ({}px)", movement_amount as i32);
                     true
@@ -353,10 +394,7 @@ pub fn wire_pointer_events(
         drop(config);
         drop(ruler_config);
 
-        let canvas_mouse_pos = CanvasMousePos {
-            x: doc_x,
-            y: doc_y,
-        };
+        let canvas_mouse_pos = CanvasMousePos { x: doc_x, y: doc_y };
 
         // Check if cursor is over a resize handle of selected objects
         let selected = state.selected_ids.borrow();
@@ -368,18 +406,31 @@ pub fn wire_pointer_events(
                     // Find the selected element
                     for element in &page.elements {
                         let (elem_id, bounds) = match element {
-                            testruct_core::document::DocumentElement::Shape(shape) => (shape.id, &shape.bounds),
-                            testruct_core::document::DocumentElement::Text(text) => (text.id, &text.bounds),
-                            testruct_core::document::DocumentElement::Image(image) => (image.id, &image.bounds),
-                            testruct_core::document::DocumentElement::Frame(frame) => (frame.id, &frame.bounds),
+                            testruct_core::document::DocumentElement::Shape(shape) => {
+                                (shape.id, &shape.bounds)
+                            }
+                            testruct_core::document::DocumentElement::Text(text) => {
+                                (text.id, &text.bounds)
+                            }
+                            testruct_core::document::DocumentElement::Image(image) => {
+                                (image.id, &image.bounds)
+                            }
+                            testruct_core::document::DocumentElement::Frame(frame) => {
+                                (frame.id, &frame.bounds)
+                            }
                         };
 
                         if elem_id == *selected_id {
                             // Test for resize handle hit
-                            if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 8.0) {
+                            if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 8.0)
+                            {
                                 cursor_name = match handle {
-                                    ResizeHandle::TopLeft | ResizeHandle::BottomRight => "nwse-resize",
-                                    ResizeHandle::TopRight | ResizeHandle::BottomLeft => "nesw-resize",
+                                    ResizeHandle::TopLeft | ResizeHandle::BottomRight => {
+                                        "nwse-resize"
+                                    }
+                                    ResizeHandle::TopRight | ResizeHandle::BottomLeft => {
+                                        "nesw-resize"
+                                    }
                                     ResizeHandle::Top | ResizeHandle::Bottom => "ns-resize",
                                     ResizeHandle::Left | ResizeHandle::Right => "ew-resize",
                                 };
@@ -424,11 +475,11 @@ pub fn wire_pointer_events(
             let shift_pressed = modifier_state.contains(gdk::ModifierType::SHIFT_MASK);
             let ctrl_pressed = modifier_state.contains(gdk::ModifierType::CONTROL_MASK);
 
-            // Check for double-click (n_press == 2) for text editing
+            // Check for double-click (n_press == 2) for text editing or image selection
             eprintln!("🖱️  Click: n_press={}, tool=Select", n_press);
             if n_press == 2 {
                 eprintln!("🔍 Double-click detected at ({:.0}, {:.0})", x, y);
-                // Try to find a text element at this position
+                // Try to find a text or image element at this position
                 if let Some(document) = app_state_click.active_document() {
                     if let Some(page) = document.pages.first() {
                         let config = state.config.borrow();
@@ -440,22 +491,104 @@ pub fn wire_pointer_events(
                         drop(config);
                         drop(ruler_config);
 
-                        // Check if double-click is on a text element
+                        // Check if double-click is on a text or image element
                         for element in &page.elements {
-                            if let DocumentElement::Text(text) = element {
-                                let bounds = &text.bounds;
-                                // Check if click is within bounds
-                                if doc_x >= bounds.origin.x as f64 && doc_x <= (bounds.origin.x + bounds.size.width) as f64
-                                    && doc_y >= bounds.origin.y as f64 && doc_y <= (bounds.origin.y + bounds.size.height) as f64 {
-                                    // Enter text editing mode
-                                    let mut tool_state = state.tool_state.borrow_mut();
-                                    tool_state.editing_text_id = Some(text.id);
-                                    tool_state.editing_cursor_pos = text.content.len();
-                                    drop(tool_state);
-                                    drawing_area_click.queue_draw();
-                                    tracing::info!("✅ Entered text editing mode for text element: {}", text.id);
-                                    return;
+                            match element {
+                                DocumentElement::Text(text) => {
+                                    let bounds = &text.bounds;
+                                    // Check if click is within bounds
+                                    if doc_x >= bounds.origin.x as f64
+                                        && doc_x <= (bounds.origin.x + bounds.size.width) as f64
+                                        && doc_y >= bounds.origin.y as f64
+                                        && doc_y <= (bounds.origin.y + bounds.size.height) as f64
+                                    {
+                                        // Enter text editing mode
+                                        let mut tool_state = state.tool_state.borrow_mut();
+                                        tool_state.editing_text_id = Some(text.id);
+                                        tool_state.editing_cursor_pos = text.content.len();
+                                        drop(tool_state);
+                                        drawing_area_click.queue_draw();
+                                        tracing::info!(
+                                            "✅ Entered text editing mode for text element: {}",
+                                            text.id
+                                        );
+                                        return;
+                                    }
                                 }
+                                DocumentElement::Image(image) => {
+                                    let bounds = &image.bounds;
+                                    // Check if click is within bounds
+                                    if doc_x >= bounds.origin.x as f64
+                                        && doc_x <= (bounds.origin.x + bounds.size.width) as f64
+                                        && doc_y >= bounds.origin.y as f64
+                                        && doc_y <= (bounds.origin.y + bounds.size.height) as f64
+                                    {
+                                        // Image double-click detected
+                                        tracing::info!(
+                                            "🖼️  Image double-click detected for image: {}",
+                                            image.id
+                                        );
+
+                                        // Select the image on the canvas
+                                        let mut selected = state.selected_ids.borrow_mut();
+                                        selected.clear();
+                                        selected.push(image.id);
+                                        drop(selected);
+                                        drawing_area_click.queue_draw();
+
+                                        // Show image selection dialog
+                                        if let Some(window) = app_state_click.window() {
+                                            let image_id = image.id;
+                                            let app_state_dialog = app_state_click.clone();
+                                            let drawing_area_dialog = drawing_area_click.clone();
+
+                                            // Cast ApplicationWindow to Window for the dialog
+                                            use gtk4::glib::Cast;
+                                            let window_ref = window.upcast::<gtk4::Window>();
+
+                                            crate::dialogs::image_dialog::show_image_chooser_async(
+                                                &window_ref,
+                                                Box::new(move |path| {
+                                                    tracing::info!(
+                                                        "📝 Image selected for block {}: {}",
+                                                        image_id,
+                                                        path.display()
+                                                    );
+
+                                                    // Update the asset catalog with the selected image
+                                                    let asset_ref = {
+                                                        let catalog = app_state_dialog.asset_catalog();
+                                                        let mut cat = catalog.lock().expect("asset catalog");
+                                                        cat.register(&path)
+                                                    };
+
+                                                    // Store the image path in the document
+                                                    let _ = app_state_dialog.with_active_document(|doc| {
+                                                        if let Some(page) = doc.pages.first_mut() {
+                                                            for element in &mut page.elements {
+                                                                if let DocumentElement::Image(img) = element {
+                                                                    if img.id == image_id {
+                                                                        img.source = asset_ref;
+                                                                        tracing::info!("✅ Updated image element with asset reference");
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    });
+
+                                                    // Redraw the canvas
+                                                    drawing_area_dialog.queue_draw();
+                                                }),
+                                            );
+                                        } else {
+                                            tracing::warn!("⚠️  Window not available for image dialog");
+                                        }
+
+                                        return;
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -510,7 +643,11 @@ pub fn wire_pointer_events(
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
-                            tracing::info!("✅ Started resizing object {} with handle {:?}", element_id, handle);
+                            tracing::info!(
+                                "✅ Started resizing object {} with handle {:?}",
+                                element_id,
+                                handle
+                            );
                             resize_detected = true;
                             break;
                         }
@@ -546,7 +683,8 @@ pub fn wire_pointer_events(
                     }
 
                     // Convert to references for hit testing
-                    let object_refs: Vec<(uuid::Uuid, &Rect)> = objects.iter().map(|(id, bounds)| (*id, bounds)).collect();
+                    let object_refs: Vec<(uuid::Uuid, &Rect)> =
+                        objects.iter().map(|(id, bounds)| (*id, bounds)).collect();
 
                     // Transform screen coordinates to document coordinates
                     let config = state.config.borrow();
@@ -1039,7 +1177,12 @@ fn move_selected_objects(
                 *doc = document;
             });
 
-            tracing::debug!("Moved {} selected object(s) by ({}, {})", selected_ids_copy.len(), delta_x, delta_y);
+            tracing::debug!(
+                "Moved {} selected object(s) by ({}, {})",
+                selected_ids_copy.len(),
+                delta_x,
+                delta_y
+            );
         }
     }
 }

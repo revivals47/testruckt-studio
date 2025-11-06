@@ -61,7 +61,11 @@ fn bind_toolbar_buttons(components: &WindowComponents) {
     bind_button(&toolbar.unlock_btn, window, "win.unlock");
 
     // Snap toggles
-    bind_toggle_button(&toolbar.snap_to_guides_toggle, window, "win.toggle-snap-guides");
+    bind_toggle_button(
+        &toolbar.snap_to_guides_toggle,
+        window,
+        "win.toggle-snap-guides",
+    );
 
     // Popover toggles
     bind_toggle_button(&toolbar.ruler_menu_toggle, window, "win.toggle-rulers");
@@ -84,7 +88,11 @@ fn bind_button(button: &gtk4::Button, window: &gtk4::ApplicationWindow, action_n
 }
 
 /// Bind a toggle button to a window action
-fn bind_toggle_button(button: &gtk4::ToggleButton, window: &gtk4::ApplicationWindow, action_name: &str) {
+fn bind_toggle_button(
+    button: &gtk4::ToggleButton,
+    window: &gtk4::ApplicationWindow,
+    action_name: &str,
+) {
     let action_name = action_name.to_string();
     let window_weak = window.downgrade();
 
@@ -250,8 +258,8 @@ fn bind_tool_selection(components: &WindowComponents) {
 
 /// Monitor tool state changes and update UI buttons accordingly
 fn setup_tool_monitor(components: &WindowComponents) {
-    use gtk4::glib;
     use crate::canvas::tools::ToolMode;
+    use gtk4::glib;
 
     let render_state = components.canvas_view.render_state().clone();
     let tool_buttons = components.tool_palette_buttons.clone();
@@ -283,7 +291,7 @@ fn setup_tool_monitor(components: &WindowComponents) {
                 ToolMode::Circle => tool_buttons.circle_btn.set_active(true),
                 ToolMode::Line => tool_buttons.line_btn.set_active(true),
                 ToolMode::Arrow => tool_buttons.arrow_btn.set_active(true),
-                ToolMode::Pan => {}, // Pan tool doesn't have a button in the palette
+                ToolMode::Pan => {} // Pan tool doesn't have a button in the palette
             }
         }
 
@@ -309,7 +317,11 @@ fn setup_selection_monitor(components: &WindowComponents, app_state: AppState) {
             tracing::debug!("✅ Selection changed, updating property panel");
 
             // Update the property panel text buffer with the selected element's content
-            crate::panels::update_property_panel_on_selection(&property_components, &app_state, &current_selection);
+            crate::panels::update_property_panel_on_selection(
+                &property_components,
+                &app_state,
+                &current_selection,
+            );
         }
 
         glib::ControlFlow::Continue

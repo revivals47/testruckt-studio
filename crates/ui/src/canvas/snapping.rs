@@ -121,7 +121,7 @@ impl SnapEngine {
             let snap_line = SnapLine {
                 line_type: SnapLineType::Grid,
                 position: nearest_grid,
-                is_horizontal: false, // vertical line at x position
+                is_horizontal: false,   // vertical line at x position
                 bounds: (0.0, 10000.0), // full canvas height
             };
             Some((nearest_grid, snap_line))
@@ -140,7 +140,7 @@ impl SnapEngine {
             let snap_line = SnapLine {
                 line_type: SnapLineType::Grid,
                 position: nearest_grid,
-                is_horizontal: true, // horizontal line at y position
+                is_horizontal: true,    // horizontal line at y position
                 bounds: (0.0, 10000.0), // full canvas width
             };
             Some((nearest_grid, snap_line))

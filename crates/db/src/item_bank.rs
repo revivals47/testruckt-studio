@@ -2,11 +2,11 @@
 //!
 //! Provides CRUD operations and search functionality for the item database.
 
-use crate::models::{Item, Passage, ItemType, Difficulty};
+use crate::models::{Difficulty, Item, ItemType, Passage};
 use crate::schema;
 use anyhow::Result;
 use chrono::Utc;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use std::path::Path;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -75,43 +75,48 @@ impl ItemBank {
              FROM items WHERE id = ?1"
         )?;
 
-        let mut item = stmt.query_row(params![id.to_string()], |row| {
-            let created_at_str = row.get::<_, String>(7)?;
-            let updated_at_str = row.get::<_, String>(8)?;
+        let mut item = stmt
+            .query_row(params![id.to_string()], |row| {
+                let created_at_str = row.get::<_, String>(7)?;
+                let updated_at_str = row.get::<_, String>(8)?;
 
-            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
-                .with_timezone(&Utc);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
-                .with_timezone(&Utc);
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            Ok(Item {
-                id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
-                title: row.get(1)?,
-                description: row.get(2)?,
-                content: row.get(3)?,
-                item_type: parse_item_type(&row.get::<_, String>(4)?),
-                difficulty: parse_difficulty(&row.get::<_, String>(5)?),
-                skill_ids: Vec::new(),
-                passage_id: row.get::<_, Option<String>>(6)?.map(|s| Uuid::parse_str(&s).unwrap()),
-                created_at,
-                updated_at,
+                Ok(Item {
+                    id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    content: row.get(3)?,
+                    item_type: parse_item_type(&row.get::<_, String>(4)?),
+                    difficulty: parse_difficulty(&row.get::<_, String>(5)?),
+                    skill_ids: Vec::new(),
+                    passage_id: row
+                        .get::<_, Option<String>>(6)?
+                        .map(|s| Uuid::parse_str(&s).unwrap()),
+                    created_at,
+                    updated_at,
+                })
             })
-        }).ok();
+            .ok();
 
         // Load skill IDs from item_skills table
         if let Some(ref mut item) = item {
-            let mut skill_stmt = self.conn.prepare(
-                "SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id"
-            )?;
+            let mut skill_stmt = self
+                .conn
+                .prepare("SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id")?;
 
-            let skills: Vec<Uuid> = skill_stmt.query_map(params![id.to_string()], |row| {
-                let skill_id_str: String = row.get(0)?;
-                Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            let skills: Vec<Uuid> = skill_stmt
+                .query_map(params![id.to_string()], |row| {
+                    let skill_id_str: String = row.get(0)?;
+                    Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
             item.skill_ids = skills;
         }
@@ -122,15 +127,16 @@ impl ItemBank {
     /// Load skill IDs for items from the database
     fn load_skill_ids(&self, items: &mut [Item]) -> Result<()> {
         for item in items {
-            let mut skill_stmt = self.conn.prepare(
-                "SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id"
-            )?;
+            let mut skill_stmt = self
+                .conn
+                .prepare("SELECT skill_id FROM item_skills WHERE item_id = ?1 ORDER BY skill_id")?;
 
-            let skills: Vec<Uuid> = skill_stmt.query_map(params![item.id.to_string()], |row| {
-                let skill_id_str: String = row.get(0)?;
-                Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            let skills: Vec<Uuid> = skill_stmt
+                .query_map(params![item.id.to_string()], |row| {
+                    let skill_id_str: String = row.get(0)?;
+                    Ok(Uuid::parse_str(&skill_id_str).unwrap_or_default())
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
             item.skill_ids = skills;
         }
@@ -144,32 +150,35 @@ impl ItemBank {
              FROM items ORDER BY created_at DESC LIMIT ?1"
         )?;
 
-        let mut items = stmt.query_map(params![limit.unwrap_or(1000)], |row| {
-            let created_at_str = row.get::<_, String>(7)?;
-            let updated_at_str = row.get::<_, String>(8)?;
+        let mut items = stmt
+            .query_map(params![limit.unwrap_or(1000)], |row| {
+                let created_at_str = row.get::<_, String>(7)?;
+                let updated_at_str = row.get::<_, String>(8)?;
 
-            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
-                .with_timezone(&Utc);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
-                .with_timezone(&Utc);
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            Ok(Item {
-                id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
-                title: row.get(1)?,
-                description: row.get(2)?,
-                content: row.get(3)?,
-                item_type: parse_item_type(&row.get::<_, String>(4)?),
-                difficulty: parse_difficulty(&row.get::<_, String>(5)?),
-                skill_ids: Vec::new(),
-                passage_id: row.get::<_, Option<String>>(6)?.map(|s| Uuid::parse_str(&s).unwrap()),
-                created_at,
-                updated_at,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+                Ok(Item {
+                    id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    content: row.get(3)?,
+                    item_type: parse_item_type(&row.get::<_, String>(4)?),
+                    difficulty: parse_difficulty(&row.get::<_, String>(5)?),
+                    skill_ids: Vec::new(),
+                    passage_id: row
+                        .get::<_, Option<String>>(6)?
+                        .map(|s| Uuid::parse_str(&s).unwrap()),
+                    created_at,
+                    updated_at,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Load skill IDs for all items
         self.load_skill_ids(&mut items)?;
@@ -187,32 +196,35 @@ impl ItemBank {
              FROM items WHERE title LIKE ?1 OR content LIKE ?1 ORDER BY created_at DESC LIMIT 100"
         )?;
 
-        let mut items = stmt.query_map(params![&search_pattern], |row| {
-            let created_at_str = row.get::<_, String>(7)?;
-            let updated_at_str = row.get::<_, String>(8)?;
+        let mut items = stmt
+            .query_map(params![&search_pattern], |row| {
+                let created_at_str = row.get::<_, String>(7)?;
+                let updated_at_str = row.get::<_, String>(8)?;
 
-            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
-                .with_timezone(&Utc);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
-                .with_timezone(&Utc);
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            Ok(Item {
-                id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
-                title: row.get(1)?,
-                description: row.get(2)?,
-                content: row.get(3)?,
-                item_type: parse_item_type(&row.get::<_, String>(4)?),
-                difficulty: parse_difficulty(&row.get::<_, String>(5)?),
-                skill_ids: Vec::new(),
-                passage_id: row.get::<_, Option<String>>(6)?.map(|s| Uuid::parse_str(&s).unwrap()),
-                created_at,
-                updated_at,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+                Ok(Item {
+                    id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    content: row.get(3)?,
+                    item_type: parse_item_type(&row.get::<_, String>(4)?),
+                    difficulty: parse_difficulty(&row.get::<_, String>(5)?),
+                    skill_ids: Vec::new(),
+                    passage_id: row
+                        .get::<_, Option<String>>(6)?
+                        .map(|s| Uuid::parse_str(&s).unwrap()),
+                    created_at,
+                    updated_at,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Load skill IDs for all search results
         self.load_skill_ids(&mut items)?;
@@ -229,32 +241,35 @@ impl ItemBank {
              FROM items WHERE difficulty = ?1 ORDER BY created_at DESC"
         )?;
 
-        let mut items = stmt.query_map(params![difficulty.as_str()], |row| {
-            let created_at_str = row.get::<_, String>(7)?;
-            let updated_at_str = row.get::<_, String>(8)?;
+        let mut items = stmt
+            .query_map(params![difficulty.as_str()], |row| {
+                let created_at_str = row.get::<_, String>(7)?;
+                let updated_at_str = row.get::<_, String>(8)?;
 
-            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
-                .with_timezone(&Utc);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
-                .with_timezone(&Utc);
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            Ok(Item {
-                id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
-                title: row.get(1)?,
-                description: row.get(2)?,
-                content: row.get(3)?,
-                item_type: parse_item_type(&row.get::<_, String>(4)?),
-                difficulty: parse_difficulty(&row.get::<_, String>(5)?),
-                skill_ids: Vec::new(),
-                passage_id: row.get::<_, Option<String>>(6)?.map(|s| Uuid::parse_str(&s).unwrap()),
-                created_at,
-                updated_at,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+                Ok(Item {
+                    id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    content: row.get(3)?,
+                    item_type: parse_item_type(&row.get::<_, String>(4)?),
+                    difficulty: parse_difficulty(&row.get::<_, String>(5)?),
+                    skill_ids: Vec::new(),
+                    passage_id: row
+                        .get::<_, Option<String>>(6)?
+                        .map(|s| Uuid::parse_str(&s).unwrap()),
+                    created_at,
+                    updated_at,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Load skill IDs for items filtered by difficulty
         self.load_skill_ids(&mut items)?;
@@ -266,10 +281,8 @@ impl ItemBank {
     pub fn delete_item(&self, id: &Uuid) -> Result<()> {
         debug!("Deleting item: {}", id);
 
-        self.conn.execute(
-            "DELETE FROM items WHERE id = ?1",
-            params![id.to_string()],
-        )?;
+        self.conn
+            .execute("DELETE FROM items WHERE id = ?1", params![id.to_string()])?;
 
         info!("Item {} deleted", id);
         Ok(())
@@ -299,30 +312,32 @@ impl ItemBank {
     /// Get a passage by ID
     pub fn get_passage(&self, id: &Uuid) -> Result<Option<Passage>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, content, source, created_at, updated_at FROM passages WHERE id = ?1"
+            "SELECT id, title, content, source, created_at, updated_at FROM passages WHERE id = ?1",
         )?;
 
-        let passage = stmt.query_row(params![id.to_string()], |row| {
-            let created_at_str = row.get::<_, String>(4)?;
-            let updated_at_str = row.get::<_, String>(5)?;
+        let passage = stmt
+            .query_row(params![id.to_string()], |row| {
+                let created_at_str = row.get::<_, String>(4)?;
+                let updated_at_str = row.get::<_, String>(5)?;
 
-            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
-                .with_timezone(&Utc);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("created_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-                .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
-                .with_timezone(&Utc);
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+                    .map_err(|_| rusqlite::Error::InvalidParameterName("updated_at".to_string()))?
+                    .with_timezone(&Utc);
 
-            Ok(Passage {
-                id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
-                title: row.get(1)?,
-                content: row.get(2)?,
-                source: row.get(3)?,
-                created_at,
-                updated_at,
+                Ok(Passage {
+                    id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    source: row.get(3)?,
+                    created_at,
+                    updated_at,
+                })
             })
-        }).ok();
+            .ok();
 
         Ok(passage)
     }
@@ -331,11 +346,9 @@ impl ItemBank {
 
     /// Get total item count
     pub fn count_items(&self) -> Result<i64> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM items",
-            [],
-            |row| row.get(0)
-        )?;
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM items", [], |row| row.get(0))?;
 
         Ok(count)
     }
@@ -345,7 +358,7 @@ impl ItemBank {
         let count: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM items WHERE item_type = ?1",
             params![item_type.as_str()],
-            |row| row.get(0)
+            |row| row.get(0),
         )?;
 
         Ok(count)

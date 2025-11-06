@@ -2,8 +2,8 @@
 //!
 //! Defines SQL schema for item bank tables.
 
-use rusqlite::Connection;
 use anyhow::Result;
+use rusqlite::Connection;
 use tracing::debug;
 
 /// Initialize the database schema
@@ -175,11 +175,11 @@ mod tests {
         init_schema(&conn)?;
 
         // Verify tables exist
-        let mut stmt = conn.prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )?;
+        let mut stmt =
+            conn.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")?;
 
-        let tables: Vec<String> = stmt.query_map([], |row| row.get(0))?
+        let tables: Vec<String> = stmt
+            .query_map([], |row| row.get(0))?
             .collect::<Result<Vec<_>, _>>()?;
 
         assert!(tables.contains(&"items".to_string()));

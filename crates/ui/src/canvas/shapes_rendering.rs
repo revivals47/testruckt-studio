@@ -15,24 +15,32 @@ pub fn draw_rectangle(
     fill: &Option<Color>,
 ) -> Result<(), cairo::Error> {
     if let Some(fill_color) = fill {
-        ctx.set_source_rgb(fill_color.r as f64, fill_color.g as f64, fill_color.b as f64);
+        ctx.set_source_rgb(
+            fill_color.r as f64,
+            fill_color.g as f64,
+            fill_color.b as f64,
+        );
         ctx.rectangle(
             bounds.origin.x as f64,
             bounds.origin.y as f64,
             bounds.size.width as f64,
-            bounds.size.height as f64
+            bounds.size.height as f64,
         );
         ctx.fill()?;
     }
 
     if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+        ctx.set_source_rgb(
+            stroke_color.r as f64,
+            stroke_color.g as f64,
+            stroke_color.b as f64,
+        );
         ctx.set_line_width(2.0);
         ctx.rectangle(
             bounds.origin.x as f64,
             bounds.origin.y as f64,
             bounds.size.width as f64,
-            bounds.size.height as f64
+            bounds.size.height as f64,
         );
         ctx.stroke()?;
     }
@@ -60,12 +68,20 @@ pub fn draw_ellipse(
     ctx.restore()?;
 
     if let Some(fill_color) = fill {
-        ctx.set_source_rgb(fill_color.r as f64, fill_color.g as f64, fill_color.b as f64);
+        ctx.set_source_rgb(
+            fill_color.r as f64,
+            fill_color.g as f64,
+            fill_color.b as f64,
+        );
         ctx.fill_preserve()?;
     }
 
     if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+        ctx.set_source_rgb(
+            stroke_color.r as f64,
+            stroke_color.g as f64,
+            stroke_color.b as f64,
+        );
         ctx.set_line_width(2.0);
         ctx.stroke()?;
     }
@@ -74,18 +90,18 @@ pub fn draw_ellipse(
 }
 
 /// Draw a line shape
-pub fn draw_line(
-    ctx: &Context,
-    bounds: &Rect,
-    stroke: &Option<Color>,
-) -> Result<(), cairo::Error> {
+pub fn draw_line(ctx: &Context, bounds: &Rect, stroke: &Option<Color>) -> Result<(), cairo::Error> {
     if let Some(stroke_color) = stroke {
-        ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+        ctx.set_source_rgb(
+            stroke_color.r as f64,
+            stroke_color.g as f64,
+            stroke_color.b as f64,
+        );
         ctx.set_line_width(2.0);
         ctx.move_to(bounds.origin.x as f64, bounds.origin.y as f64);
         ctx.line_to(
             bounds.origin.x as f64 + bounds.size.width as f64,
-            bounds.origin.y as f64 + bounds.size.height as f64
+            bounds.origin.y as f64 + bounds.size.height as f64,
         );
         ctx.stroke()?;
     }
@@ -99,7 +115,12 @@ pub fn draw_arrow(
     bounds: &Rect,
     stroke: &Option<Color>,
 ) -> Result<(), cairo::Error> {
-    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
+    let stroke_color = stroke.unwrap_or(Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    });
 
     let x1 = bounds.origin.x as f64;
     let y1 = bounds.origin.y as f64;
@@ -107,7 +128,11 @@ pub fn draw_arrow(
     let y2 = bounds.origin.y as f64 + bounds.size.height as f64;
 
     // Draw the line
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_source_rgb(
+        stroke_color.r as f64,
+        stroke_color.g as f64,
+        stroke_color.b as f64,
+    );
     ctx.set_line_width(2.0);
     ctx.move_to(x1, y1);
     ctx.line_to(x2, y2);
@@ -132,7 +157,11 @@ pub fn draw_arrow(
     ctx.line_to(p1x, p1y);
     ctx.line_to(p2x, p2y);
     ctx.close_path();
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_source_rgb(
+        stroke_color.r as f64,
+        stroke_color.g as f64,
+        stroke_color.b as f64,
+    );
     ctx.fill()?;
 
     Ok(())
@@ -144,7 +173,12 @@ pub fn draw_polygon(
     bounds: &Rect,
     stroke: &Option<Color>,
 ) -> Result<(), cairo::Error> {
-    let stroke_color = stroke.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 });
+    let stroke_color = stroke.unwrap_or(Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    });
 
     let center_x = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
     let center_y = bounds.origin.y as f64 + bounds.size.height as f64 / 2.0;
@@ -155,7 +189,8 @@ pub fn draw_polygon(
     let mut first = true;
 
     for i in 0..SIDES {
-        let angle = (2.0 * std::f64::consts::PI * i as f64 / SIDES as f64) - std::f64::consts::PI / 2.0;
+        let angle =
+            (2.0 * std::f64::consts::PI * i as f64 / SIDES as f64) - std::f64::consts::PI / 2.0;
         let x = center_x + radius * angle.cos();
         let y = center_y + radius * angle.sin();
 
@@ -168,7 +203,11 @@ pub fn draw_polygon(
     }
 
     ctx.close_path();
-    ctx.set_source_rgb(stroke_color.r as f64, stroke_color.g as f64, stroke_color.b as f64);
+    ctx.set_source_rgb(
+        stroke_color.r as f64,
+        stroke_color.g as f64,
+        stroke_color.b as f64,
+    );
     ctx.set_line_width(2.0);
     ctx.stroke()?;
 

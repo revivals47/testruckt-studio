@@ -68,7 +68,10 @@ pub fn register(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
         tracing::info!("Action: duplicate page");
         match page_state.duplicate_page(0) {
             Ok(_) => {
-                tracing::info!("✅ Page duplicated. Total pages: {}", page_state.page_count());
+                tracing::info!(
+                    "✅ Page duplicated. Total pages: {}",
+                    page_state.page_count()
+                );
             }
             Err(e) => {
                 tracing::warn!("⚠️  Failed to duplicate page: {}", e);
@@ -182,7 +185,10 @@ fn perform_save_as_document(window: &gtk4::ApplicationWindow, state: &crate::app
 
         glib::spawn_future_local(async move {
             if let Some(path) = crate::io::file_dialog::show_save_dialog(&window_clone).await {
-                match crate::io::file_io::save_document(&state_clone.active_document().unwrap(), &path) {
+                match crate::io::file_io::save_document(
+                    &state_clone.active_document().unwrap(),
+                    &path,
+                ) {
                     Ok(_) => {
                         tracing::info!("✅ Document saved as: {}", path.display());
                     }

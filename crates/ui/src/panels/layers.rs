@@ -1,4 +1,4 @@
-use gtk4::{prelude::*, Box as GtkBox, Label, Orientation, ScrolledWindow, CheckButton};
+use gtk4::{prelude::*, Box as GtkBox, CheckButton, Label, Orientation, ScrolledWindow};
 
 /// Represents a single layer item in the layers panel
 #[derive(Clone)]
@@ -63,16 +63,16 @@ fn create_layer_item(element: &testruct_core::document::DocumentElement, index: 
     let (_type_name, type_label) = match element {
         testruct_core::document::DocumentElement::Text(text) => (
             "Text",
-            format!("Text: {}", if text.content.len() > 15 {
-                format!("{}...", &text.content[..15])
-            } else {
-                text.content.clone()
-            }),
+            format!(
+                "Text: {}",
+                if text.content.len() > 15 {
+                    format!("{}...", &text.content[..15])
+                } else {
+                    text.content.clone()
+                }
+            ),
         ),
-        testruct_core::document::DocumentElement::Image(_) => (
-            "Image",
-            "Image".to_string(),
-        ),
+        testruct_core::document::DocumentElement::Image(_) => ("Image", "Image".to_string()),
         testruct_core::document::DocumentElement::Shape(shape) => {
             let shape_type = match shape.kind {
                 testruct_core::document::ShapeKind::Rectangle => "Rectangle",
@@ -82,11 +82,8 @@ fn create_layer_item(element: &testruct_core::document::DocumentElement, index: 
                 testruct_core::document::ShapeKind::Polygon => "Polygon",
             };
             ("Shape", shape_type.to_string())
-        },
-        testruct_core::document::DocumentElement::Frame(_) => (
-            "Frame",
-            "Frame".to_string(),
-        ),
+        }
+        testruct_core::document::DocumentElement::Frame(_) => ("Frame", "Frame".to_string()),
     };
 
     // Create element label

@@ -29,8 +29,8 @@
 | Z-order buttons | ✅ Full | ✅ UI built (bring forward/back) | ✅ Complete |
 | Alignment buttons | ✅ Full | ✅ UI built (6 alignment buttons) | ✅ Complete |
 | Grouping section | ✅ Full | ✅ UI built (status, name, ungroup) | ✅ Complete |
-| Shape styling (colors, stroke) | ✅ Full | ✅ UI built | ✅ Complete |
-| Signal handlers | ✅ Full | ⚠️ Not wired yet | ⚠️ Partial |
+| Shape styling (colors, stroke) | ✅ Full | ✅ カラーダイアログ連携済み | ✅ Complete |
+| Signal handlers | ✅ Full | ✅ 塗り潰し/線色・テキスト自動リサイズ等を実装 | ✅ Complete |
 | File location | `property/panel_ui_setup.rs` (522 lines) | `panels/properties.rs` (240 lines) | ~46% reduction |
 
 ### Layers Panel
@@ -589,4 +589,3 @@ crates/ui/src/
 2. **Short-term**: Implement text editing UI and layer reordering
 3. **Medium-term**: Add database layer for item library and document persistence
 4. **Long-term**: Rich text formatting and advanced operations (distribute, rotate, etc.)
-

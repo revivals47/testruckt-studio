@@ -42,10 +42,7 @@ pub async fn show_save_dialog(parent: &gtk4::ApplicationWindow) -> Option<PathBu
 }
 
 /// Show an export dialog for selecting an export location and format
-pub async fn show_export_dialog(
-    parent: &gtk4::ApplicationWindow,
-    format: &str,
-) -> Option<PathBuf> {
+pub async fn show_export_dialog(parent: &gtk4::ApplicationWindow, format: &str) -> Option<PathBuf> {
     let dialog = FileDialog::new();
     dialog.set_title(&format!("Export Document as {}", format.to_uppercase()));
 

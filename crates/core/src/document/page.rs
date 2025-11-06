@@ -59,7 +59,7 @@ impl Page {
                 self.elements.swap(pos, pos + 1);
                 true
             } else {
-                false  // Already at front
+                false // Already at front
             }
         } else {
             false
@@ -73,7 +73,7 @@ impl Page {
                 self.elements.swap(pos, pos - 1);
                 true
             } else {
-                false  // Already at back
+                false // Already at back
             }
         } else {
             false
@@ -119,6 +119,8 @@ pub struct TextElement {
     pub content: String,
     pub style: crate::typography::TextStyle,
     pub bounds: super::super::layout::Rect,
+    #[serde(default)]
+    pub auto_resize_height: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

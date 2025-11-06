@@ -2,9 +2,9 @@
 //!
 //! Provides buttons for selecting canvas tools (Select, Rectangle, Circle, Text).
 
+use crate::canvas::tools::ToolMode;
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Orientation, ToggleButton};
-use crate::canvas::tools::ToolMode;
 
 /// Tool selection button group
 pub struct ToolButtons {
@@ -70,7 +70,7 @@ impl ToolButtons {
             ToolMode::Arrow => self.arrow_btn.set_active(true),
             ToolMode::Image => self.image_btn.set_active(true),
             ToolMode::Text => self.text_btn.set_active(true),
-            ToolMode::Pan => {}, // Pan is not a selectable tool button
+            ToolMode::Pan => {} // Pan is not a selectable tool button
         }
     }
 }
@@ -104,7 +104,7 @@ pub fn build_tool_section(container: &GtkBox) -> ToolButtons {
 
     let buttons = ToolButtons::new();
 
-    buttons.select_btn.set_active(true);  // Default to Select
+    buttons.select_btn.set_active(true); // Default to Select
     buttons.select_btn.add_css_class("flat");
     tool_row1.append(&buttons.select_btn);
 

@@ -105,7 +105,11 @@ pub fn test_resize_handle(
 ) -> Option<ResizeHandle> {
     let half_size = handle_size / 2.0;
     let handles = [
-        (ResizeHandle::TopLeft, bounds.origin.x as f64, bounds.origin.y as f64),
+        (
+            ResizeHandle::TopLeft,
+            bounds.origin.x as f64,
+            bounds.origin.y as f64,
+        ),
         (
             ResizeHandle::Top,
             bounds.origin.x as f64 + bounds.size.width as f64 / 2.0,
@@ -303,9 +307,9 @@ mod tests {
     fn test_widget_to_canvas_conversion() {
         let pos = widget_to_canvas(
             100.0, 150.0, // widget coords
-            1.0,           // zoom
-            0.0, 0.0,      // pan
-            20.0,          // ruler size
+            1.0,   // zoom
+            0.0, 0.0,  // pan
+            20.0, // ruler size
         );
         assert_eq!(pos.x, 80.0);
         assert_eq!(pos.y, 130.0);
@@ -314,10 +318,10 @@ mod tests {
     #[test]
     fn test_widget_to_canvas_with_zoom() {
         let pos = widget_to_canvas(
-            100.0, 100.0,  // widget coords
-            2.0,            // 2x zoom
-            0.0, 0.0,       // pan
-            20.0,           // ruler size
+            100.0, 100.0, // widget coords
+            2.0,   // 2x zoom
+            0.0, 0.0,  // pan
+            20.0, // ruler size
         );
         assert_eq!(pos.x, 40.0);
         assert_eq!(pos.y, 40.0);
@@ -325,10 +329,7 @@ mod tests {
 
     #[test]
     fn test_point_in_bounds() {
-        let bounds = Rect::new(
-            Point::new(10.0, 10.0),
-            Size::new(100.0, 50.0),
-        );
+        let bounds = Rect::new(Point::new(10.0, 10.0), Size::new(100.0, 50.0));
 
         assert!(point_in_bounds(CanvasMousePos::new(50.0, 30.0), &bounds));
         assert!(!point_in_bounds(CanvasMousePos::new(5.0, 30.0), &bounds));
@@ -337,10 +338,7 @@ mod tests {
 
     #[test]
     fn test_resize_bounds_bottom_right() {
-        let bounds = Rect::new(
-            Point::new(0.0, 0.0),
-            Size::new(100.0, 100.0),
-        );
+        let bounds = Rect::new(Point::new(0.0, 0.0), Size::new(100.0, 100.0));
 
         let new_bounds = calculate_resize_bounds(&bounds, ResizeHandle::BottomRight, 50.0, 25.0);
         assert_eq!(new_bounds.size.width, 150.0);

@@ -20,12 +20,7 @@ pub struct TextEditor {
 
 impl TextEditor {
     /// Create a new text editor for the given text element
-    pub fn new(
-        text_id: Uuid,
-        content: String,
-        bounds: Rect,
-        style: TextStyle,
-    ) -> Self {
+    pub fn new(text_id: Uuid, content: String, bounds: Rect, style: TextStyle) -> Self {
         Self {
             text_id,
             content,
@@ -41,7 +36,11 @@ impl TextEditor {
     pub fn insert_text(&mut self, text: &str) {
         // Delete selection if any
         if let (Some(start), Some(end)) = (self.selection_start, self.selection_end) {
-            let (min, max) = if start < end { (start, end) } else { (end, start) };
+            let (min, max) = if start < end {
+                (start, end)
+            } else {
+                (end, start)
+            };
             self.content.drain(min..max);
             self.cursor_pos = min;
             self.selection_start = None;
@@ -59,7 +58,11 @@ impl TextEditor {
     pub fn handle_backspace(&mut self) {
         // Delete selection if any
         if let (Some(start), Some(end)) = (self.selection_start, self.selection_end) {
-            let (min, max) = if start < end { (start, end) } else { (end, start) };
+            let (min, max) = if start < end {
+                (start, end)
+            } else {
+                (end, start)
+            };
             self.content.drain(min..max);
             self.cursor_pos = min;
             self.selection_start = None;
@@ -78,7 +81,11 @@ impl TextEditor {
     pub fn handle_delete(&mut self) {
         // Delete selection if any
         if let (Some(start), Some(end)) = (self.selection_start, self.selection_end) {
-            let (min, max) = if start < end { (start, end) } else { (end, start) };
+            let (min, max) = if start < end {
+                (start, end)
+            } else {
+                (end, start)
+            };
             self.content.drain(min..max);
             self.cursor_pos = min;
             self.selection_start = None;
@@ -165,7 +172,11 @@ impl TextEditor {
     /// Get the current selection as a string
     pub fn get_selection(&self) -> Option<String> {
         if let (Some(start), Some(end)) = (self.selection_start, self.selection_end) {
-            let (min, max) = if start < end { (start, end) } else { (end, start) };
+            let (min, max) = if start < end {
+                (start, end)
+            } else {
+                (end, start)
+            };
             if min < max && max <= self.content.len() {
                 return Some(self.content[min..max].to_string());
             }
@@ -176,7 +187,11 @@ impl TextEditor {
     /// Delete the current selection
     pub fn delete_selection(&mut self) {
         if let (Some(start), Some(end)) = (self.selection_start, self.selection_end) {
-            let (min, max) = if start < end { (start, end) } else { (end, start) };
+            let (min, max) = if start < end {
+                (start, end)
+            } else {
+                (end, start)
+            };
             if min < max {
                 self.content.drain(min..max);
                 self.cursor_pos = min;
@@ -228,7 +243,10 @@ mod tests {
             "Hello World".to_string(),
             Rect {
                 origin: Point { x: 0.0, y: 0.0 },
-                size: Size { width: 100.0, height: 20.0 },
+                size: Size {
+                    width: 100.0,
+                    height: 20.0,
+                },
             },
             TextStyle::default(),
         )

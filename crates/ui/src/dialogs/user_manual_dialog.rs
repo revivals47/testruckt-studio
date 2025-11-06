@@ -1,7 +1,7 @@
 //! User manual dialog for the application
 
 use gtk4::prelude::*;
-use gtk4::{Dialog, Label, ScrolledWindow, Window, Orientation, Box as GtkBox};
+use gtk4::{Box as GtkBox, Dialog, Label, Orientation, ScrolledWindow, Window};
 
 /// Show the User Manual dialog
 pub fn show_user_manual_dialog(parent: &Window) {

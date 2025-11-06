@@ -165,7 +165,7 @@ impl CanvasView {
 
         // Draw page elements
         let selected = render_state.selected_ids.borrow();
-        Self::draw_elements(ctx, page, &selected, render_state)?;
+        Self::draw_elements(ctx, page, &selected, render_state, app_state)?;
         drop(selected);
 
         // Draw drag preview box (blue outline while dragging)
@@ -190,9 +190,10 @@ impl CanvasView {
         page: &testruct_core::document::Page,
         selected_ids: &[uuid::Uuid],
         render_state: &CanvasRenderState,
+        app_state: &AppState,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for element in &page.elements {
-            Self::draw_element(ctx, element, selected_ids, render_state)?;
+            Self::draw_element(ctx, element, selected_ids, render_state, app_state)?;
         }
         Ok(())
     }
@@ -203,6 +204,7 @@ impl CanvasView {
         element: &testruct_core::document::DocumentElement,
         selected_ids: &[uuid::Uuid],
         render_state: &CanvasRenderState,
+        app_state: &AppState,
     ) -> Result<(), Box<dyn std::error::Error>> {
         use testruct_core::document::{DocumentElement, ShapeKind};
 
@@ -234,7 +236,7 @@ impl CanvasView {
 
                 // Recursively draw frame children
                 for child in &frame.children {
-                    Self::draw_element(ctx, child, selected_ids, render_state)?;
+                    Self::draw_element(ctx, child, selected_ids, render_state, app_state)?;
                 }
             }
             DocumentElement::Text(text) => {
@@ -274,9 +276,17 @@ impl CanvasView {
                 }
             }
             DocumentElement::Image(image) => {
-                // Draw image placeholder for now
-                // TODO: Implement actual image loading from asset catalog
-                rendering::draw_image_placeholder(ctx, &image.bounds)?;
+                // Draw image element with actual image or fallback to placeholder
+                if let Err(e) = rendering::draw_image_element(
+                    ctx,
+                    &image.bounds,
+                    &image.source,
+                    app_state,
+                ) {
+                    tracing::warn!("Failed to render image: {}", e);
+                    // Fallback to placeholder if rendering fails
+                    rendering::draw_image_placeholder(ctx, &image.bounds)?;
+                }
 
                 let is_selected = selected_ids.contains(&image.id);
                 if is_selected {

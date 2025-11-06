@@ -1,8 +1,8 @@
 //! Layout primitives and canvas composition utilities.
 
-mod geometry;
 mod canvas;
 mod engine;
+mod geometry;
 
 pub use canvas::{CanvasLayout, LayoutSection};
 pub use engine::{LayoutEngine, LayoutRequest, LayoutResult};

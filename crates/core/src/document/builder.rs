@@ -44,6 +44,7 @@ impl DocumentBuilder {
             metadata,
             pages: self.pages,
             styles: Default::default(),
+            assets: crate::workspace::AssetCatalog::new(),
         })
     }
 }

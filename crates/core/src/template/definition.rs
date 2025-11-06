@@ -1,6 +1,6 @@
 use super::style::TemplateStyle;
-use crate::layout::CanvasLayout;
 use crate::document::PageMetadata;
+use crate::layout::CanvasLayout;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

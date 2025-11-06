@@ -1,9 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use testruct_core::{Document, DocumentId, Project};
-use testruct_core::workspace::assets::AssetCatalog;
-use testruct_db::ItemBank;
 use crate::undo_redo::UndoRedoStack;
+use testruct_core::workspace::assets::AssetCatalog;
+use testruct_core::{Document, DocumentId, Project};
+use testruct_db::ItemBank;
+use gtk4::ApplicationWindow;
+use gtk4::glib::WeakRef;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -22,6 +24,7 @@ impl Default for AppState {
                 undo_redo_stack: Arc::new(Mutex::new(crate::undo_redo::UndoRedoStack::default())),
                 item_bank: Arc::new(Mutex::new(item_bank)),
                 asset_catalog: Arc::new(Mutex::new(AssetCatalog::new())),
+                window: None,
             })),
         };
 
@@ -107,7 +110,10 @@ impl AppState {
         undo_stack.push(command);
     }
 
-    pub fn add_element_to_active_page(&self, element: testruct_core::document::DocumentElement) -> Result<(), String> {
+    pub fn add_element_to_active_page(
+        &self,
+        element: testruct_core::document::DocumentElement,
+    ) -> Result<(), String> {
         let mut inner = self.inner.lock().expect("state");
         if let Some(doc_id) = inner.active_document {
             if let Some(doc) = inner.project.document_mut(doc_id) {
@@ -233,6 +239,20 @@ impl AppState {
         }
     }
 
+    /// Set the main window reference
+    pub fn set_window(&self, window: &ApplicationWindow) {
+        let mut inner = self.inner.lock().expect("state");
+        // Use glib's downgrade to create a WeakRef
+        use gtk4::glib::object::ObjectExt;
+        let weak_window = window.downgrade();
+        inner.window = Some(weak_window);
+    }
+
+    /// Get the main window reference if available
+    pub fn window(&self) -> Option<ApplicationWindow> {
+        let inner = self.inner.lock().expect("state");
+        inner.window.as_ref().and_then(|weak| weak.upgrade())
+    }
 }
 
 struct AppShared {
@@ -241,4 +261,5 @@ struct AppShared {
     undo_redo_stack: Arc<Mutex<UndoRedoStack>>,
     item_bank: Arc<Mutex<ItemBank>>,
     asset_catalog: Arc<Mutex<AssetCatalog>>,
+    window: Option<WeakRef<ApplicationWindow>>,
 }

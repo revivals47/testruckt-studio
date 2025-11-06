@@ -12,7 +12,7 @@ pub struct TextStyle {
     pub underline: bool,
     pub strikethrough: bool,
     pub background_color: Option<Color>,
-    pub line_height: f32,  // 行間（相対値、例: 1.0 = 通常、1.5 = 1.5倍）
+    pub line_height: f32, // 行間（相対値、例: 1.0 = 通常、1.5 = 1.5倍）
 }
 
 impl Default for TextStyle {
@@ -27,7 +27,7 @@ impl Default for TextStyle {
             underline: false,
             strikethrough: false,
             background_color: None,
-            line_height: 1.0,  // デフォルトは通常の行間
+            line_height: 1.0, // デフォルトは通常の行間
         }
     }
 }

@@ -39,7 +39,10 @@ pub fn register(
                     source: asset_ref,
                     bounds: testruct_core::layout::Rect {
                         origin: testruct_core::layout::Point { x: 100.0, y: 100.0 },
-                        size: testruct_core::layout::Size { width: 200.0, height: 200.0 },
+                        size: testruct_core::layout::Size {
+                            width: 200.0,
+                            height: 200.0,
+                        },
                     },
                 };
 
@@ -85,9 +88,9 @@ pub fn register(
                     tracing::info!("✅ Template selected: {}", template.name);
 
                     let project = state_ref.project();
-                    if let Some(_new_doc) = project.apply_template(
-                        testruct_core::template::TemplateRef { id: template.id }
-                    ) {
+                    if let Some(_new_doc) = project
+                        .apply_template(testruct_core::template::TemplateRef { id: template.id })
+                    {
                         tracing::info!("✅ New document created from template");
                     } else {
                         tracing::error!("❌ Failed to create document from template");
@@ -112,96 +115,104 @@ fn register_zorder_actions(
     let bring_to_front_state = state.clone();
     let bring_to_front_drawing_area = canvas_view.drawing_area();
     let bring_to_front_render_state = canvas_view.render_state().selected_ids.clone();
-    property_components.bring_to_front_btn.connect_clicked(move |_| {
-        tracing::info!("Action: bring to front");
-        let selected_ids = bring_to_front_render_state.borrow();
-        if let Some(element_id) = selected_ids.first().copied() {
-            bring_to_front_state.with_active_document(|doc| {
-                if let Some(page) = doc.pages.get_mut(0) {
-                    if page.bring_to_front(element_id) {
-                        tracing::info!("✅ Element brought to front");
-                        let _ = bring_to_front_drawing_area.queue_draw();
+    property_components
+        .bring_to_front_btn
+        .connect_clicked(move |_| {
+            tracing::info!("Action: bring to front");
+            let selected_ids = bring_to_front_render_state.borrow();
+            if let Some(element_id) = selected_ids.first().copied() {
+                bring_to_front_state.with_active_document(|doc| {
+                    if let Some(page) = doc.pages.get_mut(0) {
+                        if page.bring_to_front(element_id) {
+                            tracing::info!("✅ Element brought to front");
+                            let _ = bring_to_front_drawing_area.queue_draw();
+                        } else {
+                            tracing::warn!("⚠️  Element not found");
+                        }
                     } else {
-                        tracing::warn!("⚠️  Element not found");
+                        tracing::warn!("⚠️  No active page");
                     }
-                } else {
-                    tracing::warn!("⚠️  No active page");
-                }
-            });
-        } else {
-            tracing::warn!("⚠️  No element selected");
-        }
-    });
+                });
+            } else {
+                tracing::warn!("⚠️  No element selected");
+            }
+        });
 
     let bring_forward_state = state.clone();
     let bring_forward_drawing_area = canvas_view.drawing_area();
     let bring_forward_render_state = canvas_view.render_state().selected_ids.clone();
-    property_components.bring_forward_btn.connect_clicked(move |_| {
-        tracing::info!("Action: bring forward");
-        let selected_ids = bring_forward_render_state.borrow();
-        if let Some(element_id) = selected_ids.first().copied() {
-            bring_forward_state.with_active_document(|doc| {
-                if let Some(page) = doc.pages.get_mut(0) {
-                    if page.bring_forward(element_id) {
-                        tracing::info!("✅ Element brought forward");
-                        let _ = bring_forward_drawing_area.queue_draw();
+    property_components
+        .bring_forward_btn
+        .connect_clicked(move |_| {
+            tracing::info!("Action: bring forward");
+            let selected_ids = bring_forward_render_state.borrow();
+            if let Some(element_id) = selected_ids.first().copied() {
+                bring_forward_state.with_active_document(|doc| {
+                    if let Some(page) = doc.pages.get_mut(0) {
+                        if page.bring_forward(element_id) {
+                            tracing::info!("✅ Element brought forward");
+                            let _ = bring_forward_drawing_area.queue_draw();
+                        } else {
+                            tracing::warn!("⚠️  Element already at front or not found");
+                        }
                     } else {
-                        tracing::warn!("⚠️  Element already at front or not found");
+                        tracing::warn!("⚠️  No active page");
                     }
-                } else {
-                    tracing::warn!("⚠️  No active page");
-                }
-            });
-        } else {
-            tracing::warn!("⚠️  No element selected");
-        }
-    });
+                });
+            } else {
+                tracing::warn!("⚠️  No element selected");
+            }
+        });
 
     let send_to_back_state = state.clone();
     let send_to_back_drawing_area = canvas_view.drawing_area();
     let send_to_back_render_state = canvas_view.render_state().selected_ids.clone();
-    property_components.send_to_back_btn.connect_clicked(move |_| {
-        tracing::info!("Action: send to back");
-        let selected_ids = send_to_back_render_state.borrow();
-        if let Some(element_id) = selected_ids.first().copied() {
-            send_to_back_state.with_active_document(|doc| {
-                if let Some(page) = doc.pages.get_mut(0) {
-                    if page.send_to_back(element_id) {
-                        tracing::info!("✅ Element sent to back");
-                        let _ = send_to_back_drawing_area.queue_draw();
+    property_components
+        .send_to_back_btn
+        .connect_clicked(move |_| {
+            tracing::info!("Action: send to back");
+            let selected_ids = send_to_back_render_state.borrow();
+            if let Some(element_id) = selected_ids.first().copied() {
+                send_to_back_state.with_active_document(|doc| {
+                    if let Some(page) = doc.pages.get_mut(0) {
+                        if page.send_to_back(element_id) {
+                            tracing::info!("✅ Element sent to back");
+                            let _ = send_to_back_drawing_area.queue_draw();
+                        } else {
+                            tracing::warn!("⚠️  Element not found");
+                        }
                     } else {
-                        tracing::warn!("⚠️  Element not found");
+                        tracing::warn!("⚠️  No active page");
                     }
-                } else {
-                    tracing::warn!("⚠️  No active page");
-                }
-            });
-        } else {
-            tracing::warn!("⚠️  No element selected");
-        }
-    });
+                });
+            } else {
+                tracing::warn!("⚠️  No element selected");
+            }
+        });
 
     let send_backward_state = state.clone();
     let send_backward_drawing_area = canvas_view.drawing_area();
     let send_backward_render_state = canvas_view.render_state().selected_ids.clone();
-    property_components.send_backward_btn.connect_clicked(move |_| {
-        tracing::info!("Action: send backward");
-        let selected_ids = send_backward_render_state.borrow();
-        if let Some(element_id) = selected_ids.first().copied() {
-            send_backward_state.with_active_document(|doc| {
-                if let Some(page) = doc.pages.get_mut(0) {
-                    if page.send_backward(element_id) {
-                        tracing::info!("✅ Element sent backward");
-                        let _ = send_backward_drawing_area.queue_draw();
+    property_components
+        .send_backward_btn
+        .connect_clicked(move |_| {
+            tracing::info!("Action: send backward");
+            let selected_ids = send_backward_render_state.borrow();
+            if let Some(element_id) = selected_ids.first().copied() {
+                send_backward_state.with_active_document(|doc| {
+                    if let Some(page) = doc.pages.get_mut(0) {
+                        if page.send_backward(element_id) {
+                            tracing::info!("✅ Element sent backward");
+                            let _ = send_backward_drawing_area.queue_draw();
+                        } else {
+                            tracing::warn!("⚠️  Element already at back or not found");
+                        }
                     } else {
-                        tracing::warn!("⚠️  Element already at back or not found");
+                        tracing::warn!("⚠️  No active page");
                     }
-                } else {
-                    tracing::warn!("⚠️  No active page");
-                }
-            });
-        } else {
-            tracing::warn!("⚠️  No element selected");
-        }
-    });
+                });
+            } else {
+                tracing::warn!("⚠️  No element selected");
+            }
+        });
 }

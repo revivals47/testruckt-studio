@@ -5,15 +5,20 @@
 use anyhow::{anyhow, Result};
 use cairo::{Context, Format, ImageSurface};
 use std::path::Path;
-use testruct_core::Document;
 use testruct_core::workspace::assets::AssetCatalog;
+use testruct_core::Document;
 use tracing::{debug, info};
 
 /// Default DPI for image export
 const DEFAULT_DPI: f64 = 96.0;
 
 /// Render a document to PNG format (one file per page)
-pub fn render_to_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
+pub fn render_to_png(
+    document: &Document,
+    output_path: &Path,
+    dpi: f64,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     info!("Exporting to PNG: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -32,7 +37,13 @@ pub fn render_to_png(document: &Document, output_path: &Path, dpi: f64, catalog:
 }
 
 /// Render a document to JPEG format (one file per page)
-pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality: i32, catalog: &AssetCatalog) -> Result<()> {
+pub fn render_to_jpeg(
+    document: &Document,
+    output_path: &Path,
+    dpi: f64,
+    quality: i32,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     info!("Exporting to JPEG: {}", output_path.display());
 
     if document.pages.is_empty() {
@@ -40,7 +51,11 @@ pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality
     }
 
     let dpi = if dpi <= 0.0 { DEFAULT_DPI } else { dpi };
-    let quality = if quality < 0 || quality > 100 { 95 } else { quality };
+    let quality = if quality < 0 || quality > 100 {
+        95
+    } else {
+        quality
+    };
 
     debug!("JPEG export DPI: {}, Quality: {}", dpi, quality);
 
@@ -51,13 +66,23 @@ pub fn render_to_jpeg(document: &Document, output_path: &Path, dpi: f64, quality
 }
 
 /// Export single-page document to PNG
-fn export_single_page_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
+fn export_single_page_png(
+    document: &Document,
+    output_path: &Path,
+    dpi: f64,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     let page = &document.pages[0];
     render_page_to_png(page, output_path, dpi, catalog)
 }
 
 /// Export multi-page document to multiple PNG files
-fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
+fn export_multi_page_png(
+    document: &Document,
+    output_path: &Path,
+    dpi: f64,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     for (index, page) in document.pages.iter().enumerate() {
         let page_num = index + 1;
 
@@ -71,7 +96,8 @@ fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64, cata
             format!("{}_page_{}.png", output_path.display(), page_num)
         };
 
-        let page_path = output_path.parent()
+        let page_path = output_path
+            .parent()
             .unwrap_or_else(|| Path::new("."))
             .join(&output_filename);
 
@@ -79,12 +105,21 @@ fn export_multi_page_png(document: &Document, output_path: &Path, dpi: f64, cata
         render_page_to_png(page, &page_path, dpi, catalog)?;
     }
 
-    info!("PNG export completed: {} pages exported to {}", document.pages.len(), output_path.display());
+    info!(
+        "PNG export completed: {} pages exported to {}",
+        document.pages.len(),
+        output_path.display()
+    );
     Ok(())
 }
 
 /// Render a single page to PNG file
-fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path, dpi: f64, catalog: &AssetCatalog) -> Result<()> {
+fn render_page_to_png(
+    _page: &testruct_core::document::Page,
+    output_path: &Path,
+    dpi: f64,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     // Use default page dimensions (A4: 595.28 x 841.89 points)
     let width_points = 595.28;
     let height_points = 841.89;
@@ -94,7 +129,10 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
     let pixel_width = (width_inches * dpi) as i32;
     let pixel_height = (height_inches * dpi) as i32;
 
-    debug!("PNG size: {}x{} pixels at {} DPI", pixel_width, pixel_height, dpi);
+    debug!(
+        "PNG size: {}x{} pixels at {} DPI",
+        pixel_width, pixel_height, dpi
+    );
 
     // Clamp to minimum size
     let pixel_width = pixel_width.max(100);
@@ -104,8 +142,8 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
     let surface = ImageSurface::create(Format::ARgb32, pixel_width, pixel_height)
         .map_err(|e| anyhow!("Failed to create image surface: {}", e))?;
 
-    let ctx = Context::new(&surface)
-        .map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
+    let ctx =
+        Context::new(&surface).map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
 
     // Scale context for DPI
     let scale = dpi / 72.0;
@@ -118,7 +156,8 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
     let mut file = std::fs::File::create(output_path)
         .map_err(|e| anyhow!("Failed to create output file: {}", e))?;
 
-    surface.write_to_png(&mut file)
+    surface
+        .write_to_png(&mut file)
         .map_err(|e| anyhow!("Failed to write PNG: {}", e))?;
 
     info!("PNG exported: {}", output_path.display());
@@ -126,7 +165,11 @@ fn render_page_to_png(_page: &testruct_core::document::Page, output_path: &Path,
 }
 
 /// Render a single page to Cairo context
-fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, catalog: &AssetCatalog) -> Result<()> {
+fn render_page_to_context(
+    ctx: &Context,
+    page: &testruct_core::document::Page,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     // Set white background
     ctx.set_source_rgb(1.0, 1.0, 1.0);
     ctx.paint()
@@ -152,7 +195,11 @@ fn render_page_to_context(ctx: &Context, page: &testruct_core::document::Page, c
 }
 
 /// Render a single element to Cairo context
-fn render_element_to_context(ctx: &Context, element: &testruct_core::document::DocumentElement, catalog: &AssetCatalog) -> Result<()> {
+fn render_element_to_context(
+    ctx: &Context,
+    element: &testruct_core::document::DocumentElement,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     use testruct_core::document::DocumentElement;
 
     match element {
@@ -164,13 +211,21 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
         }
         DocumentElement::Image(image) => {
             // Try to load image from catalog, fallback to placeholder if not found
-            match crate::export::image_utils::render_image_from_asset(ctx, image.source, catalog, &image.bounds) {
+            match crate::export::image_utils::render_image_from_asset(
+                ctx,
+                image.source,
+                catalog,
+                &image.bounds,
+            ) {
                 Ok(_) => {
                     debug!("Image rendered from asset catalog: {}", image.id);
                 }
                 Err(e) => {
                     // If loading fails, draw placeholder and log warning
-                    debug!("Failed to render image {}: {}, using placeholder", image.id, e);
+                    debug!(
+                        "Failed to render image {}: {}, using placeholder",
+                        image.id, e
+                    );
                     let _ = crate::export::image_utils::draw_image_placeholder(ctx, &image.bounds);
                 }
             }
@@ -184,7 +239,10 @@ fn render_element_to_context(ctx: &Context, element: &testruct_core::document::D
 }
 
 /// Render a shape element
-fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::ShapeElement) -> Result<()> {
+fn render_shape_to_context(
+    ctx: &Context,
+    shape: &testruct_core::document::ShapeElement,
+) -> Result<()> {
     use testruct_core::document::ShapeKind;
 
     let x = shape.bounds.origin.x as f64;
@@ -212,7 +270,8 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
             }
         }
         ShapeKind::Ellipse => {
-            ctx.save().map_err(|e| anyhow!("Failed to save context: {}", e))?;
+            ctx.save()
+                .map_err(|e| anyhow!("Failed to save context: {}", e))?;
             ctx.translate(x + width / 2.0, y + height / 2.0);
             ctx.scale(width / 2.0, height / 2.0);
             ctx.arc(0.0, 0.0, 1.0, 0.0, std::f64::consts::PI * 2.0);
@@ -230,7 +289,8 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
                 ctx.stroke()
                     .map_err(|e| anyhow!("Failed to stroke ellipse: {}", e))?;
             }
-            ctx.restore().map_err(|e| anyhow!("Failed to restore context: {}", e))?;
+            ctx.restore()
+                .map_err(|e| anyhow!("Failed to restore context: {}", e))?;
         }
         ShapeKind::Line => {
             // Lines use stroke color
@@ -276,7 +336,11 @@ fn render_shape_to_context(ctx: &Context, shape: &testruct_core::document::Shape
 }
 
 /// Render a frame element (with recursive children)
-fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::FrameElement, catalog: &AssetCatalog) -> Result<()> {
+fn render_frame_to_context(
+    ctx: &Context,
+    frame: &testruct_core::document::FrameElement,
+    catalog: &AssetCatalog,
+) -> Result<()> {
     let x = frame.bounds.origin.x as f64;
     let y = frame.bounds.origin.y as f64;
     let width = frame.bounds.size.width as f64;
@@ -299,7 +363,10 @@ fn render_frame_to_context(ctx: &Context, frame: &testruct_core::document::Frame
 }
 
 /// Render a text element with Pango layout
-fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextElement) -> Result<()> {
+fn render_text_to_context(
+    ctx: &Context,
+    text: &testruct_core::document::TextElement,
+) -> Result<()> {
     ctx.save()
         .map_err(|e| anyhow!("Failed to save context: {}", e))?;
 
@@ -323,7 +390,12 @@ fn render_text_to_context(ctx: &Context, text: &testruct_core::document::TextEle
     ctx.translate(bounds.origin.x as f64, bounds.origin.y as f64);
 
     // Create clipping rectangle
-    ctx.rectangle(0.0, 0.0, bounds.size.width as f64, bounds.size.height as f64);
+    ctx.rectangle(
+        0.0,
+        0.0,
+        bounds.size.width as f64,
+        bounds.size.height as f64,
+    );
     ctx.clip();
 
     // Create Pango layout

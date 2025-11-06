@@ -15,7 +15,7 @@ pub struct LayoutResult {
 
 #[derive(Debug, Error)]
 pub enum LayoutError {
-    #[error("insufficient room to place widget" )]
+    #[error("insufficient room to place widget")]
     NotEnoughRoom,
 }
 
