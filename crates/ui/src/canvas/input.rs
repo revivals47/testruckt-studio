@@ -299,6 +299,127 @@ pub fn wire_pointer_events(
             }
         }
 
+        // Handle Copy: Ctrl+C
+        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::c {
+            let selected = render_state_keyboard.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(document) = app_state_keyboard.active_document() {
+                    if let Some(page) = document.pages.first() {
+                        let elements: Vec<_> = page.elements
+                            .iter()
+                            .filter(|e| selected.contains(&e.id()))
+                            .cloned()
+                            .collect();
+
+                        crate::clipboard::copy_to_clipboard(elements);
+                        tracing::info!("✅ Copied {} objects to clipboard", selected.len());
+                        drawing_area_keyboard.queue_draw();
+                        return gtk4::glib::Propagation::Stop;
+                    }
+                }
+            }
+        }
+
+        // Handle Cut: Ctrl+X (Copy + Delete)
+        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::x {
+            let selected = render_state_keyboard.selected_ids.borrow().clone();
+            let selected_count = selected.len();
+
+            if !selected.is_empty() {
+                if let Some(mut document) = app_state_keyboard.active_document() {
+                    if let Some(page) = document.pages.first_mut() {
+                        // Copy selected elements to clipboard
+                        let elements: Vec<_> = page.elements
+                            .iter()
+                            .filter(|e| selected.contains(&e.id()))
+                            .cloned()
+                            .collect();
+
+                        crate::clipboard::copy_to_clipboard(elements);
+
+                        // Delete the selected elements
+                        page.elements.retain(|e| !selected.contains(&e.id()));
+
+                        // Clear selection
+                        render_state_keyboard.selected_ids.borrow_mut().clear();
+                    }
+                }
+
+                tracing::info!("✅ Cut {} objects", selected_count);
+                drawing_area_keyboard.queue_draw();
+                return gtk4::glib::Propagation::Stop;
+            }
+        }
+
+        // Handle Paste: Ctrl+V
+        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::v {
+            if crate::clipboard::has_clipboard_content() {
+                if let Some(mut document) = app_state_keyboard.active_document() {
+                    if let Some(pasted_elements) = crate::clipboard::paste_from_clipboard() {
+                        if let Some(page) = document.pages.first_mut() {
+                            for elem in pasted_elements {
+                                page.add_element(elem);
+                            }
+                        }
+                        tracing::info!("✅ Pasted {} objects from clipboard", crate::clipboard::clipboard_content_count());
+                        drawing_area_keyboard.queue_draw();
+                        return gtk4::glib::Propagation::Stop;
+                    }
+                }
+            }
+        }
+
+        // Handle Duplicate: Ctrl+D
+        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::d {
+            let selected = render_state_keyboard.selected_ids.borrow().clone();
+            if !selected.is_empty() {
+                if let Some(mut document) = app_state_keyboard.active_document() {
+                    if let Some(page) = document.pages.first_mut() {
+                        let mut new_elements = Vec::new();
+
+                        for orig_elem in page.elements.iter().filter(|e| selected.contains(&e.id())) {
+                            let mut new_elem = orig_elem.clone();
+                            let new_id = uuid::Uuid::new_v4();
+
+                            // Update ID and offset position
+                            match &mut new_elem {
+                                DocumentElement::Text(t) => {
+                                    t.id = new_id;
+                                    t.bounds.origin.x += 20.0;
+                                    t.bounds.origin.y += 20.0;
+                                }
+                                DocumentElement::Image(img) => {
+                                    img.id = new_id;
+                                    img.bounds.origin.x += 20.0;
+                                    img.bounds.origin.y += 20.0;
+                                }
+                                DocumentElement::Shape(shape) => {
+                                    shape.id = new_id;
+                                    shape.bounds.origin.x += 20.0;
+                                    shape.bounds.origin.y += 20.0;
+                                }
+                                DocumentElement::Frame(frame) => {
+                                    frame.id = new_id;
+                                    frame.bounds.origin.x += 20.0;
+                                    frame.bounds.origin.y += 20.0;
+                                }
+                            }
+
+                            new_elements.push(new_elem);
+                        }
+
+                        for elem in new_elements {
+                            page.add_element(elem);
+                        }
+                    }
+                }
+
+                tracing::info!("✅ Duplicated {} objects", selected.len());
+                drawing_area_keyboard.queue_draw();
+                return gtk4::glib::Propagation::Stop;
+            }
+        }
+
         // Handle object movement when NOT in text editing
         let movement_amount = if shift_pressed { 10.0 } else { 1.0 };
 
