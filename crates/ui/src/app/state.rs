@@ -253,6 +253,21 @@ impl AppState {
         let inner = self.inner.lock().expect("state");
         inner.window.as_ref().and_then(|weak| weak.upgrade())
     }
+
+    /// Execute an operation directly on the active document without command pattern
+    /// This is used for operations that need to work with the project's document reference
+    pub fn with_mutable_active_document<F, R>(&self, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut testruct_core::Document) -> R,
+    {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                return Some(f(doc));
+            }
+        }
+        None
+    }
 }
 
 struct AppShared {

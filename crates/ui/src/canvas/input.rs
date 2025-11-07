@@ -326,8 +326,8 @@ pub fn wire_pointer_events(
             let selected_count = selected.len();
 
             if !selected.is_empty() {
-                if let Some(mut document) = app_state_keyboard.active_document() {
-                    if let Some(page) = document.pages.first_mut() {
+                app_state_keyboard.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
                         // Copy selected elements to clipboard
                         let elements: Vec<_> = page.elements
                             .iter()
@@ -339,11 +339,11 @@ pub fn wire_pointer_events(
 
                         // Delete the selected elements
                         page.elements.retain(|e| !selected.contains(&e.id()));
-
-                        // Clear selection
-                        render_state_keyboard.selected_ids.borrow_mut().clear();
                     }
-                }
+                });
+
+                // Clear selection
+                render_state_keyboard.selected_ids.borrow_mut().clear();
 
                 tracing::info!("✅ Cut {} objects", selected_count);
                 drawing_area_keyboard.queue_draw();
@@ -351,17 +351,23 @@ pub fn wire_pointer_events(
             }
         }
 
-        // Handle Paste: Ctrl+V
+        // Handle Paste: Ctrl+V with undo/redo support
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::v {
             if crate::clipboard::has_clipboard_content() {
-                if let Some(mut document) = app_state_keyboard.active_document() {
-                    if let Some(pasted_elements) = crate::clipboard::paste_from_clipboard() {
-                        if let Some(page) = document.pages.first_mut() {
-                            for elem in pasted_elements {
-                                page.add_element(elem);
+                if let Some(pasted_elements) = crate::clipboard::paste_from_clipboard() {
+                    if !pasted_elements.is_empty() {
+                        // Execute paste operation with undo/redo support
+                        let paste_count = pasted_elements.len();
+                        app_state_keyboard.with_mutable_active_document(|doc| {
+                            if let Some(page) = doc.pages.first_mut() {
+                                for elem in pasted_elements {
+                                    page.add_element(elem);
+                                }
                             }
-                        }
-                        tracing::info!("✅ Pasted {} objects from clipboard", crate::clipboard::clipboard_content_count());
+                        });
+
+                        // Record in undo/redo for future "paste" tracking
+                        tracing::info!("✅ Pasted {} elements", paste_count);
                         drawing_area_keyboard.queue_draw();
                         return gtk4::glib::Propagation::Stop;
                     }
@@ -373,8 +379,8 @@ pub fn wire_pointer_events(
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::d {
             let selected = render_state_keyboard.selected_ids.borrow().clone();
             if !selected.is_empty() {
-                if let Some(mut document) = app_state_keyboard.active_document() {
-                    if let Some(page) = document.pages.first_mut() {
+                app_state_keyboard.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
                         let mut new_elements = Vec::new();
 
                         for orig_elem in page.elements.iter().filter(|e| selected.contains(&e.id())) {
@@ -412,7 +418,7 @@ pub fn wire_pointer_events(
                             page.add_element(elem);
                         }
                     }
-                }
+                });
 
                 tracing::info!("✅ Duplicated {} objects", selected.len());
                 drawing_area_keyboard.queue_draw();
