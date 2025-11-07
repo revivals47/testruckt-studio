@@ -971,8 +971,8 @@ pub fn wire_pointer_events(
                     let grid_spacing = config.grid_spacing;
                     drop(config);
 
-                    // Get the original bounds from the document
-                    if let Some(mut document) = app_state_drag_end.active_document() {
+                    // Apply resize directly to the document
+                    app_state_drag_end.with_mutable_active_document(|document| {
                         if let Some(page) = document.pages.first_mut() {
                             for element in page.elements.iter_mut() {
                                 match element {
@@ -1003,12 +1003,8 @@ pub fn wire_pointer_events(
                                     _ => {}
                                 }
                             }
-                            // Update the document in app state
-                            app_state_drag_end.with_active_document(|doc| {
-                                *doc = document;
-                            });
                         }
-                    }
+                    });
                 }
             } else if current_tool == ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Move selected objects
@@ -1025,8 +1021,8 @@ pub fn wire_pointer_events(
                     let selected_ids: Vec<uuid::Uuid> = selected.clone();
                     drop(selected);
 
-                    // Move each selected object
-                    if let Some(mut document) = app_state_drag_end.active_document() {
+                    // Move each selected object directly to the document
+                    app_state_drag_end.with_mutable_active_document(|document| {
                         if let Some(page) = document.pages.first_mut() {
                             for element in page.elements.iter_mut() {
                                 match element {
@@ -1069,13 +1065,9 @@ pub fn wire_pointer_events(
                                     _ => {}
                                 }
                             }
-                            // Update the document in app state
-                            app_state_drag_end.with_active_document(|doc| {
-                                *doc = document;
-                            });
                             tracing::info!("✅ Moved {} selected object(s)", selected_ids.len());
                         }
-                    }
+                    });
                 }
             } else if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Shape/Text creation based on tool
