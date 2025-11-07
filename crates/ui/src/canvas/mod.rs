@@ -1,3 +1,4 @@
+pub mod alignment;
 pub mod dirty_region;
 pub mod grid_rendering;
 pub mod input;
