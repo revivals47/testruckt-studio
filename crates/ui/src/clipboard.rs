@@ -154,6 +154,7 @@ mod tests {
 
         assert!(has_clipboard_content());
         assert_eq!(clipboard_content_count(), 1);
+        clear_clipboard();
     }
 
     #[test]
@@ -179,6 +180,7 @@ mod tests {
             assert_eq!(t.bounds.origin.x, 20.0);
             assert_eq!(t.bounds.origin.y, 20.0);
         }
+        clear_clipboard();
     }
 
     #[test]
@@ -204,6 +206,7 @@ mod tests {
         ]);
 
         assert_eq!(clipboard_content_count(), 2);
+        clear_clipboard();
     }
 
     #[test]
@@ -228,5 +231,6 @@ mod tests {
                 assert_ne!(t1.id, t2.id);
             }
         }
+        clear_clipboard();
     }
 }
