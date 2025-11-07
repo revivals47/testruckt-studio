@@ -435,3 +435,153 @@ fn elem_id(element: &testruct_core::document::DocumentElement) -> uuid::Uuid {
         testruct_core::document::DocumentElement::Shape(s) => s.id,
     }
 }
+
+/// Paste command for pasting elements from clipboard
+#[derive(Debug)]
+pub struct PasteCommand {
+    document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+    page_index: usize,
+    pasted_element_ids: Vec<uuid::Uuid>,
+}
+
+impl PasteCommand {
+    /// Create a new paste command
+    pub fn new(
+        document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+        elements: Vec<testruct_core::document::DocumentElement>,
+        page_index: usize,
+    ) -> Self {
+        let pasted_element_ids = elements.iter().map(elem_id).collect();
+        {
+            let mut doc = document.lock().expect("document");
+            if page_index < doc.pages.len() {
+                for elem in elements {
+                    doc.pages[page_index].add_element(elem);
+                }
+            }
+        }
+
+        Self {
+            document,
+            page_index,
+            pasted_element_ids,
+        }
+    }
+}
+
+impl Command for PasteCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        Ok(format!("Pasted {} elements", self.pasted_element_ids.len()))
+    }
+
+    fn undo(&mut self) -> Result<String, String> {
+        let mut doc = self.document.lock().expect("document");
+
+        if self.page_index >= doc.pages.len() {
+            return Err("Page index out of bounds".to_string());
+        }
+
+        let page = &mut doc.pages[self.page_index];
+        for id in &self.pasted_element_ids {
+            page.elements.retain(|e| elem_id(e) != *id);
+        }
+
+        Ok(format!("Removed {} pasted elements", self.pasted_element_ids.len()))
+    }
+
+    fn description(&self) -> &str {
+        "Paste"
+    }
+}
+
+/// Duplicate command for duplicating selected elements
+#[derive(Debug)]
+pub struct DuplicateCommand {
+    document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+    page_index: usize,
+    element_ids_to_duplicate: Vec<uuid::Uuid>,
+    duplicated_ids: Vec<uuid::Uuid>,
+}
+
+impl DuplicateCommand {
+    /// Create a new duplicate command
+    pub fn new(
+        document: std::sync::Arc<std::sync::Mutex<testruct_core::document::Document>>,
+        element_ids: Vec<uuid::Uuid>,
+        page_index: usize,
+    ) -> Self {
+        Self {
+            document,
+            page_index,
+            element_ids_to_duplicate: element_ids,
+            duplicated_ids: Vec::new(),
+        }
+    }
+}
+
+impl Command for DuplicateCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        let mut doc = self.document.lock().expect("document");
+
+        if self.page_index >= doc.pages.len() {
+            return Err("Page index out of bounds".to_string());
+        }
+
+        let page = &mut doc.pages[self.page_index];
+
+        for orig_id in &self.element_ids_to_duplicate {
+            if let Some(element) = page.elements.iter().find(|e| elem_id(e) == *orig_id) {
+                let mut new_elem = element.clone();
+                let new_id = uuid::Uuid::new_v4();
+
+                // Update ID and offset position
+                match &mut new_elem {
+                    testruct_core::document::DocumentElement::Text(t) => {
+                        t.id = new_id;
+                        t.bounds.origin.x += 20.0;
+                        t.bounds.origin.y += 20.0;
+                    }
+                    testruct_core::document::DocumentElement::Image(img) => {
+                        img.id = new_id;
+                        img.bounds.origin.x += 20.0;
+                        img.bounds.origin.y += 20.0;
+                    }
+                    testruct_core::document::DocumentElement::Shape(shape) => {
+                        shape.id = new_id;
+                        shape.bounds.origin.x += 20.0;
+                        shape.bounds.origin.y += 20.0;
+                    }
+                    testruct_core::document::DocumentElement::Frame(frame) => {
+                        frame.id = new_id;
+                        frame.bounds.origin.x += 20.0;
+                        frame.bounds.origin.y += 20.0;
+                    }
+                }
+
+                page.add_element(new_elem);
+                self.duplicated_ids.push(new_id);
+            }
+        }
+
+        Ok(format!("Duplicated {} objects", self.element_ids_to_duplicate.len()))
+    }
+
+    fn undo(&mut self) -> Result<String, String> {
+        let mut doc = self.document.lock().expect("document");
+
+        if self.page_index >= doc.pages.len() {
+            return Err("Page index out of bounds".to_string());
+        }
+
+        let page = &mut doc.pages[self.page_index];
+        for dup_id in &self.duplicated_ids {
+            page.elements.retain(|e| elem_id(e) != *dup_id);
+        }
+
+        Ok("Removed duplicated objects".to_string())
+    }
+
+    fn description(&self) -> &str {
+        "Duplicate"
+    }
+}

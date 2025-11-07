@@ -1,0 +1,146 @@
+TEXT EDITING SYSTEM ANALYSIS - TESTRUCT ORIGINAL APPLICATION
+============================================================
+
+Three comprehensive documents have been created:
+
+1. TEXT_EDITING_ANALYSIS.md (627 lines)
+   - Complete architectural overview
+   - Detailed implementation analysis
+   - Signal flow diagrams
+   - State management patterns
+   - Missing features assessment
+   - Implementation checklist
+
+2. TEXT_EDITING_QUICK_REFERENCE.md
+   - File locations and line numbers
+   - Data flow sequences
+   - Component tables
+   - Tag system reference
+   - State variables documentation
+   - Debugging checklist
+   - Performance considerations
+
+3. TEXT_EDITING_CODE_SNIPPETS.md
+   - 14 key code examples
+   - Copy-paste ready implementations
+   - Fully commented code blocks
+   - Signal handler patterns
+   - Text extraction/application logic
+   - Canvas and property panel integration
+
+KEY FINDINGS
+============
+
+ARCHITECTURE: Modal Dialog-Based Text Editing
+- Double-click on canvas triggers RichTextEditor dialog
+- GTK TextBuffer with tag-based formatting
+- Property panel for style management
+- Clean separation of concerns
+
+CORE FILES:
+- canvas/click_handlers.rs - Double-click detection
+- rich_text_editor.rs - Modal editor with 762 lines
+- canvas/text_handler.rs - Text object lifecycle
+- property/panel_*.rs - Property panel integration
+- window_setup.rs - Callback configuration
+
+SUPPORTED FEATURES:
+✓ Rich text formatting (bold, italic, underline, strikethrough)
+✓ Text color and background color
+✓ Font size adjustment (6-72pt)
+✓ Text alignment (left, center, right)
+✓ Auto-resize height
+✓ Keyboard shortcuts (Ctrl+B, I, U)
+✓ Tag-based formatting system
+✓ Text extraction from formatted buffer
+✓ Multiple font families
+
+MISSING IN RUST VERSION:
+✗ RichTextEditor dialog implementation
+✗ TextHandler utility module
+✗ Double-click callback mechanism
+✗ Text content display in properties
+✗ Cursor-aware formatting detection
+✗ Inline text editing mode
+
+TEXT EDITING FLOW:
+1. User double-clicks text object on canvas
+2. DoubleClickHandler detects click + validates selection
+3. TextHandler::prepare_text_for_editing converts to RichText
+4. on_edit_text callback invoked with (index, RichText)
+5. RichTextEditor::new creates modal dialog
+6. Dialog displays text with existing formatting applied
+7. User edits text and formats with toolbar buttons
+8. User clicks OK
+9. RichTextEditor extracts RichText from TextBuffer
+10. Callback returns updated RichText
+11. canvas.update_object_rich_text saves to document
+12. on_document_modified triggers UI updates
+13. Drawing area redraws with new text
+
+RICH TEXT TAG SYSTEM:
+- "bold", "italic", "underline", "strikethrough"
+- "fgcolor_{RRGGBB}" for text color
+- "bgcolor_{RRGGBB}" for background color
+- "fontsize_{size}" for font size
+- Tags are reused from buffer.tag_table
+- Applied/removed from selection bounds
+
+PROPERTY PANEL INTEGRATION:
+- Displays object properties (font, size, line height)
+- Updates when object selected
+- Changes trigger on_style_changed callback
+- No direct text content editing in panel
+- Text always edited via RichTextEditor dialog
+
+STATE MANAGEMENT:
+RichTextEditor:
+  - blocking_signals: Prevent feedback loops
+  - current_attributes: Formatting state (underutilized)
+  - current_alignment: Paragraph alignment
+
+PropertyPanel:
+  - current_object: Selected object reference
+  - on_style_changed: Callback for style updates
+  - on_layer_command: Z-order operations
+  - on_alignment_command: Object alignment
+  - on_auto_resize_changed: Height auto-resize toggle
+
+CRITICAL IMPLEMENTATION DETAILS:
+- Minimum text object size: 20x20 pixels
+- Ruler offset: 20 pixels (coordinate adjustment)
+- Character→Byte offset conversion for byte positions
+- Tag table lookup vs creation pattern
+- Selection bounds for tag application
+- EventControllerKey for keyboard shortcuts
+- Modal dialog with Cancel/OK buttons
+
+STRENGTHS:
+- Well-organized code structure
+- Complete feature implementation
+- Clean signal flow
+- Tag reuse optimization
+- Proper resource management
+
+WEAKNESSES:
+- No cursor-aware formatting detection
+- Formatting buttons don't reflect current cursor position
+- No inline text editing
+- No format painter
+- Limited undo for individual text changes
+- No text preview in property panel
+
+NEXT STEPS FOR RUST IMPLEMENTATION:
+1. Implement RichTextEditor dialog (using gtk4-rs)
+2. Create TextHandler module with lifecycle functions
+3. Set up double-click detection with GestureClick
+4. Implement on_edit_text callback mechanism
+5. Build text extraction/application logic
+6. Test formatting tag system
+7. Integrate with property panel
+8. Add keyboard shortcut handling
+9. Implement auto-resize functionality
+10. Add undo support for text changes
+
+REFERENCES:
+All code is from: /Users/ken/Desktop/testruct-desktop/crates/gtkapp/src/

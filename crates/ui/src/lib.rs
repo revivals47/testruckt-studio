@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod canvas;
+pub mod clipboard;
 pub mod dialogs;
 pub mod error;
 pub mod export;
