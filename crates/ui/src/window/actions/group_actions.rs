@@ -102,11 +102,15 @@ pub fn register(
     add_window_action(window, "ungroup", move |_| {
         tracing::info!("Action: ungroup selected objects");
 
-        let selected_ids = ungroup_render_state.borrow();
-        if selected_ids.is_empty() {
-            tracing::warn!("⚠️  No objects selected for ungrouping");
-            return;
-        }
+        // Extract selected IDs and drop the borrow immediately
+        let selected_ids_vec = {
+            let selected_ids = ungroup_render_state.borrow();
+            if selected_ids.is_empty() {
+                tracing::warn!("⚠️  No objects selected for ungrouping");
+                return;
+            }
+            selected_ids.clone()
+        }; // Borrow is dropped here
 
         ungroup_state.with_active_document(|doc| {
             if let Some(page) = doc.pages.get_mut(0) {
@@ -115,7 +119,7 @@ pub fn register(
 
                 // Find group frames to ungroup
                 for (i, element) in page.elements.iter().enumerate() {
-                    if selected_ids.contains(&element.id()) {
+                    if selected_ids_vec.contains(&element.id()) {
                         if let testruct_core::document::DocumentElement::Frame(frame) = element {
                             indices_to_ungroup.push(i);
                             children_to_add.extend(frame.children.iter().cloned());
@@ -144,7 +148,7 @@ pub fn register(
             }
         });
 
-        // Clear selection and redraw
+        // Clear selection and redraw (safe now that immutable borrow is dropped)
         ungroup_render_state.borrow_mut().clear();
         let _ = ungroup_drawing_area.queue_draw();
     });

@@ -345,15 +345,24 @@ fn handle_text_editing_key(
             Some(true)
         }
         gtk4::gdk::Key::BackSpace => {
-            // Delete character before cursor
+            // Delete character before cursor (use char count, not byte count)
             if *cursor_pos > 0 {
                 app_state.with_active_document(|doc| {
                     if let Some(page) = doc.pages.first_mut() {
                         for element in &mut page.elements {
                             if let DocumentElement::Text(text) = element {
                                 if text.id == text_id {
-                                    if *cursor_pos <= text.content.len() && *cursor_pos > 0 {
-                                        text.content.remove(*cursor_pos - 1);
+                                    // Convert cursor position from char count to byte index
+                                    let chars: Vec<char> = text.content.chars().collect();
+                                    if *cursor_pos <= chars.len() && *cursor_pos > 0 {
+                                        // Remove character at position cursor_pos - 1
+                                        let new_content: String = chars
+                                            .iter()
+                                            .enumerate()
+                                            .filter(|(i, _)| *i != *cursor_pos - 1)
+                                            .map(|(_, c)| c)
+                                            .collect();
+                                        text.content = new_content;
                                         *cursor_pos -= 1;
                                     }
                                 }
@@ -373,14 +382,22 @@ fn handle_text_editing_key(
             Some(true)
         }
         gtk4::gdk::Key::Delete => {
-            // Delete character at cursor
+            // Delete character at cursor (use char count, not byte count)
             app_state.with_active_document(|doc| {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
                         if let DocumentElement::Text(text) = element {
                             if text.id == text_id {
-                                if *cursor_pos < text.content.len() {
-                                    text.content.remove(*cursor_pos);
+                                let chars: Vec<char> = text.content.chars().collect();
+                                if *cursor_pos < chars.len() {
+                                    // Remove character at position cursor_pos
+                                    let new_content: String = chars
+                                        .iter()
+                                        .enumerate()
+                                        .filter(|(i, _)| *i != *cursor_pos)
+                                        .map(|(_, c)| c)
+                                        .collect();
+                                    text.content = new_content;
                                 }
                             }
                         }
@@ -460,7 +477,20 @@ fn handle_text_editing_key(
                     for element in &mut page.elements {
                         if let DocumentElement::Text(text) = element {
                             if text.id == text_id {
-                                text.content.insert(*cursor_pos, '\n');
+                                // Insert newline using char-based indexing
+                                let chars: Vec<char> = text.content.chars().collect();
+                                let mut new_content = String::new();
+                                for (i, c) in chars.iter().enumerate() {
+                                    if i == *cursor_pos {
+                                        new_content.push('\n');
+                                    }
+                                    new_content.push(*c);
+                                }
+                                // If cursor is at the end, append newline
+                                if *cursor_pos >= chars.len() {
+                                    new_content.push('\n');
+                                }
+                                text.content = new_content;
                                 *cursor_pos += 1;
                             }
                         }
@@ -484,7 +514,20 @@ fn handle_text_editing_key(
                             for element in &mut page.elements {
                                 if let DocumentElement::Text(text) = element {
                                     if text.id == text_id {
-                                        text.content.insert(*cursor_pos, ch);
+                                        // Insert character using char-based indexing, not byte-based
+                                        let chars: Vec<char> = text.content.chars().collect();
+                                        let mut new_content = String::new();
+                                        for (i, c) in chars.iter().enumerate() {
+                                            if i == *cursor_pos {
+                                                new_content.push(ch);
+                                            }
+                                            new_content.push(*c);
+                                        }
+                                        // If cursor is at the end, append character
+                                        if *cursor_pos >= chars.len() {
+                                            new_content.push(ch);
+                                        }
+                                        text.content = new_content;
                                         *cursor_pos += 1;
                                     }
                                 }

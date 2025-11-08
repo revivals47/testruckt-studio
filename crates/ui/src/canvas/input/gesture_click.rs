@@ -130,15 +130,26 @@ pub fn setup_click_gesture(
                                         && doc_y <= (bounds.origin.y + bounds.size.height) as f64
                                     {
                                         // Enter text editing mode
+                                        eprintln!("✏️ ENTERING TEXT EDITING MODE");
+                                        eprintln!("  Text ID: {}", text.id);
+                                        eprintln!("  Text content: '{}'", text.content);
+                                        eprintln!("  Text bounds: {:?}", text.bounds);
+
                                         let mut tool_state = state.tool_state.borrow_mut();
                                         tool_state.editing_text_id = Some(text.id);
                                         tool_state.editing_cursor_pos = text.content.len();
                                         drop(tool_state);
+
+                                        // Give focus to drawing area to receive keyboard input
+                                        drawing_area_click.grab_focus();
+                                        eprintln!("  ✅ Called grab_focus()");
                                         drawing_area_click.queue_draw();
+
                                         tracing::info!(
                                             "Entered text editing mode for text element: {}",
                                             text.id
                                         );
+                                        eprintln!("  ✅ Text editing mode activated");
                                         return;
                                     }
                                 }
