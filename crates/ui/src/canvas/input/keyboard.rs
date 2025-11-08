@@ -617,6 +617,11 @@ fn handle_duplicate(
                             frame.bounds.origin.x += 20.0;
                             frame.bounds.origin.y += 20.0;
                         }
+                        DocumentElement::Group(group) => {
+                            group.id = new_id;
+                            group.bounds.origin.x += 20.0;
+                            group.bounds.origin.y += 20.0;
+                        }
                     }
 
                     new_elements.push(new_elem);
@@ -662,6 +667,10 @@ pub fn move_selected_objects(
                             DocumentElement::Frame(frame) => {
                                 frame.bounds.origin.x += delta_x;
                                 frame.bounds.origin.y += delta_y;
+                            }
+                            DocumentElement::Group(group) => {
+                                group.bounds.origin.x += delta_x;
+                                group.bounds.origin.y += delta_y;
                             }
                         }
                     }

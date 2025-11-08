@@ -229,6 +229,7 @@ impl AppState {
                         testruct_core::document::DocumentElement::Text(text) => text.id,
                         testruct_core::document::DocumentElement::Image(image) => image.id,
                         testruct_core::document::DocumentElement::Frame(frame) => frame.id,
+                        testruct_core::document::DocumentElement::Group(group) => group.id,
                     })
                     .collect()
             } else {

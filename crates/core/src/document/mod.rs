@@ -10,7 +10,8 @@ use std::fmt;
 pub use builder::{DocumentBuilder, DocumentBuilderError};
 pub use metadata::{DocumentMetadata, PageMetadata};
 pub use page::{
-    DocumentElement, FrameElement, ImageElement, Page, PageId, ShapeElement, ShapeKind, TextElement,
+    DocumentElement, FrameElement, GroupElement, ImageElement, Page, PageId, ShapeElement,
+    ShapeKind, TextElement,
 };
 pub use page_size::PageSize;
 

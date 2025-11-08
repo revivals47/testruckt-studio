@@ -107,6 +107,9 @@ pub fn setup_mouse_tracking(
                             testruct_core::document::DocumentElement::Frame(frame) => {
                                 (frame.id, &frame.bounds)
                             }
+                            testruct_core::document::DocumentElement::Group(group) => {
+                                (group.id, &group.bounds)
+                            }
                         };
 
                         if elem_id == *selected_id {

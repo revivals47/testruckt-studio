@@ -254,6 +254,7 @@ fn get_element_bounds(element: &DocumentElement) -> Rect {
         DocumentElement::Text(text) => text.bounds,
         DocumentElement::Image(image) => image.bounds,
         DocumentElement::Frame(frame) => frame.bounds,
+        DocumentElement::Group(group) => group.bounds,
     }
 }
 
@@ -398,6 +399,9 @@ fn apply_alignment(
                             }
                             DocumentElement::Frame(frame) => {
                                 frame.bounds = new_bounds;
+                            }
+                            DocumentElement::Group(group) => {
+                                group.bounds = new_bounds;
                             }
                         }
                         break;

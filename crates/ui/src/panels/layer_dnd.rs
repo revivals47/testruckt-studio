@@ -127,6 +127,9 @@ fn get_element_info(element: &testruct_core::document::DocumentElement) -> (Stri
         testruct_core::document::DocumentElement::Frame(_) => {
             ("Frame".to_string(), "Frame".to_string())
         }
+        testruct_core::document::DocumentElement::Group(group) => {
+            (format!("Group: {}", group.name), format!("Group: {}", group.name))
+        }
     }
 }
 

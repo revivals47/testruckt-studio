@@ -92,6 +92,7 @@ pub enum DocumentElement {
     Text(TextElement),
     Image(ImageElement),
     Shape(ShapeElement),
+    Group(GroupElement),
 }
 
 impl DocumentElement {
@@ -102,6 +103,7 @@ impl DocumentElement {
             DocumentElement::Text(t) => t.id,
             DocumentElement::Image(i) => i.id,
             DocumentElement::Shape(s) => s.id,
+            DocumentElement::Group(g) => g.id,
         }
     }
 }
@@ -137,6 +139,14 @@ pub struct ShapeElement {
     pub bounds: super::super::layout::Rect,
     pub stroke: Option<crate::typography::Color>,
     pub fill: Option<crate::typography::Color>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GroupElement {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub bounds: super::super::layout::Rect,
+    pub children: Vec<DocumentElement>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -43,6 +43,7 @@ pub fn register(
                             testruct_core::document::DocumentElement::Text(t) => &t.bounds,
                             testruct_core::document::DocumentElement::Image(i) => &i.bounds,
                             testruct_core::document::DocumentElement::Shape(s) => &s.bounds,
+                            testruct_core::document::DocumentElement::Group(g) => &g.bounds,
                         };
 
                         min_x = min_x.min(bounds.origin.x);

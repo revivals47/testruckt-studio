@@ -126,6 +126,12 @@ fn render_element_to_context(
         DocumentElement::Frame(frame) => {
             render_frame_to_context(ctx, frame, catalog)?;
         }
+        DocumentElement::Group(group) => {
+            // Recursively render group children
+            for child in &group.children {
+                render_element_to_context(ctx, child, catalog)?;
+            }
+        }
     }
 
     Ok(())

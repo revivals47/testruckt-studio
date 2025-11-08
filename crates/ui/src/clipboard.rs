@@ -100,6 +100,9 @@ fn regenerate_element_id(element: &mut DocumentElement) {
         DocumentElement::Frame(frame) => {
             frame.id = uuid::Uuid::new_v4();
         }
+        DocumentElement::Group(group) => {
+            group.id = uuid::Uuid::new_v4();
+        }
     }
 }
 
@@ -123,6 +126,10 @@ fn offset_element_bounds(element: &mut DocumentElement, offset: (f32, f32)) {
         DocumentElement::Frame(frame) => {
             frame.bounds.origin.x += offset.0;
             frame.bounds.origin.y += offset.1;
+        }
+        DocumentElement::Group(group) => {
+            group.bounds.origin.x += offset.0;
+            group.bounds.origin.y += offset.1;
         }
     }
 }

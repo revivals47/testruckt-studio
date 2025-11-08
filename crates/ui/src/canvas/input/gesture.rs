@@ -264,6 +264,7 @@ fn setup_click_gesture(
                             DocumentElement::Text(text) => text.id,
                             DocumentElement::Image(image) => image.id,
                             DocumentElement::Frame(frame) => frame.id,
+                            DocumentElement::Group(group) => group.id,
                         };
 
                         // Only check resize handles for selected objects
@@ -276,6 +277,7 @@ fn setup_click_gesture(
                             DocumentElement::Text(text) => &text.bounds,
                             DocumentElement::Image(image) => &image.bounds,
                             DocumentElement::Frame(frame) => &frame.bounds,
+                            DocumentElement::Group(group) => &group.bounds,
                         };
 
                         // Test for resize handle hit
@@ -323,6 +325,9 @@ fn setup_click_gesture(
                             }
                             DocumentElement::Frame(frame) => {
                                 objects.push((frame.id, frame.bounds.clone()));
+                            }
+                            DocumentElement::Group(group) => {
+                                objects.push((group.id, group.bounds.clone()));
                             }
                         }
                     }

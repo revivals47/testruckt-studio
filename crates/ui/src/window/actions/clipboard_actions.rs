@@ -101,6 +101,11 @@ pub fn register(
                     s.bounds.origin.x += PASTE_OFFSET;
                     s.bounds.origin.y += PASTE_OFFSET;
                 }
+                testruct_core::document::DocumentElement::Group(ref mut g) => {
+                    g.id = new_id;
+                    g.bounds.origin.x += PASTE_OFFSET;
+                    g.bounds.origin.y += PASTE_OFFSET;
+                }
             }
         }
 

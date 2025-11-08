@@ -210,6 +210,36 @@ impl CanvasView {
         use testruct_core::document::{DocumentElement, ShapeKind};
 
         match element {
+            DocumentElement::Group(group) => {
+                // Draw group border (similar to frame but with different styling)
+                ctx.set_source_rgb(0.7, 0.7, 0.9);
+                ctx.set_line_width(1.0);
+                ctx.rectangle(
+                    group.bounds.origin.x as f64,
+                    group.bounds.origin.y as f64,
+                    group.bounds.size.width as f64,
+                    group.bounds.size.height as f64,
+                );
+                ctx.stroke()?;
+
+                // Draw group selection highlight if selected
+                let is_selected = selected_ids.contains(&group.id);
+                if is_selected {
+                    let selection_color = testruct_core::typography::Color {
+                        r: 0.05,
+                        g: 0.49,
+                        b: 0.86,
+                        a: 1.0,
+                    };
+                    rendering::draw_selection_box(ctx, &group.bounds, &selection_color)?;
+                    rendering::draw_resize_handles(ctx, &group.bounds, &selection_color)?;
+                }
+
+                // Recursively draw group children
+                for child in &group.children {
+                    Self::draw_element(ctx, child, selected_ids, render_state, app_state)?;
+                }
+            }
             DocumentElement::Frame(frame) => {
                 // Draw frame border
                 ctx.set_source_rgb(0.9, 0.9, 0.9);
