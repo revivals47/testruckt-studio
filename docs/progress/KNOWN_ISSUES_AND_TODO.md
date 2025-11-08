@@ -147,16 +147,27 @@
 ---
 
 #### 7. Grouping が完全に未実装
-**ステータス**: ❌ データ構造なし
+**ステータス**: ✅ 実装完了（2025年11月8日）
 **影響範囲**: 高度な編集
 **詳細**:
 ```
-- DocumentElement に Group 型がない
-- グループコマンドがない
-- グループ内の要素操作ができない
+実装内容:
+- DocumentElement に Group(GroupElement) バリアント追加
+- GroupCommand を undo_redo.rs に実装
+- GroupElement はchildren ベクタで子要素を管理
+- グループのバウンダリを自動計算（すべての子を包含）
+- Undo/Redo 完全サポート（アングループ機能含む）
+- レンダリング、選択、エクスポート、アライメント等すべてに対応
 ```
 
-**対応予定**: Phase 2（2025年12月13日）
+**対応完了**: 2025年11月8日
+
+**確認完了項目**:
+- [x] GroupElement 構造体実装（id, name, bounds, children）
+- [x] GroupCommand 実装（execute, undo）
+- [x] パターンマッチ全箇所対応（20+ ファイル）
+- [x] レンダリング対応（子要素の再帰的描画）
+- [x] 統合テスト実装（4個すべて合格）
 
 ---
 
@@ -244,7 +255,7 @@
 
 ## 📋 未実装機能（優先度順）
 
-### ✅ 完成した機能（15/30）
+### ✅ 完成した機能（20/30）
 
 #### Canvas & Rendering (4/4 完成)
 - [x] Canvas Rendering (Cairo)
@@ -269,24 +280,28 @@
 - [x] Asset Management
 - [x] Image Rendering
 
+#### Document Management (2/2 完成)
+- [x] Save/Load (JSON形式でのシリアライズ)
+- [x] Undo/Redo (スタック統合、全操作対応)
+
+#### Editing Capabilities (3/4 完成)
+- [x] Grouping (グループ化・アングループ)
+- [x] Copy/Paste/Duplicate (検証・テスト完了)
+- [ ] **Alignment Tools** - 配置・分散機能
+- [ ] **Layers Panel** - ドラッグ&ドロップ機能
+
 ---
 
-### ⏳ 進行中の機能（0/30）
+### ⏳ 進行中の機能（1/10）
 
-#### Document Management (0/2)
-- [ ] **Save/Load** - JSON形式でのシリアライズ
-- [ ] **Undo/Redo** - スタック統合（インフラ整備済み）
-
-#### Editing Capabilities (0/4)
+#### Editing Capabilities (1/2)
 - [ ] **Alignment Tools** - 配置・分散機能
-- [ ] **Grouping** - グループ化・アングループ
 - [ ] **Layers Panel** - ドラッグ&ドロップ機能
-- [ ] **Copy/Paste/Duplicate** - 検証・テスト必要
 
-#### Style & Appearance (0/3)
-- [ ] **Fill Color** - カラー編集・グラデーション
-- [ ] **Stroke Properties** - 幅・色・スタイル
-- [ ] **Typography Controls** - 太字・斜体・下線
+#### Style & Appearance (3/3 完成)
+- [x] Fill Color (カラー編集)
+- [x] Stroke Properties (幅・色・スタイル)
+- [x] Typography Controls (太字・斜体)
 
 #### Export & Output (0/3)
 - [ ] **Export to PDF** - PDF形式出力
@@ -312,13 +327,13 @@
 
 | # | バグ | 影響度 | 難易度 | 優先度 | 状態 |
 |---|------|--------|--------|--------|------|
-| 1 | Save/Load 未実装 | 🔴 致命的 | 🟡 中 | 🔴 最高 | ⏳ Phase 3 |
-| 2 | Undo/Redo 未統合 | 🔴 高 | 🟢 低 | 🔴 高 | ⏳ Phase 4 |
+| 1 | Save/Load 未実装 | 🔴 致命的 | 🟡 中 | 🔴 最高 | ✅ 完了（2025-11-08） |
+| 2 | Undo/Redo 未統合 | 🔴 高 | 🟢 低 | 🔴 高 | ✅ 完了（2025-11-08） |
 | 3 | Copy/Paste 未検証 | 🟡 中 | 🟢 低 | 🟡 中 | ✅ 完了（2025-11-08） |
 | 4 | Fill/Stroke UI 未反映 | 🟡 中 | 🟡 中 | 🟡 中 | ✅ 完了（2025-11-08） |
 | 5 | Layers パネル未実装 | 🟡 中 | 🟡 中 | 🟡 中 | ⏳ Phase 2 |
 | 6 | テキスト装飾未実装 | 🟢 低 | 🟡 中 | 🟡 中 | ✅ 完了（2025-11-08） |
-| 7 | Grouping 未実装 | 🟢 低 | 🔴 高 | 🟢 低 | ⏳ Phase 2 |
+| 7 | Grouping 未実装 | 🟢 低 | 🔴 高 | 🟢 低 | ✅ 完了（2025-11-08） |
 | 8 | マルチページ UI 未実装 | 🟢 低 | 🔴 高 | 🟢 低 | ⏳ Phase 6 |
 | 9 | SVG Export 未実装 | 🟢 低 | 🟡 中 | 🟢 低 | ⏳ Phase 3 |
 | 10 | Template 機能限定 | 🟢 低 | 🟢 低 | 🟢 低 | ⏳ Phase 2 |
