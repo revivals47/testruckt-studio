@@ -1,18 +1,37 @@
 //! キーボード入力処理モジュール
 //!
-//! キャンバスのキーボードイベントを処理し、テキスト編集、ショートカット実行、
-//! オブジェクト移動などの機能を提供します。
+//! キャンバスのキーボードイベントを処理し、テキスト編集とショートカット実行を提供します。
 //!
 //! # 主な機能
 //!
 //! - **テキスト編集**: 文字入力、削除、カーソル移動
-//! - **ショートカット**: コピー/カット/ペースト/複製
 //! - **テキスト配置**: 左揃え、右揃え、中央揃え、両端揃え
-//! - **オブジェクト移動**: 矢印キーでの選択オブジェクト移動
-//! - **画像挿入**: Ctrl+Shift+I
-//! - **テンプレート保存**: Ctrl+Shift+S
+//! - **ショートカット統合**: keyboard_shortcuts モジュールと連携
 //!
 //! # キーボード操作一覧
+//!
+//! ## テキスト編集
+//!
+//! | キー | 説明 |
+//! |------|------|
+//! | Escape | テキスト編集終了 |
+//! | BackSpace | 前の文字削除 |
+//! | Delete | カーソル位置の文字削除 |
+//! | Left/Right | カーソル左右移動 |
+//! | Home/End | カーソル行頭/行末移動 |
+//! | Return | 改行挿入 |
+//!
+//! ## テキスト配置（編集中）
+//!
+//! | キー | 説明 |
+//! |------|------|
+//! | Ctrl+L | テキスト左揃え |
+//! | Ctrl+R | テキスト右揃え |
+//! | Ctrl+E | テキスト右揃え（代替） |
+//! | Ctrl+C | テキスト中央揃え |
+//! | Ctrl+J | テキスト両端揃え |
+//!
+//! ## ショートカット（詳細は keyboard_shortcuts モジュール参照）
 //!
 //! | キー | 説明 |
 //! |------|------|
@@ -20,20 +39,9 @@
 //! | Ctrl+X | 選択オブジェクトをカット（削除後にコピー） |
 //! | Ctrl+V | クリップボードからペースト |
 //! | Ctrl+D | 選択オブジェクトを複製 |
-//! | Ctrl+L | テキスト左揃え |
-//! | Ctrl+R | テキスト右揃え |
-//! | Ctrl+E | テキスト右揃え（代替） |
-//! | Ctrl+C | テキスト中央揃え |
-//! | Ctrl+J | テキスト両端揃え |
 //! | Ctrl+Shift+I | 画像挿入 |
 //! | Ctrl+Shift+S | テンプレートとして保存 |
 //! | ←→↑↓ | オブジェクト移動（Shift: 10px、通常: 1px） |
-//! | Escape | テキスト編集終了 |
-//! | BackSpace | 前の文字削除 |
-//! | Delete | カーソル位置の文字削除 |
-//! | Left/Right | カーソル左右移動 |
-//! | Home/End | カーソル行頭/行末移動 |
-//! | Return | 改行挿入 |
 //!
 //! # 使用例
 //!
@@ -64,6 +72,9 @@ use gtk4::prelude::*;
 use gtk4::{DrawingArea, EventControllerKey};
 use testruct_core::document::DocumentElement;
 use uuid::Uuid;
+
+// Import keyboard shortcuts module
+use super::keyboard_shortcuts;
 
 /// キーボードイベント処理を初期化
 ///
@@ -96,13 +107,13 @@ pub fn setup_keyboard_events(
 
         // Handle Ctrl+Shift+I to insert image
         if ctrl_pressed && shift_pressed && keyval == gtk4::gdk::Key::i {
-            handle_insert_image(&app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_insert_image(&app_state_keyboard, &drawing_area_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
         // Handle Ctrl+Shift+S to save as template
         if ctrl_pressed && shift_pressed && keyval == gtk4::gdk::Key::s {
-            handle_save_template(&app_state_keyboard);
+            keyboard_shortcuts::handle_save_template(&app_state_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
@@ -141,25 +152,25 @@ pub fn setup_keyboard_events(
 
         // Handle Copy: Ctrl+C
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::c {
-            handle_copy(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_copy(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
         // Handle Cut: Ctrl+X
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::x {
-            handle_cut(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_cut(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
         // Handle Paste: Ctrl+V
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::v {
-            handle_paste(&app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_paste(&app_state_keyboard, &drawing_area_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
         // Handle Duplicate: Ctrl+D
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::d {
-            handle_duplicate(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_duplicate(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
             return gtk4::glib::Propagation::Stop;
         }
 
@@ -170,7 +181,7 @@ pub fn setup_keyboard_events(
         let handled = match keyval {
             gtk4::gdk::Key::Left => {
                 if !in_text_editing {
-                    move_selected_objects(
+                    keyboard_shortcuts::move_selected_objects(
                         &render_state_kbd,
                         &app_state_keyboard,
                         -movement_amount,
@@ -185,7 +196,7 @@ pub fn setup_keyboard_events(
             }
             gtk4::gdk::Key::Right => {
                 if !in_text_editing {
-                    move_selected_objects(
+                    keyboard_shortcuts::move_selected_objects(
                         &render_state_kbd,
                         &app_state_keyboard,
                         movement_amount,
@@ -200,7 +211,7 @@ pub fn setup_keyboard_events(
             }
             gtk4::gdk::Key::Up => {
                 if !in_text_editing {
-                    move_selected_objects(
+                    keyboard_shortcuts::move_selected_objects(
                         &render_state_kbd,
                         &app_state_keyboard,
                         0.0,
@@ -215,7 +226,7 @@ pub fn setup_keyboard_events(
             }
             gtk4::gdk::Key::Down => {
                 if !in_text_editing {
-                    move_selected_objects(
+                    keyboard_shortcuts::move_selected_objects(
                         &render_state_kbd,
                         &app_state_keyboard,
                         0.0,
@@ -240,43 +251,21 @@ pub fn setup_keyboard_events(
     drawing_area.add_controller(key_controller);
 }
 
-fn handle_insert_image(app_state: &AppState, drawing_area: &DrawingArea) {
-    app_state.with_active_document(|doc| {
-        if let Some(page) = doc.pages.first_mut() {
-            let image = DocumentElement::Image(testruct_core::document::ImageElement {
-                id: Uuid::new_v4(),
-                source: testruct_core::workspace::assets::AssetRef::new(),
-                bounds: testruct_core::layout::Rect {
-                    origin: testruct_core::layout::Point { x: 100.0, y: 100.0 },
-                    size: testruct_core::layout::Size {
-                        width: 200.0,
-                        height: 150.0,
-                    },
-                },
-            });
-            page.elements.push(image);
-        }
-    });
-    drawing_area.queue_draw();
-    tracing::info!("✅ Image inserted");
-}
-
-fn handle_save_template(app_state: &AppState) {
-    if let Some(document) = app_state.active_document() {
-        let template_name = chrono::Local::now()
-            .format("template_%Y%m%d_%H%M%S")
-            .to_string();
-        match crate::templates::save_template(&template_name, &document) {
-            Ok(_) => {
-                tracing::info!("✅ Document saved as template: {}", template_name);
-            }
-            Err(e) => {
-                tracing::error!("Failed to save template: {}", e);
-            }
-        }
-    }
-}
-
+/// テキスト配置変更処理
+///
+/// Ctrl+L/R/E/C/J によるテキストアライメント変更を処理します。
+///
+/// # 引数
+///
+/// - `app_state`: アプリケーション状態
+/// - `render_state`: キャンバス描画状態
+/// - `drawing_area`: 描画エリア（再描画用）
+/// - `text_id`: 編集中のテキスト要素ID
+/// - `keyval`: 押されたキーの値
+///
+/// # 戻り値
+///
+/// アライメントが変更された場合は `true`、それ以外は `false`
 fn handle_text_alignment(
     app_state: &AppState,
     render_state: &CanvasRenderState,
@@ -319,6 +308,23 @@ fn handle_text_alignment(
     }
 }
 
+/// テキスト編集キー処理
+///
+/// テキスト編集モード中のキーボード入力を処理します。
+///
+/// # 引数
+///
+/// - `app_state`: アプリケーション状態
+/// - `render_state`: キャンバス描画状態
+/// - `drawing_area`: 描画エリア（再描画用）
+/// - `text_id`: 編集中のテキスト要素ID
+/// - `keyval`: 押されたキーの値
+/// - `cursor_pos`: カーソル位置（可変参照）
+///
+/// # 戻り値
+///
+/// キーが処理された場合は `Some(true)`、伝播を続ける場合は `Some(false)`、
+/// 未処理の場合は `None`
 fn handle_text_editing_key(
     app_state: &AppState,
     render_state: &CanvasRenderState,
@@ -499,183 +505,5 @@ fn handle_text_editing_key(
             }
             None
         }
-    }
-}
-
-fn handle_copy(
-    render_state: &CanvasRenderState,
-    app_state: &AppState,
-    drawing_area: &DrawingArea,
-) {
-    let selected = render_state.selected_ids.borrow();
-    if !selected.is_empty() {
-        if let Some(document) = app_state.active_document() {
-            if let Some(page) = document.pages.first() {
-                let elements: Vec<_> = page
-                    .elements
-                    .iter()
-                    .filter(|e| selected.contains(&e.id()))
-                    .cloned()
-                    .collect();
-
-                crate::clipboard::copy_to_clipboard(elements);
-                tracing::info!("✅ Copied {} objects to clipboard", selected.len());
-                drawing_area.queue_draw();
-            }
-        }
-    }
-}
-
-fn handle_cut(
-    render_state: &CanvasRenderState,
-    app_state: &AppState,
-    drawing_area: &DrawingArea,
-) {
-    let selected = render_state.selected_ids.borrow().clone();
-    let selected_count = selected.len();
-
-    if !selected.is_empty() {
-        app_state.with_mutable_active_document(|doc| {
-            if let Some(page) = doc.pages.first_mut() {
-                // Copy selected elements to clipboard
-                let elements: Vec<_> = page
-                    .elements
-                    .iter()
-                    .filter(|e| selected.contains(&e.id()))
-                    .cloned()
-                    .collect();
-
-                crate::clipboard::copy_to_clipboard(elements);
-
-                // Delete the selected elements
-                page.elements.retain(|e| !selected.contains(&e.id()));
-            }
-        });
-
-        // Clear selection
-        render_state.selected_ids.borrow_mut().clear();
-
-        tracing::info!("✅ Cut {} objects", selected_count);
-        drawing_area.queue_draw();
-    }
-}
-
-fn handle_paste(app_state: &AppState, drawing_area: &DrawingArea) {
-    if crate::clipboard::has_clipboard_content() {
-        if let Some(pasted_elements) = crate::clipboard::paste_from_clipboard() {
-            if !pasted_elements.is_empty() {
-                let paste_count = pasted_elements.len();
-                app_state.with_mutable_active_document(|doc| {
-                    if let Some(page) = doc.pages.first_mut() {
-                        for elem in pasted_elements {
-                            page.add_element(elem);
-                        }
-                    }
-                });
-
-                tracing::info!("✅ Pasted {} elements", paste_count);
-                drawing_area.queue_draw();
-            }
-        }
-    }
-}
-
-fn handle_duplicate(
-    render_state: &CanvasRenderState,
-    app_state: &AppState,
-    drawing_area: &DrawingArea,
-) {
-    let selected = render_state.selected_ids.borrow().clone();
-    if !selected.is_empty() {
-        app_state.with_mutable_active_document(|doc| {
-            if let Some(page) = doc.pages.first_mut() {
-                let mut new_elements = Vec::new();
-
-                for orig_elem in page.elements.iter().filter(|e| selected.contains(&e.id())) {
-                    let mut new_elem = orig_elem.clone();
-                    let new_id = Uuid::new_v4();
-
-                    // Update ID and offset position
-                    match &mut new_elem {
-                        DocumentElement::Text(t) => {
-                            t.id = new_id;
-                            t.bounds.origin.x += 20.0;
-                            t.bounds.origin.y += 20.0;
-                        }
-                        DocumentElement::Image(img) => {
-                            img.id = new_id;
-                            img.bounds.origin.x += 20.0;
-                            img.bounds.origin.y += 20.0;
-                        }
-                        DocumentElement::Shape(shape) => {
-                            shape.id = new_id;
-                            shape.bounds.origin.x += 20.0;
-                            shape.bounds.origin.y += 20.0;
-                        }
-                        DocumentElement::Frame(frame) => {
-                            frame.id = new_id;
-                            frame.bounds.origin.x += 20.0;
-                            frame.bounds.origin.y += 20.0;
-                        }
-                        DocumentElement::Group(group) => {
-                            group.id = new_id;
-                            group.bounds.origin.x += 20.0;
-                            group.bounds.origin.y += 20.0;
-                        }
-                    }
-
-                    new_elements.push(new_elem);
-                }
-
-                for elem in new_elements {
-                    page.add_element(elem);
-                }
-            }
-        });
-
-        tracing::info!("✅ Duplicated {} objects", selected.len());
-        drawing_area.queue_draw();
-    }
-}
-
-pub fn move_selected_objects(
-    render_state: &CanvasRenderState,
-    app_state: &AppState,
-    delta_x: f32,
-    delta_y: f32,
-) {
-    let selected = render_state.selected_ids.borrow();
-
-    if !selected.is_empty() {
-        app_state.with_mutable_active_document(|doc| {
-            if let Some(page) = doc.pages.first_mut() {
-                for element in &mut page.elements {
-                    if selected.contains(&element.id()) {
-                        match element {
-                            DocumentElement::Text(text) => {
-                                text.bounds.origin.x += delta_x;
-                                text.bounds.origin.y += delta_y;
-                            }
-                            DocumentElement::Image(image) => {
-                                image.bounds.origin.x += delta_x;
-                                image.bounds.origin.y += delta_y;
-                            }
-                            DocumentElement::Shape(shape) => {
-                                shape.bounds.origin.x += delta_x;
-                                shape.bounds.origin.y += delta_y;
-                            }
-                            DocumentElement::Frame(frame) => {
-                                frame.bounds.origin.x += delta_x;
-                                frame.bounds.origin.y += delta_y;
-                            }
-                            DocumentElement::Group(group) => {
-                                group.bounds.origin.x += delta_x;
-                                group.bounds.origin.y += delta_y;
-                            }
-                        }
-                    }
-                }
-            }
-        });
     }
 }

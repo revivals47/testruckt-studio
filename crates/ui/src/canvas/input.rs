@@ -12,10 +12,13 @@
 //!
 //! | モジュール | ファイル | 行数 | 責務 |
 //! |-----------|---------|------|------|
-//! | keyboard | keyboard.rs | 606 | テキスト編集、ショートカット、オブジェクト移動 |
-//! | gesture | gesture.rs | 622 | 選択、リサイズ、図形作成 |
+//! | keyboard | keyboard.rs | 509 | テキスト編集、テキスト配置、イベント統合 |
+//! | keyboard_shortcuts | keyboard_shortcuts.rs | 305 | ショートカット、オブジェクト移動、クリップボード |
+//! | gesture | gesture.rs | 120 | ジェスチャー統合、公開API |
+//! | gesture_click | gesture_click.rs | 337 | クリック、ダブルクリック、選択処理 |
+//! | gesture_drag | gesture_drag.rs | 359 | ドラッグ、移動、リサイズ、図形作成 |
 //! | mouse | mouse.rs | 88 | カーソル管理 |
-//! | 統合 | input.rs | 22 | イベントハンドラー初期化 |
+//! | 統合 | input.rs | 110 | イベントハンドラー初期化 |
 //!
 //! # 使用例
 //!
@@ -67,10 +70,13 @@
 //! 詳細は各モジュールドキュメントを参照してください。
 
 mod keyboard;
+mod keyboard_shortcuts;
 mod mouse;
 mod gesture;
+mod gesture_click;
+mod gesture_drag;
 
-pub use self::keyboard::move_selected_objects;
+pub use self::keyboard_shortcuts::move_selected_objects;
 
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;

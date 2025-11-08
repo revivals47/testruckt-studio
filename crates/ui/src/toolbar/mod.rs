@@ -3,7 +3,7 @@
 //! Provides builders for the primary and secondary toolbars with all controls
 //! organized by functional groups.
 
-pub mod tools;
+pub mod toolbar_shapes;
 
 use gtk4::prelude::*;
 use gtk4::{
