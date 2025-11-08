@@ -226,7 +226,8 @@ pub fn setup_click_gesture(
                         };
 
                         // Test for resize handle hit
-                        if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 8.0) {
+                        // Use larger detection range (16.0 instead of 8.0) to account for coordinate display issues
+                        if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 16.0) {
                             // Store resize state
                             let mut tool_state = state.tool_state.borrow_mut();
                             tool_state.resizing_object_id = Some(element_id);
@@ -235,7 +236,14 @@ pub fn setup_click_gesture(
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
-                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}, object_is_selected={}", element_id, handle, selected_ids.contains(&element_id));
+                            let config = state.config.borrow();
+                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}, selected={}", element_id, handle, selected_ids.contains(&element_id));
+                            eprintln!("  📍 Widget coords: ({:.1}, {:.1})", x, y);
+                            eprintln!("  📍 Canvas coords: ({:.2}, {:.2})", canvas_mouse_pos.x, canvas_mouse_pos.y);
+                            eprintln!("  📍 Bounds: x={:.2}, y={:.2}, w={:.2}, h={:.2}", bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height);
+                            eprintln!("  📍 Zoom: {:.2}, Pan: ({:.1}, {:.1}), Ruler: {:.1}", config.zoom, config.pan_x, config.pan_y, state.ruler_config.borrow().size);
+                            drop(config);
+
                             tracing::info!(
                                 "Started resizing object {} with handle {:?}",
                                 element_id,
