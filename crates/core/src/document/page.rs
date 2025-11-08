@@ -139,7 +139,7 @@ pub struct ShapeElement {
     pub fill: Option<crate::typography::Color>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ShapeKind {
     Rectangle,
     Ellipse,
