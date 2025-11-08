@@ -478,20 +478,14 @@ fn handle_text_editing_key(
                         if let DocumentElement::Text(text) = element {
                             if text.id == text_id {
                                 // Insert newline using char-based indexing
-                                let chars: Vec<char> = text.content.chars().collect();
-                                let mut new_content = String::new();
-                                for (i, c) in chars.iter().enumerate() {
-                                    if i == *cursor_pos {
-                                        new_content.push('\n');
-                                    }
-                                    new_content.push(*c);
+                                let mut chars: Vec<char> = text.content.chars().collect();
+
+                                // Insert newline at cursor position
+                                if *cursor_pos <= chars.len() {
+                                    chars.insert(*cursor_pos, '\n');
+                                    text.content = chars.iter().collect();
+                                    *cursor_pos += 1;
                                 }
-                                // If cursor is at the end, append newline
-                                if *cursor_pos >= chars.len() {
-                                    new_content.push('\n');
-                                }
-                                text.content = new_content;
-                                *cursor_pos += 1;
                             }
                         }
                     }
@@ -514,21 +508,15 @@ fn handle_text_editing_key(
                             for element in &mut page.elements {
                                 if let DocumentElement::Text(text) = element {
                                     if text.id == text_id {
-                                        // Insert character using char-based indexing, not byte-based
-                                        let chars: Vec<char> = text.content.chars().collect();
-                                        let mut new_content = String::new();
-                                        for (i, c) in chars.iter().enumerate() {
-                                            if i == *cursor_pos {
-                                                new_content.push(ch);
-                                            }
-                                            new_content.push(*c);
+                                        // Insert character using char-based indexing
+                                        let mut chars: Vec<char> = text.content.chars().collect();
+
+                                        // Insert character at cursor position
+                                        if *cursor_pos <= chars.len() {
+                                            chars.insert(*cursor_pos, ch);
+                                            text.content = chars.iter().collect();
+                                            *cursor_pos += 1;
                                         }
-                                        // If cursor is at the end, append character
-                                        if *cursor_pos >= chars.len() {
-                                            new_content.push(ch);
-                                        }
-                                        text.content = new_content;
-                                        *cursor_pos += 1;
                                     }
                                 }
                             }
