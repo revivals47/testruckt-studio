@@ -1,6 +1,7 @@
 mod item_library;
 pub mod layer_dnd;
 mod layers;
+pub mod layers_panel;
 mod properties;
 pub mod property_handlers;
 
@@ -9,6 +10,7 @@ pub use layer_dnd::{
     build_draggable_layers_list, reorder_layer, DraggableLayerItem, LayerDirection,
 };
 pub use layers::{build_layer_panel, build_layers_list, LayerItem};
+pub use layers_panel::{LayersPanel, update_layers_panel};
 pub use properties::{
     build_property_panel, build_property_panel_with_components, PropertyPanelComponents,
 };
