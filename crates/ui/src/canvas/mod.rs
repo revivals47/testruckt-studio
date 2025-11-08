@@ -91,6 +91,19 @@ impl CanvasView {
         // Wire up all event handlers - must happen AFTER container setup
         input::wire_pointer_events(&drawing_area, &render_state, &app_state);
 
+        // DEBUG: Log widget hierarchy and allocation information
+        eprintln!("\n=== Canvas Widget Hierarchy ===");
+        eprintln!("DrawingArea allocation: {:?}", drawing_area.allocation());
+        eprintln!("Overlay allocation: {:?}", overlay.allocation());
+        eprintln!("Container allocation: {:?}", container.allocation());
+        if let Some(parent) = drawing_area.parent() {
+            eprintln!("DrawingArea parent: {:?}", parent);
+            let alloc = parent.allocation();
+            eprintln!("Parent allocation: x={}, y={}, w={}, h={}",
+                alloc.x(), alloc.y(), alloc.width(), alloc.height());
+        }
+        eprintln!("=== End Hierarchy ===\n");
+
         Self {
             container,
             drawing_area,

@@ -29,7 +29,7 @@ use crate::canvas::selection::HitTest;
 use crate::canvas::tools::ToolMode;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
-use gtk4::{DrawingArea, GestureClick};
+use gtk4::{DrawingArea, GestureClick, ScrolledWindow};
 use gtk4::gdk;
 use testruct_core::document::DocumentElement;
 use testruct_core::layout::Rect;
@@ -64,7 +64,47 @@ pub fn setup_click_gesture(
             let ctrl_pressed = modifier_state.contains(gdk::ModifierType::CONTROL_MASK);
 
             // Check for double-click (n_press == 2) for text editing or image selection
-            eprintln!("Click: n_press={}, tool=Select", n_press);
+            eprintln!("\n=== Click Event ===");
+            eprintln!("n_press: {}, x: {:.1}, y: {:.1}", n_press, x, y);
+
+            // CRITICAL FIX: GTK4 on macOS reports event coordinates as window-relative,
+            // but DrawingArea is offset from window top due to menu bar and toolbars.
+            // Measured offset: ~21px horizontally and vertically
+            const WINDOW_OFFSET_X: f64 = 21.0;  // UI elements horizontal offset
+            const WINDOW_OFFSET_Y: f64 = 21.0;  // Menu bar + toolbar vertical offset
+
+            // Adjust event coordinates to DrawingArea-relative
+            let adjusted_x = x - WINDOW_OFFSET_X;
+            let adjusted_y = y - WINDOW_OFFSET_Y;
+
+            let config = state.config.borrow();
+            let ruler_config = state.ruler_config.borrow();
+            let ruler_size = ruler_config.size;
+            let zoom = config.zoom;
+            let pan_x = config.pan_x;
+            let pan_y = config.pan_y;
+            eprintln!("Config - Ruler: {:.0}, Zoom: {:.2}, Pan: ({:.1}, {:.1})", ruler_size, zoom, pan_x, pan_y);
+
+            // Detailed coordinate transformation steps
+            eprintln!("Step 0 (window offset): ({:.1}, {:.1}) - ({:.0}, {:.0}) = ({:.1}, {:.1})",
+                x, y, WINDOW_OFFSET_X, WINDOW_OFFSET_Y, adjusted_x, adjusted_y);
+
+            let step1_x = adjusted_x - ruler_size;
+            let step1_y = adjusted_y - ruler_size;
+            eprintln!("Step 1 (subtract ruler): ({:.1}, {:.1})", step1_x, step1_y);
+
+            let step2_x = step1_x - pan_x;
+            let step2_y = step1_y - pan_y;
+            eprintln!("Step 2 (subtract pan): ({:.2}, {:.2})", step2_x, step2_y);
+
+            let canvas_x = step2_x / zoom;
+            let canvas_y = step2_y / zoom;
+            eprintln!("Step 3 (divide zoom): ({:.2}, {:.2})", canvas_x, canvas_y);
+            eprintln!("=== End Click ===\n");
+
+            drop(config);
+            drop(ruler_config);
+
             if n_press == 2 {
                 eprintln!("Double-click detected at ({:.0}, {:.0})", x, y);
                 // Try to find a text or image element at this position
@@ -72,10 +112,9 @@ pub fn setup_click_gesture(
                     if let Some(page) = document.pages.first() {
                         let config = state.config.borrow();
                         let ruler_config = state.ruler_config.borrow();
-                        let screen_x = x - (ruler_config.size + config.pan_x);
-                        let screen_y = y - (ruler_config.size + config.pan_y);
-                        let doc_x = screen_x / config.zoom;
-                        let doc_y = screen_y / config.zoom;
+                        // Use adjusted coordinates (window offset corrected)
+                        let doc_x = (adjusted_x - ruler_config.size - config.pan_x) / config.zoom;
+                        let doc_y = (adjusted_y - ruler_config.size - config.pan_y) / config.zoom;
                         drop(config);
                         drop(ruler_config);
 
@@ -185,11 +224,11 @@ pub fn setup_click_gesture(
 
             // Get the active document
             if let Some(document) = app_state_click.active_document() {
-                // Transform screen coordinates to document coordinates
+                // Transform screen coordinates to document coordinates using adjusted coordinates
                 let config = state.config.borrow();
                 let ruler_config = state.ruler_config.borrow();
-                let screen_x = x - (ruler_config.size + config.pan_x);
-                let screen_y = y - (ruler_config.size + config.pan_y);
+                let screen_x = adjusted_x - (ruler_config.size + config.pan_x);
+                let screen_y = adjusted_y - (ruler_config.size + config.pan_y);
                 let doc_x = screen_x / config.zoom;
                 let doc_y = screen_y / config.zoom;
                 let canvas_mouse_pos = CanvasMousePos::new(doc_x, doc_y);
@@ -237,11 +276,13 @@ pub fn setup_click_gesture(
                             drop(tool_state);
 
                             let config = state.config.borrow();
-                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}, selected={}", element_id, handle, selected_ids.contains(&element_id));
+                            let ruler_size = state.ruler_config.borrow().size;
+                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}", element_id, handle);
                             eprintln!("  📍 Widget coords: ({:.1}, {:.1})", x, y);
-                            eprintln!("  📍 Canvas coords: ({:.2}, {:.2})", canvas_mouse_pos.x, canvas_mouse_pos.y);
-                            eprintln!("  📍 Bounds: x={:.2}, y={:.2}, w={:.2}, h={:.2}", bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height);
-                            eprintln!("  📍 Zoom: {:.2}, Pan: ({:.1}, {:.1}), Ruler: {:.1}", config.zoom, config.pan_x, config.pan_y, state.ruler_config.borrow().size);
+                            eprintln!("  📍 Offset calculation: ({:.1} - {:.1} - {:.1}) = {:.1}", x, ruler_size, config.pan_x, x - ruler_size - config.pan_x);
+                            eprintln!("  📍 Canvas coords (before zoom): ({:.2}, {:.2})", x - ruler_size - config.pan_x, y - ruler_size - config.pan_y);
+                            eprintln!("  📍 Canvas coords (after zoom): ({:.2}, {:.2})", canvas_mouse_pos.x, canvas_mouse_pos.y);
+                            eprintln!("  📍 Handle position in bounds: offset=({:.2}, {:.2}) from origin", bounds.origin.x, bounds.origin.y);
                             drop(config);
 
                             tracing::info!(
@@ -271,25 +312,42 @@ pub fn setup_click_gesture(
                     // Build list of objects with their bounds for hit testing
                     let mut objects: Vec<(uuid::Uuid, Rect)> = Vec::new();
 
+                    eprintln!("\n📋 Page Elements:");
                     for element in &page.elements {
                         match element {
                             DocumentElement::Shape(shape) => {
+                                eprintln!("  Shape {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
+                                    shape.id, shape.bounds.origin.x, shape.bounds.origin.y,
+                                    shape.bounds.size.width, shape.bounds.size.height);
                                 objects.push((shape.id, shape.bounds.clone()));
                             }
                             DocumentElement::Text(text) => {
+                                eprintln!("  Text  {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
+                                    text.id, text.bounds.origin.x, text.bounds.origin.y,
+                                    text.bounds.size.width, text.bounds.size.height);
                                 objects.push((text.id, text.bounds.clone()));
                             }
                             DocumentElement::Image(image) => {
+                                eprintln!("  Image {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
+                                    image.id, image.bounds.origin.x, image.bounds.origin.y,
+                                    image.bounds.size.width, image.bounds.size.height);
                                 objects.push((image.id, image.bounds.clone()));
                             }
                             DocumentElement::Frame(frame) => {
+                                eprintln!("  Frame {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
+                                    frame.id, frame.bounds.origin.x, frame.bounds.origin.y,
+                                    frame.bounds.size.width, frame.bounds.size.height);
                                 objects.push((frame.id, frame.bounds.clone()));
                             }
                             DocumentElement::Group(group) => {
+                                eprintln!("  Group {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
+                                    group.id, group.bounds.origin.x, group.bounds.origin.y,
+                                    group.bounds.size.width, group.bounds.size.height);
                                 objects.push((group.id, group.bounds.clone()));
                             }
                         }
                     }
+                    eprintln!("Canvas Click at: ({:.2}, {:.2})", doc_x, doc_y);
 
                     // Convert to references for hit testing
                     let object_refs: Vec<(uuid::Uuid, &Rect)> =

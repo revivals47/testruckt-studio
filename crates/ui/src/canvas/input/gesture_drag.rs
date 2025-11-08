@@ -71,7 +71,10 @@ pub fn setup_drag_gesture(
         let _current_tool = tool_state.current_tool;
         drop(tool_state);
 
-        // Store drag start position
+        // Store drag start position as RAW window coordinates
+        // offset_x and offset_y from drag_update are relative to this position
+        // So we keep them in the same coordinate system (window coordinates)
+        // Conversion to canvas coordinates happens only in drag_end
         let mut tool_state = state.tool_state.borrow_mut();
         tool_state.drag_start = Some((x, y));
     });
@@ -85,13 +88,41 @@ pub fn setup_drag_gesture(
             let current_y = start_y + offset_y;
             let current_tool = tool_state.current_tool;
 
+            eprintln!("🔵 Drag Update:");
+            eprintln!("  Start: ({:.1}, {:.1})", start_x, start_y);
+            eprintln!("  Offset: ({:.1}, {:.1})", offset_x, offset_y);
+            eprintln!("  Current: ({:.1}, {:.1})", current_x, current_y);
+
             tracing::info!(
                 "drag update [{:?}]: from ({:.0}, {:.0}) to ({:.0}, {:.0}), offset=({:.1}, {:.1})",
                 current_tool, start_x, start_y, current_x, current_y, offset_x, offset_y
             );
 
+            // CRITICAL FIX: Apply window offset correction for drag_box preview
+            // drag_box is rendered in document coordinates, so we need to correct window coordinates
+            const WINDOW_OFFSET_X: f64 = 21.0;
+            const WINDOW_OFFSET_Y: f64 = 21.0;
+            let adjusted_start_x = start_x - WINDOW_OFFSET_X;
+            let adjusted_start_y = start_y - WINDOW_OFFSET_Y;
+            let adjusted_current_x = current_x - WINDOW_OFFSET_X;
+            let adjusted_current_y = current_y - WINDOW_OFFSET_Y;
+
+            // Get ruler size and apply document coordinate conversion
+            let config = state.config.borrow();
+            let ruler_size = 20.0;  // From RulerConfig::default()
+            let pan_x = config.pan_x;
+            let pan_y = config.pan_y;
+            let zoom = config.zoom;
+            drop(config);
+
+            // Convert to document coordinates (same formula as drag_end)
+            let doc_x1 = (adjusted_start_x - ruler_size - pan_x) / zoom;
+            let doc_y1 = (adjusted_start_y - ruler_size - pan_y) / zoom;
+            let doc_x2 = (adjusted_current_x - ruler_size - pan_x) / zoom;
+            let doc_y2 = (adjusted_current_y - ruler_size - pan_y) / zoom;
+
             // Update drag box for preview rendering
-            let (x1, y1, x2, y2) = (start_x, start_y, current_x, current_y);
+            let (x1, y1, x2, y2) = (doc_x1, doc_y1, doc_x2, doc_y2);
             let min_x = x1.min(x2);
             let min_y = y1.min(y2);
             let max_x = x1.max(x2);
@@ -292,18 +323,33 @@ pub fn setup_drag_gesture(
                 }
             } else if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Shape/Text creation based on tool
+                // CRITICAL FIX: Apply window offset correction
+                // start_x and current_x are in window coordinates
+                const WINDOW_OFFSET_X: f64 = 21.0;
+                const WINDOW_OFFSET_Y: f64 = 21.0;
+                let adjusted_start_x = start_x - WINDOW_OFFSET_X;
+                let adjusted_start_y = start_y - WINDOW_OFFSET_Y;
+                let adjusted_current_x = current_x - WINDOW_OFFSET_X;
+                let adjusted_current_y = current_y - WINDOW_OFFSET_Y;
+
                 // Convert screen coordinates to document coordinates
                 let config = state.config.borrow();
+                let ruler_size = 20.0;  // From RulerConfig::default()
                 let pan_x = config.pan_x;
                 let pan_y = config.pan_y;
                 let zoom = config.zoom;
                 drop(config);
 
-                // Convert to document coordinates (accounting for pan and zoom)
-                let doc_start_x = (start_x / zoom) - pan_x;
-                let doc_start_y = (start_y / zoom) - pan_y;
-                let doc_current_x = (current_x / zoom) - pan_x;
-                let doc_current_y = (current_y / zoom) - pan_y;
+                // Convert to document coordinates (accounting for ruler, pan, and zoom)
+                let doc_start_x = (adjusted_start_x - ruler_size - pan_x) / zoom;
+                let doc_start_y = (adjusted_start_y - ruler_size - pan_y) / zoom;
+                let doc_current_x = (adjusted_current_x - ruler_size - pan_x) / zoom;
+                let doc_current_y = (adjusted_current_y - ruler_size - pan_y) / zoom;
+
+                eprintln!("📐 Shape creation coordinate transformation:");
+                eprintln!("  Window: start=({:.1}, {:.1}), current=({:.1}, {:.1})", start_x, start_y, current_x, current_y);
+                eprintln!("  Adjusted: start=({:.1}, {:.1}), current=({:.1}, {:.1})", adjusted_start_x, adjusted_start_y, adjusted_current_x, adjusted_current_y);
+                eprintln!("  Document: start=({:.2}, {:.2}), current=({:.2}, {:.2})", doc_start_x, doc_start_y, doc_current_x, doc_current_y);
 
                 tracing::info!("Creating {} element with drag offset ({:.1}, {:.1})", current_tool.name(), offset_x, offset_y);
 
