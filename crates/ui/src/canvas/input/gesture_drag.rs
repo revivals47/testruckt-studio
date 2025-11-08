@@ -150,6 +150,9 @@ pub fn setup_drag_gesture(
 
             if is_resizing && (offset_x.abs() > 2.0 || offset_y.abs() > 2.0) {
                 // Apply resize
+                eprintln!("🔄 RESIZE DETECTED: is_resizing={}, resizing_object_id={:?}, resize_handle={:?}",
+                    is_resizing, resizing_object_id, resize_handle);
+
                 if let (Some(object_id), Some(handle), Some(_mouse_pos)) = (resizing_object_id, resize_handle, resize_original_bounds) {
                     // Calculate document-space delta
                     let config = state.config.borrow();
@@ -159,40 +162,70 @@ pub fn setup_drag_gesture(
                     let grid_spacing = config.grid_spacing;
                     drop(config);
 
+                    eprintln!("✏️ Applying resize: delta=({:.2}, {:.2}), handle={:?}", delta_x, delta_y, handle);
+
                     // Apply resize directly to the document
-                    app_state_drag_end.with_mutable_active_document(|document| {
+                    let resize_applied = app_state_drag_end.with_mutable_active_document(|document| {
                         if let Some(page) = document.pages.first_mut() {
                             for element in page.elements.iter_mut() {
                                 match element {
+                                    DocumentElement::Text(text) if text.id == object_id => {
+                                        let old_bounds = text.bounds.clone();
+                                        let mut new_bounds = calculate_resize_bounds(&text.bounds, handle, delta_x, delta_y);
+                                        if snap_enabled {
+                                            new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
+                                        }
+                                        text.bounds = new_bounds;
+                                        eprintln!("✅ Resized TEXT {} with handle {:?}: {:?} -> {:?}",
+                                            object_id, handle, old_bounds, text.bounds);
+                                        return true;
+                                    }
                                     DocumentElement::Shape(shape) if shape.id == object_id => {
+                                        let old_bounds = shape.bounds.clone();
                                         let mut new_bounds = calculate_resize_bounds(&shape.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                         }
                                         shape.bounds = new_bounds;
-                                        tracing::info!("Resized shape {} with handle {:?}", object_id, handle);
+                                        eprintln!("✅ Resized SHAPE {} with handle {:?}: {:?} -> {:?}",
+                                            object_id, handle, old_bounds, shape.bounds);
+                                        return true;
                                     }
                                     DocumentElement::Image(image) if image.id == object_id => {
+                                        let old_bounds = image.bounds.clone();
                                         let mut new_bounds = calculate_resize_bounds(&image.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                         }
                                         image.bounds = new_bounds;
-                                        tracing::info!("Resized image {} with handle {:?}", object_id, handle);
+                                        eprintln!("✅ Resized IMAGE {} with handle {:?}: {:?} -> {:?}",
+                                            object_id, handle, old_bounds, image.bounds);
+                                        return true;
                                     }
                                     DocumentElement::Frame(frame) if frame.id == object_id => {
+                                        let old_bounds = frame.bounds.clone();
                                         let mut new_bounds = calculate_resize_bounds(&frame.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                         }
                                         frame.bounds = new_bounds;
-                                        tracing::info!("Resized frame {} with handle {:?}", object_id, handle);
+                                        eprintln!("✅ Resized FRAME {} with handle {:?}: {:?} -> {:?}",
+                                            object_id, handle, old_bounds, frame.bounds);
+                                        return true;
                                     }
                                     _ => {}
                                 }
                             }
                         }
+                        false
                     });
+
+                    if !resize_applied.unwrap_or(false) {
+                        eprintln!("❌ WARNING: Resize was not applied to document!");
+                    }
+                } else {
+                    eprintln!("❌ ERROR: Missing resize state - object_id={:?}, handle={:?}, bounds={:?}",
+                        resizing_object_id, resize_handle, resize_original_bounds);
                 }
             } else if current_tool == ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Move selected objects

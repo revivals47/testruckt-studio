@@ -196,7 +196,9 @@ pub fn setup_click_gesture(
                 drop(config);
                 drop(ruler_config);
 
-                // Check if clicking on a resize handle of a selected object
+                // IMPORTANT: Check if clicking on a resize handle FIRST
+                // This must happen BEFORE double-click text editing check
+                // because users should be able to resize text/image boxes
                 let selected_ids = state.selected_ids.borrow();
                 let mut resize_detected = false;
 
@@ -233,6 +235,7 @@ pub fn setup_click_gesture(
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
+                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}", element_id, handle);
                             tracing::info!(
                                 "Started resizing object {} with handle {:?}",
                                 element_id,
