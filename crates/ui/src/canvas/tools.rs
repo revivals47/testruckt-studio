@@ -208,6 +208,8 @@ pub struct ToolState {
     pub resize_handle: Option<crate::canvas::mouse::ResizeHandle>,
     /// Original bounds before resize started
     pub resize_original_bounds: Option<crate::canvas::mouse::CanvasMousePos>,
+    /// Previous drag offset (for computing delta in real-time resize)
+    pub last_drag_offset: Option<(f64, f64)>,
     /// ID of text element currently being edited
     pub editing_text_id: Option<uuid::Uuid>,
     /// Cursor position in the edited text
@@ -227,6 +229,7 @@ impl Default for ToolState {
             resizing_object_id: None,
             resize_handle: None,
             resize_original_bounds: None,
+            last_drag_offset: None,
             editing_text_id: None,
             editing_cursor_pos: 0,
             editing_selection_start: None,

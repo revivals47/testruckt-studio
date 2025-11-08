@@ -77,29 +77,111 @@ pub fn setup_drag_gesture(
         // Conversion to canvas coordinates happens only in drag_end
         let mut tool_state = state.tool_state.borrow_mut();
         tool_state.drag_start = Some((x, y));
+        tool_state.last_drag_offset = Some((0.0, 0.0));  // Reset offset tracking
     });
 
     let render_state_update = render_state.clone();
+    let app_state_drag_update = app_state.clone();
     drag_gesture.connect_drag_update(move |_gesture, offset_x, offset_y| {
         let state = render_state_update.clone();
-        let tool_state = state.tool_state.borrow();
-        if let Some((start_x, start_y)) = tool_state.drag_start {
-            let current_x = start_x + offset_x;
-            let current_y = start_y + offset_y;
-            let current_tool = tool_state.current_tool;
 
-            eprintln!("🔵 Drag Update:");
-            eprintln!("  Start: ({:.1}, {:.1})", start_x, start_y);
-            eprintln!("  Offset: ({:.1}, {:.1})", offset_x, offset_y);
-            eprintln!("  Current: ({:.1}, {:.1})", current_x, current_y);
+        // Extract all values we need from tool_state first, then drop the borrow
+        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle) = {
+            let tool_state = state.tool_state.borrow();
+            if let Some((start_x, start_y)) = tool_state.drag_start {
+                (
+                    start_x,
+                    start_y,
+                    tool_state.current_tool,
+                    tool_state.resizing_object_id.is_some(),
+                    tool_state.resizing_object_id,
+                    tool_state.resize_handle,
+                )
+            } else {
+                return;
+            }
+        }; // tool_state borrow is dropped here
 
-            tracing::info!(
-                "drag update [{:?}]: from ({:.0}, {:.0}) to ({:.0}, {:.0}), offset=({:.1}, {:.1})",
-                current_tool, start_x, start_y, current_x, current_y, offset_x, offset_y
-            );
+        let current_x = start_x + offset_x;
+        let current_y = start_y + offset_y;
 
-            // CRITICAL FIX: Apply window offset correction for drag_box preview
-            // drag_box is rendered in document coordinates, so we need to correct window coordinates
+        eprintln!("🔵 Drag Update:");
+        eprintln!("  Start: ({:.1}, {:.1})", start_x, start_y);
+        eprintln!("  Offset: ({:.1}, {:.1})", offset_x, offset_y);
+        eprintln!("  Current: ({:.1}, {:.1})", current_x, current_y);
+
+        tracing::info!(
+            "drag update [{:?}]: from ({:.0}, {:.0}) to ({:.0}, {:.0}), offset=({:.1}, {:.1})",
+            current_tool, start_x, start_y, current_x, current_y, offset_x, offset_y
+        );
+
+        if is_resizing {
+            // REAL-TIME RESIZE with delta calculation
+            // Calculate only the delta from last frame to avoid cumulative growth
+            if let (Some(object_id), Some(handle)) = (resizing_object_id, resize_handle) {
+                let (last_offset_x, last_offset_y) = {
+                    let tool_state = state.tool_state.borrow();
+                    tool_state.last_drag_offset.unwrap_or((0.0, 0.0))
+                };
+
+                // Delta is the change from last frame
+                let delta_x_pixels = offset_x - last_offset_x;
+                let delta_y_pixels = offset_y - last_offset_y;
+
+                let config = state.config.borrow();
+                let delta_x = delta_x_pixels / config.zoom;
+                let delta_y = delta_y_pixels / config.zoom;
+                let snap_enabled = config.snap_to_grid;
+                let grid_spacing = config.grid_spacing;
+                drop(config);
+
+                // Update document with delta
+                let _ = app_state_drag_update.with_mutable_active_document(|document| {
+                    if let Some(page) = document.pages.first_mut() {
+                        for element in page.elements.iter_mut() {
+                            match element {
+                                DocumentElement::Text(text) if text.id == object_id => {
+                                    let mut new_bounds = calculate_resize_bounds(&text.bounds, handle, delta_x, delta_y);
+                                    if snap_enabled {
+                                        new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
+                                    }
+                                    text.bounds = new_bounds;
+                                    return true;
+                                }
+                                DocumentElement::Shape(shape) if shape.id == object_id => {
+                                    let mut new_bounds = calculate_resize_bounds(&shape.bounds, handle, delta_x, delta_y);
+                                    if snap_enabled {
+                                        new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
+                                    }
+                                    shape.bounds = new_bounds;
+                                    return true;
+                                }
+                                DocumentElement::Image(image) if image.id == object_id => {
+                                    let mut new_bounds = calculate_resize_bounds(&image.bounds, handle, delta_x, delta_y);
+                                    if snap_enabled {
+                                        new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
+                                    }
+                                    image.bounds = new_bounds;
+                                    return true;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    false
+                });
+
+                // Update last offset for next frame
+                let mut tool_state = state.tool_state.borrow_mut();
+                tool_state.last_drag_offset = Some((offset_x, offset_y));
+                drop(tool_state);
+            }
+
+            // Don't show drag_box preview during resize
+            *state.drag_box.borrow_mut() = None;
+        } else {
+            // SHAPE CREATION: Show drag_box preview for new shapes
+            // Apply window offset correction for drag_box preview
             const WINDOW_OFFSET_X: f64 = 21.0;
             const WINDOW_OFFSET_Y: f64 = 21.0;
             let adjusted_start_x = start_x - WINDOW_OFFSET_X;
