@@ -235,12 +235,17 @@ pub fn setup_click_gesture(
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
-                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}", element_id, handle);
+                            eprintln!("✏️ RESIZE HANDLE DETECTED: object={:?}, handle={:?}, object_is_selected={}", element_id, handle, selected_ids.contains(&element_id));
                             tracing::info!(
                                 "Started resizing object {} with handle {:?}",
                                 element_id,
                                 handle
                             );
+
+                            // IMPORTANT: Do NOT clear selection here
+                            // The object should already be selected
+                            // Just queue redraw and return to prevent selection changes
+                            drawing_area_click.queue_draw();
                             resize_detected = true;
                             break;
                         }
@@ -318,9 +323,16 @@ pub fn setup_click_gesture(
                             }
                         } else {
                             // Plain click: single select
-                            selected.clear();
-                            selected.push(clicked_id);
-                            tracing::info!("Selected object: {}", clicked_id);
+                            // ⚠️ IMPORTANT FIX: Only change selection if object is NOT already selected
+                            // This allows resizing of already-selected objects without losing selection
+                            if !selected.contains(&clicked_id) {
+                                selected.clear();
+                                selected.push(clicked_id);
+                                tracing::info!("Selected object: {}", clicked_id);
+                                eprintln!("📌 Selection changed to: {:?}", clicked_id);
+                            } else {
+                                eprintln!("📌 Object already selected, keeping selection for resize");
+                            }
                         }
                         drop(selected);
                         drawing_area_click.queue_draw();
