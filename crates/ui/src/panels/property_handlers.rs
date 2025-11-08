@@ -36,6 +36,22 @@ pub fn wire_property_signals(
         render_state.clone(),
     );
 
+    // Bold button
+    wire_bold_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+
+    // Italic button
+    wire_italic_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+
     // Stroke color
     wire_stroke_color_signal(
         components,
@@ -98,7 +114,7 @@ fn wire_font_family_signal(
 
     combo.connect_notify_local(Some("selected"), move |combo_box, _pspec| {
         if let Some(font_name) = dropdown_string(combo_box, combo_box.selected()) {
-            app_state.with_active_document(|doc| {
+            app_state.with_mutable_active_document(|doc| {
                 let selected = render_state.selected_ids.borrow();
                 if !selected.is_empty() {
                     if let Some(page) = doc.pages.first_mut() {
@@ -132,7 +148,7 @@ fn wire_font_size_signal(
     spin.connect_value_changed(move |spinner| {
         let font_size = spinner.value() as f32;
 
-        app_state.with_active_document(|doc| {
+        app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
@@ -144,6 +160,76 @@ fn wire_font_size_signal(
                                 tracing::debug!("✅ Font size changed to: {}px", font_size);
                             }
                             _ => {}
+                        }
+                    }
+                }
+            }
+        });
+
+        drawing_area.queue_draw();
+    });
+}
+
+/// Wire bold button toggle
+fn wire_bold_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.bold_button.clone();
+
+    button.connect_toggled(move |btn| {
+        let is_bold = btn.is_active();
+
+        app_state.with_mutable_active_document(|doc| {
+            let selected = render_state.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        if let DocumentElement::Text(text) = element {
+                            if selected.contains(&text.id) {
+                                text.style.weight = if is_bold {
+                                    testruct_core::typography::FontWeight::Bold
+                                } else {
+                                    testruct_core::typography::FontWeight::Regular
+                                };
+                                recompute_auto_height(text);
+                                tracing::debug!("✅ Bold: {}", is_bold);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        drawing_area.queue_draw();
+    });
+}
+
+/// Wire italic button toggle
+fn wire_italic_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.italic_button.clone();
+
+    button.connect_toggled(move |btn| {
+        let is_italic = btn.is_active();
+
+        app_state.with_mutable_active_document(|doc| {
+            let selected = render_state.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        if let DocumentElement::Text(text) = element {
+                            if selected.contains(&text.id) {
+                                text.style.italic = is_italic;
+                                recompute_auto_height(text);
+                                tracing::debug!("✅ Italic: {}", is_italic);
+                            }
                         }
                     }
                 }
@@ -216,7 +302,7 @@ fn wire_stroke_color_signal(
             move |result| {
                 if let Ok(rgba) = result {
                     let stroke_color = rgba_to_color(&rgba);
-                    let updated = app_state_for_cb.with_active_document(|doc| {
+                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
                         let mut changed = false;
                         if let Some(page) = doc.pages.first_mut() {
                             for element in &mut page.elements {
@@ -308,7 +394,7 @@ fn wire_fill_color_signal(
             move |result| {
                 if let Ok(rgba) = result {
                     let fill_color = rgba_to_color(&rgba);
-                    let updated = app_state_for_cb.with_active_document(|doc| {
+                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
                         let mut changed = false;
                         if let Some(page) = doc.pages.first_mut() {
                             for element in &mut page.elements {
@@ -357,7 +443,7 @@ fn wire_auto_resize_signal(
             selected_ids.clone()
         };
 
-        let state_changed = app_state.with_active_document(|doc| {
+        let state_changed = app_state.with_mutable_active_document(|doc| {
             let mut changed = false;
             if let Some(page) = doc.pages.first_mut() {
                 for element in &mut page.elements {
@@ -403,7 +489,7 @@ fn wire_alignment_dropdown(
             _ => TextAlignment::Start,
         };
 
-        app_state.with_active_document(|doc| {
+        app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
@@ -436,7 +522,7 @@ fn wire_line_height_signal(
     scale.connect_value_changed(move |scale_widget| {
         let line_height = scale_widget.value() as f32;
 
-        app_state.with_active_document(|doc| {
+        app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
@@ -480,7 +566,7 @@ fn wire_text_content_signal(
                 let end = buf.end_iter();
                 let text_content = buf.slice(&start, &end, true).to_string();
 
-                app_state_buf.with_active_document(|doc| {
+                app_state_buf.with_mutable_active_document(|doc| {
                     if let Some(page) = doc.pages.first_mut() {
                         for element in &mut page.elements {
                             if let DocumentElement::Text(text) = element {

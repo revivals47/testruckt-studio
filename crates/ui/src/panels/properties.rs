@@ -6,7 +6,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Adjustment, Box as GtkBox, Button, DropDown, Label, Orientation, Scale, ScrolledWindow,
-    SpinButton, Switch,
+    SpinButton, Switch, ToggleButton,
 };
 
 /// UI components created during property panel setup
@@ -22,6 +22,8 @@ pub struct PropertyPanelComponents {
     pub text_align_combo: DropDown,
     pub border_style_combo: DropDown,
     pub auto_resize_switch: Switch,
+    pub bold_button: gtk4::ToggleButton,
+    pub italic_button: gtk4::ToggleButton,
     pub fill_color_button: Button,
     pub stroke_color_button: Button,
     pub stroke_width_spin: SpinButton,
@@ -99,6 +101,9 @@ fn build_property_panel_components() -> PropertyPanelComponents {
     // Group section
     let (group_status_label, group_name_entry, ungroup_btn) = build_group_section(&container);
 
+    // Text formatting section (bold/italic buttons)
+    let (bold_button, italic_button) = build_text_formatting_buttons(&container);
+
     // Shape styling section
     let (fill_color_button, stroke_color_button, stroke_width_spin) =
         build_shape_styling_section(&container);
@@ -117,6 +122,8 @@ fn build_property_panel_components() -> PropertyPanelComponents {
         text_align_combo,
         border_style_combo,
         auto_resize_switch,
+        bold_button,
+        italic_button,
         fill_color_button,
         stroke_color_button,
         stroke_width_spin,
@@ -247,6 +254,36 @@ fn build_typography_section(container: &GtkBox) -> (DropDown, SpinButton, Scale,
         line_height_scale,
         text_align_combo,
     )
+}
+
+/// Build text formatting section with bold/italic buttons
+fn build_text_formatting_buttons(container: &GtkBox) -> (ToggleButton, ToggleButton) {
+    let formatting_section = GtkBox::new(Orientation::Vertical, 5);
+    formatting_section.set_margin_start(12);
+    formatting_section.set_margin_end(12);
+
+    let formatting_label = Label::new(Some("テキスト書式"));
+    formatting_label.set_xalign(0.0);
+    formatting_label.add_css_class("property-label");
+    formatting_section.append(&formatting_label);
+
+    let buttons_box = GtkBox::new(Orientation::Horizontal, 5);
+    buttons_box.set_homogeneous(true);
+
+    // Bold button
+    let bold_button = ToggleButton::with_label("太字");
+    bold_button.add_css_class("formatting-button");
+    buttons_box.append(&bold_button);
+
+    // Italic button
+    let italic_button = ToggleButton::with_label("斜体");
+    italic_button.add_css_class("formatting-button");
+    buttons_box.append(&italic_button);
+
+    formatting_section.append(&buttons_box);
+    container.append(&formatting_section);
+
+    (bold_button, italic_button)
 }
 
 /// Build text options section (auto-resize)
