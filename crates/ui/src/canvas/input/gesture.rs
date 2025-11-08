@@ -1,3 +1,75 @@
+//! ジェスチャー処理モジュール
+//!
+//! クリックおよびドラッグジェスチャーを処理し、オブジェクト選択、リサイズ、
+//! 図形作成などの操作を実現します。
+//!
+//! # クリックジェスチャー (GestureClick)
+//!
+//! 単一クリックまたは複数クリックでオブジェクトを選択します。
+//!
+//! ## 選択モード
+//!
+//! | 操作 | 動作 |
+//! |------|------|
+//! | クリック | 単一選択（既存選択をクリア） |
+//! | Shift+クリック | 選択に追加 |
+//! | Ctrl+クリック | トグル選択（選択/解除） |
+//! | ダブルクリック（テキスト） | テキスト編集モードに進入 |
+//! | ダブルクリック（画像） | 画像ファイル選択ダイアログを表示 |
+//! | 空白クリック | 選択をクリア |
+//!
+//! ## リサイズハンドル
+//!
+//! 選択オブジェクトのリサイズハンドル（8方向）を検出し、クリック時に
+//! リサイズ操作の開始位置として設定します。
+//!
+//! # ドラッグジェスチャー (GestureDrag)
+//!
+//! ドラッグ操作により3つの処理が実行されます：
+//!
+//! ## 1. オブジェクト移動
+//! Select ツール + 選択オブジェクトをドラッグ
+//! - `delta_x`, `delta_y` でオブジェクト座標を更新
+//! - グリッドスナップ対応
+//!
+//! ## 2. オブジェクトリサイズ
+//! リサイズハンドルをドラッグ
+//! - `calculate_resize_bounds()` で新しい寸法を計算
+//! - ハンドルタイプ（TopLeft, Top, TopRight など）に基づいて計算
+//! - グリッドスナップ対応
+//!
+//! ## 3. 図形作成
+//! Rectangle、Circle、Line、Arrow、Text、Image ツール + ドラッグ
+//! - `ShapeFactory` で新規要素を作成
+//! - ドラッグ開始・終了座標で図形サイズを決定
+//! - 作成後は自動的に Select ツールに切り替え
+//!
+//! # ドラッグ処理の流れ
+//!
+//! ```text
+//! drag_begin
+//!   └─ 開始座標を tool_state.drag_start に保存
+//!
+//! drag_update (繰り返し)
+//!   ├─ オフセット計算
+//!   ├─ drag_box を更新（プレビュー用）
+//!   └─ キャンバス再描画
+//!
+//! drag_end
+//!   ├─ 操作タイプ判定（リサイズ/移動/作成）
+//!   ├─ ドキュメント更新
+//!   ├─ グリッドスナップ適用
+//!   └─ ドラッグ状態をクリア
+//! ```
+//!
+//! # 使用例
+//!
+//! ```ignore
+//! use crate::canvas::input::gesture;
+//!
+//! gesture::setup_gestures(drawing_area, render_state, app_state);
+//! ```
+
 use crate::app::AppState;
 use crate::canvas::mouse::{test_resize_handle, CanvasMousePos, calculate_resize_bounds};
 use crate::canvas::rendering::{snap_rect_to_grid};
@@ -10,7 +82,7 @@ use gtk4::gdk;
 use testruct_core::document::DocumentElement;
 use testruct_core::layout::{Point, Rect, Size};
 
-/// Setup click and drag gestures for object manipulation
+/// クリックおよびドラッグジェスチャーを設定
 pub fn setup_gestures(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,

@@ -1,3 +1,63 @@
+//! キーボード入力処理モジュール
+//!
+//! キャンバスのキーボードイベントを処理し、テキスト編集、ショートカット実行、
+//! オブジェクト移動などの機能を提供します。
+//!
+//! # 主な機能
+//!
+//! - **テキスト編集**: 文字入力、削除、カーソル移動
+//! - **ショートカット**: コピー/カット/ペースト/複製
+//! - **テキスト配置**: 左揃え、右揃え、中央揃え、両端揃え
+//! - **オブジェクト移動**: 矢印キーでの選択オブジェクト移動
+//! - **画像挿入**: Ctrl+Shift+I
+//! - **テンプレート保存**: Ctrl+Shift+S
+//!
+//! # キーボード操作一覧
+//!
+//! | キー | 説明 |
+//! |------|------|
+//! | Ctrl+C | 選択オブジェクトをコピー |
+//! | Ctrl+X | 選択オブジェクトをカット（削除後にコピー） |
+//! | Ctrl+V | クリップボードからペースト |
+//! | Ctrl+D | 選択オブジェクトを複製 |
+//! | Ctrl+L | テキスト左揃え |
+//! | Ctrl+R | テキスト右揃え |
+//! | Ctrl+E | テキスト右揃え（代替） |
+//! | Ctrl+C | テキスト中央揃え |
+//! | Ctrl+J | テキスト両端揃え |
+//! | Ctrl+Shift+I | 画像挿入 |
+//! | Ctrl+Shift+S | テンプレートとして保存 |
+//! | ←→↑↓ | オブジェクト移動（Shift: 10px、通常: 1px） |
+//! | Escape | テキスト編集終了 |
+//! | BackSpace | 前の文字削除 |
+//! | Delete | カーソル位置の文字削除 |
+//! | Left/Right | カーソル左右移動 |
+//! | Home/End | カーソル行頭/行末移動 |
+//! | Return | 改行挿入 |
+//!
+//! # 使用例
+//!
+//! ```ignore
+//! use crate::canvas::input::keyboard;
+//!
+//! keyboard::setup_keyboard_events(drawing_area, render_state, app_state);
+//! ```
+//!
+//! # テキスト編集モード
+//!
+//! テキスト要素をダブルクリックすると編集モードに進入し、以下が可能になります：
+//! - 文字の挿入・削除
+//! - カーソル移動
+//! - テキスト配置の変更
+//! - Escape キーで編集終了
+//!
+//! # 状態管理
+//!
+//! キーボード処理は以下の状態を参照・更新します：
+//! - `render_state.tool_state.editing_text_id`: 編集中のテキスト要素ID
+//! - `render_state.tool_state.editing_cursor_pos`: カーソル位置
+//! - `render_state.selected_ids`: 選択オブジェクトID一覧
+
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
@@ -5,7 +65,13 @@ use gtk4::{DrawingArea, EventControllerKey};
 use testruct_core::document::DocumentElement;
 use uuid::Uuid;
 
-/// Setup keyboard event handling
+/// キーボードイベント処理を初期化
+///
+/// # 引数
+///
+/// - `drawing_area`: GTK DrawingArea ウィジェット
+/// - `render_state`: キャンバス描画状態
+/// - `app_state`: アプリケーション全体の状態
 pub fn setup_keyboard_events(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,

@@ -1,3 +1,50 @@
+//! マウス動作追跡モジュール
+//!
+//! マウス位置をリアルタイムで追跡し、UI 要素（特にリサイズハンドル）の上にあるか
+//! を検出してカーソルを適切に変更します。
+//!
+//! # 主な機能
+//!
+//! - **マウス座標追跡**: スクリーン座標をドキュメント座標に変換
+//! - **リサイズハンドル検出**: 選択オブジェクトのハンドル範囲を調査
+//! - **カーソル変更**: ハンドルタイプに応じてカーソルを更新
+//!
+//! # カーソルタイプ
+//!
+//! | ハンドル位置 | カーソル形状 | 説明 |
+//! |-------------|-----------|------|
+//! | 左上/右下コーナー | nwse-resize | 北西←→南東方向リサイズ |
+//! | 右上/左下コーナー | nesw-resize | 北東←→南西方向リサイズ |
+//! | 上/下エッジ | ns-resize | 南北方向リサイズ |
+//! | 左/右エッジ | ew-resize | 東西方向リサイズ |
+//! | その他 | default | デフォルトカーソル |
+//!
+//! # 座標変換
+//!
+//! マウス座標はスクリーン座標でイベントから渡されますが、以下の処理で
+//! ドキュメント座標に変換されます：
+//!
+//! ```text
+//! スクリーン座標
+//!   ├─ ルーラーオフセット減算: screen_x - ruler_config.size
+//!   ├─ パン値減算: screen_x - config.pan_x
+//!   └─ ズーム値除算: screen_x / config.zoom
+//!       └─ ドキュメント座標
+//! ```
+//!
+//! # 使用例
+//!
+//! ```ignore
+//! use crate::canvas::input::mouse;
+//!
+//! mouse::setup_mouse_tracking(drawing_area, render_state, app_state);
+//! ```
+//!
+//! # パフォーマンス
+//!
+//! `motion` イベントは高頻度で発生（通常 60Hz 以上）するため、処理は最小限に
+//! 留めて実装されています。リサイズハンドル検出のみで、他の処理は行いません。
+
 use crate::app::AppState;
 use crate::canvas::mouse::{test_resize_handle, CanvasMousePos, ResizeHandle};
 use crate::canvas::CanvasRenderState;
@@ -5,7 +52,13 @@ use gtk4::prelude::*;
 use gtk4::{DrawingArea, EventControllerMotion};
 use gtk4::gdk;
 
-/// Setup mouse motion tracking for cursor changes
+/// マウス動作追跡を初期化
+///
+/// # 引数
+///
+/// - `drawing_area`: GTK DrawingArea ウィジェット
+/// - `render_state`: キャンバス描画状態
+/// - `app_state`: アプリケーション全体の状態
 pub fn setup_mouse_tracking(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
