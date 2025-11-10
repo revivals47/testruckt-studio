@@ -84,6 +84,7 @@ impl ShapeFactory {
                 },
             },
             stroke: None,
+            stroke_width: 2.0,
             fill: None,
         })
     }
@@ -104,6 +105,7 @@ impl ShapeFactory {
                 },
             },
             stroke: None,
+            stroke_width: 2.0,
             fill: None,
         })
     }
@@ -147,6 +149,7 @@ impl ShapeFactory {
                 },
             },
             stroke: None,
+            stroke_width: 2.0,
             fill: None,
         })
     }
@@ -170,6 +173,7 @@ impl ShapeFactory {
                 },
             },
             stroke: None,
+            stroke_width: 2.0,
             fill: None,
         })
     }

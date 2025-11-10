@@ -12,6 +12,7 @@ pub fn draw_rectangle(
     ctx: &Context,
     bounds: &Rect,
     stroke: &Option<Color>,
+    stroke_width: f32,
     fill: &Option<Color>,
 ) -> Result<(), cairo::Error> {
     if let Some(fill_color) = fill {
@@ -35,7 +36,7 @@ pub fn draw_rectangle(
             stroke_color.g as f64,
             stroke_color.b as f64,
         );
-        ctx.set_line_width(2.0);
+        ctx.set_line_width(stroke_width as f64);
         ctx.rectangle(
             bounds.origin.x as f64,
             bounds.origin.y as f64,
@@ -53,6 +54,7 @@ pub fn draw_ellipse(
     ctx: &Context,
     bounds: &Rect,
     stroke: &Option<Color>,
+    stroke_width: f32,
     fill: &Option<Color>,
 ) -> Result<(), cairo::Error> {
     let cx = bounds.origin.x as f64 + bounds.size.width as f64 / 2.0;
@@ -82,7 +84,7 @@ pub fn draw_ellipse(
             stroke_color.g as f64,
             stroke_color.b as f64,
         );
-        ctx.set_line_width(2.0);
+        ctx.set_line_width(stroke_width as f64);
         ctx.stroke()?;
     }
 
@@ -90,14 +92,14 @@ pub fn draw_ellipse(
 }
 
 /// Draw a line shape
-pub fn draw_line(ctx: &Context, bounds: &Rect, stroke: &Option<Color>) -> Result<(), cairo::Error> {
+pub fn draw_line(ctx: &Context, bounds: &Rect, stroke: &Option<Color>, stroke_width: f32) -> Result<(), cairo::Error> {
     if let Some(stroke_color) = stroke {
         ctx.set_source_rgb(
             stroke_color.r as f64,
             stroke_color.g as f64,
             stroke_color.b as f64,
         );
-        ctx.set_line_width(2.0);
+        ctx.set_line_width(stroke_width as f64);
         ctx.move_to(bounds.origin.x as f64, bounds.origin.y as f64);
         ctx.line_to(
             bounds.origin.x as f64 + bounds.size.width as f64,
@@ -114,6 +116,7 @@ pub fn draw_arrow(
     ctx: &Context,
     bounds: &Rect,
     stroke: &Option<Color>,
+    stroke_width: f32,
 ) -> Result<(), cairo::Error> {
     let stroke_color = stroke.unwrap_or(Color {
         r: 0.0,
@@ -133,7 +136,7 @@ pub fn draw_arrow(
         stroke_color.g as f64,
         stroke_color.b as f64,
     );
-    ctx.set_line_width(2.0);
+    ctx.set_line_width(stroke_width as f64);
     ctx.move_to(x1, y1);
     ctx.line_to(x2, y2);
     ctx.stroke()?;
@@ -172,6 +175,7 @@ pub fn draw_polygon(
     ctx: &Context,
     bounds: &Rect,
     stroke: &Option<Color>,
+    stroke_width: f32,
 ) -> Result<(), cairo::Error> {
     let stroke_color = stroke.unwrap_or(Color {
         r: 0.0,
@@ -208,7 +212,7 @@ pub fn draw_polygon(
         stroke_color.g as f64,
         stroke_color.b as f64,
     );
-    ctx.set_line_width(2.0);
+    ctx.set_line_width(stroke_width as f64);
     ctx.stroke()?;
 
     Ok(())

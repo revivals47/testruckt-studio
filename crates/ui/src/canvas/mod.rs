@@ -351,19 +351,19 @@ impl CanvasView {
             DocumentElement::Shape(shape) => {
                 match shape.kind {
                     ShapeKind::Rectangle => {
-                        rendering::draw_rectangle(ctx, &shape.bounds, &shape.stroke, &shape.fill)?;
+                        rendering::draw_rectangle(ctx, &shape.bounds, &shape.stroke, shape.stroke_width, &shape.fill)?;
                     }
                     ShapeKind::Ellipse => {
-                        rendering::draw_ellipse(ctx, &shape.bounds, &shape.stroke, &shape.fill)?;
+                        rendering::draw_ellipse(ctx, &shape.bounds, &shape.stroke, shape.stroke_width, &shape.fill)?;
                     }
                     ShapeKind::Line => {
-                        rendering::draw_line(ctx, &shape.bounds, &shape.stroke)?;
+                        rendering::draw_line(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
                     }
                     ShapeKind::Arrow => {
-                        rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke)?;
+                        rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
                     }
                     ShapeKind::Polygon => {
-                        rendering::draw_polygon(ctx, &shape.bounds, &shape.stroke)?;
+                        rendering::draw_polygon(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
                     }
                 }
 
