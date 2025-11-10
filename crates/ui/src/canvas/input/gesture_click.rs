@@ -135,9 +135,13 @@ pub fn setup_click_gesture(
                                         eprintln!("  Text content: '{}'", text.content);
                                         eprintln!("  Text bounds: {:?}", text.bounds);
 
+                                        // Important: Use character count, not byte length!
+                                        let char_count = text.content.chars().count();
+                                        eprintln!("  Cursor initialization: byte_len={}, char_count={}", text.content.len(), char_count);
+
                                         let mut tool_state = state.tool_state.borrow_mut();
                                         tool_state.editing_text_id = Some(text.id);
-                                        tool_state.editing_cursor_pos = text.content.len();
+                                        tool_state.editing_cursor_pos = char_count;
                                         drop(tool_state);
 
                                         // Give focus to drawing area to receive keyboard input

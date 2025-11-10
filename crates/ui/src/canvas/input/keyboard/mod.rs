@@ -63,12 +63,18 @@ pub fn setup_keyboard_events(
     let drawing_area_keyboard = drawing_area.clone();
 
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+        tracing::debug!("🔑 Key pressed: keyval={:?}", keyval);
+
         let render_state_kbd = render_state_keyboard.clone();
         let tool_state_ref = render_state_kbd.tool_state.borrow();
         let in_text_editing = tool_state_ref.editing_text_id.is_some();
         let editing_text_id = tool_state_ref.editing_text_id;
         let mut cursor_pos = tool_state_ref.editing_cursor_pos;
         drop(tool_state_ref);
+
+        if in_text_editing {
+            tracing::debug!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
+        }
 
         // Determine if shift and control are pressed
         let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
