@@ -32,19 +32,43 @@ impl ImeManager {
     /// key events are properly routed through the input method layer.
     pub fn setup_with_controller(&self, key_controller: &gtk4::EventControllerKey) {
         let context = IMMulticontext::new();
+        eprintln!("🔧 IMMulticontext created");
 
         // Connect the commit signal to handle composed text
         let callback_ref = self.text_insertion_callback.clone();
         context.connect_commit(move |_, text: &str| {
+            eprintln!("🎌 IME COMMIT SIGNAL: '{}'", text);
             // Insert the composed text through the callback
             if let Some(ref callback) = *callback_ref.borrow() {
+                eprintln!("  ✅ Calling insertion callback with text: '{}'", text);
                 callback(text.to_string());
+            } else {
+                eprintln!("  ⚠️  No callback registered!");
             }
         });
+        eprintln!("🔗 Connected commit signal handler");
+
+        // Connect preedit signals to detect IME composition
+        context.connect_preedit_start(|_| {
+            eprintln!("📝 IME preedit-start: composition begins");
+        });
+        eprintln!("🔗 Connected preedit-start signal handler");
+
+        context.connect_preedit_end(|_| {
+            eprintln!("📝 IME preedit-end: composition ends");
+        });
+        eprintln!("🔗 Connected preedit-end signal handler");
+
+        context.connect_preedit_changed(|_| {
+            eprintln!("📝 IME preedit-changed: composition updated");
+        });
+        eprintln!("🔗 Connected preedit-changed signal handler");
 
         // Set the IMContext as the input method handler for this controller
         // This allows GTK4 to automatically route key events through the IME
+        eprintln!("🔌 Setting IMContext on EventControllerKey");
         key_controller.set_im_context(Some(&context));
+        eprintln!("✅ IMContext set on controller");
 
         // NOTE: We intentionally do NOT call set_client_widget() on the context
         // because DrawingArea is not a standard text widget and this causes
@@ -54,6 +78,7 @@ impl ImeManager {
         // Store the context
         *self.context.borrow_mut() = Some(context);
 
+        eprintln!("✅ IME context initialized with key controller and signal handlers");
         tracing::debug!("✅ IME context initialized with key controller");
     }
 
