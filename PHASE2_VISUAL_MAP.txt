@@ -1,0 +1,202 @@
+PHASE 2 FEATURE LANDSCAPE - VISUAL ROADMAP
+============================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 2: STYLING & ADVANCED FEATURES                    │
+│                         Estimated: 2-3 weeks (44-56h)                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TIER 1: QUICK WINS (Week 1 - 2.5 hours)
+═══════════════════════════════════════════════════════════════════════════════
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✓ STROKE WIDTH HANDLER      │ ✓ UNDERLINE TEXT        │ ✓ STRIKETHROUGH   │
+│   UI: SpinButton exists     │   UI: Missing button    │   UI: Missing btn │
+│   Handler: Missing (15min)  │   Handler: Missing(30m) │   Handler: 30min  │
+│                             │                          │                   │
+│ ✓ BACKGROUND COLOR          │                                              │
+│   UI: Color picker missing  │   Risk: ZERO (ready-to-go implementations)  │
+│   Handler: Missing (45min)  │   Impact: HIGH (professional text styling) │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TIER 2: HIGH VALUE (Week 2 - 3 hours)
+═══════════════════════════════════════════════════════════════════════════════
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FONT WEIGHT (6-weight)      │ LETTER SPACING          │ TEXT TRANSFORM     │
+│ ────────────────────────── │ ─────────────────────── │ ────────────────── │
+│ • Thin, Light, Regular     │ • Add spacing property  │ • UPPERCASE        │
+│ • Medium, Bold, Black      │ • Pango integration     │ • lowercase        │
+│ • Replace bold toggle      │ • Spinner control       │ • Capitalize       │
+│ • 60 min work              │ • 90 min work           │ • 60 min work      │
+│                             │                          │                   │
+│ Risk: LOW    Impact: HIGH   │ Risk: MEDIUM Impact: H  │ Risk: LOW Impact: M
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TIER 3: ADVANCED SHAPE FEATURES (Week 3 - 4-6 hours)
+═══════════════════════════════════════════════════════════════════════════════
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CORNER RADIUS              │ STROKE DASH PATTERNS   │ IMAGE OPACITY       │
+│ ────────────────────────── │ ───────────────────── │ ─────────────────── │
+│ • Rounded rectangles      │ • Solid, dashed, dot  │ • 0.0-1.0 opacity  │
+│ • Cairo rounded_rect      │ • Pattern selector    │ • Alpha blending   │
+│ • Spinner control (0-50)  │ • Cairo set_dash      │ • 60 min work      │
+│ • 90 min work             │ • 90 min work         │                    │
+│                           │                       │ GLOBAL OPACITY    │
+│ ELEMENT-LEVEL OPACITY     │                       │ • All element types
+│ • Add to all elements     │                       │ • Affects all render
+│ • 60 min work             │                       │ • 60 min work
+│                           │                       │
+│ Risk: LOW      Impact: MED │ Risk: LOW Impact: MED │ Risk: MED Impact: M
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TIER 4: PREMIUM EFFECTS (3+ hours each, optional)
+═══════════════════════════════════════════════════════════════════════════════
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SHAPE GRADIENTS  │ TEXT DROP SHADOW │ SHAPE ROTATION │ BLEND MODES        │
+│ ──────────────── │ ──────────────── │ ────────────── │ ───────────────── │
+│ • Linear + Radial│ • Shadow offset  │ • Angle field  │ • Multiply        │
+│ • Color picker   │ • Blur amount    │ • Cairo rotate │ • Screen          │
+│ • Cairo gradient │ • Color selector │ • Hit testing  │ • Overlay         │
+│ • 120 min work   │ • 90 min work    │ • 120 min work │ • 120 min work    │
+│                 │                 │                │                   │
+│ Risk: MEDIUM    │ Risk: MEDIUM    │ Risk: MEDIUM   │ Risk: MEDIUM      │
+│ Impact: HIGH    │ Impact: MEDIUM  │ Impact: LOW    │ Impact: LOW       │
+│                                                                          │
+│ SHAPE BOX SHADOW │ IMAGE ROTATION │ DECORATION COLOR                    │
+│ ──────────────── │ ──────────────── │ ────────────────                 │
+│ • Shadow struct  │ • Rotation angle │ • Different underline color      │
+│ • Blur effect    │ • Flip H/V flags │ • Pango attributes              │
+│ • 120 min work   │ • 90 min work    │ • 90 min work                    │
+│                 │                 │                                    │
+│ Risk: MEDIUM    │ Risk: MEDIUM    │ Risk: MEDIUM                      │
+│ Impact: MEDIUM  │ Impact: LOW     │ Impact: LOW                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+IMPLEMENTATION STATUS SNAPSHOT
+═══════════════════════════════════════════════════════════════════════════════
+
+TextStyle Properties (10 total):
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Property          │ Data Model │ UI Control │ Handler │ Rendering │ Status   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ font_family       │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ font_size         │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ weight            │    ✓       │    ⚠️ Bold │   ⚠️    │     ✓     │ PARTIAL  │
+│ alignment         │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ color             │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ italic            │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ underline         │    ✓       │     ✗      │    ✗    │     ✓     │ READY    │ ← QUICK WIN
+│ strikethrough     │    ✓       │     ✗      │    ✗    │     ✓     │ READY    │ ← QUICK WIN
+│ background_color  │    ✓       │     ✗      │    ✗    │     ✓     │ READY    │ ← QUICK WIN
+│ line_height       │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+ShapeElement Properties (5 total):
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Property          │ Data Model │ UI Control │ Handler │ Rendering │ Status   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ kind              │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ bounds            │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ stroke            │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+│ stroke_width      │    ✓       │    ⚠️ Spin │    ✗    │     ✓     │ READY    │ ← QUICK WIN
+│ fill              │    ✓       │     ✓      │    ✓    │     ✓     │ DONE     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+PROGRESS VISUALIZATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Data Models:        ████████████████████████████░░░░░░░░ 90% (3 properties needed)
+UI Controls:        ████████████░░░░░░░░░░░░░░░░░░░░░░░░ 60% (4 handlers unwired)
+Rendering:          █████████████████████████░░░░░░░░░░░ 95% (gradients/shadows)
+Overall Phase 2:    ████████████████░░░░░░░░░░░░░░░░░░░░ 60% Complete
+
+RESOURCE ALLOCATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Week 1 (Mon-Fri):  TIER 1 + Start TIER 2
+                   • 20 hours development
+                   • 4 commits
+                   • 300+ lines code
+                   • 4+ tests
+
+Week 2 (Mon-Fri):  TIER 2 Complete + Start TIER 3
+                   • 16-18 hours development
+                   • 5-6 commits
+                   • 400+ lines code
+                   • 6+ tests
+
+Week 3 (Mon-Fri):  TIER 3 Complete + Optional TIER 4
+                   • 12-16 hours development
+                   • 4-5 commits
+                   • 300+ lines code
+                   • 4+ tests
+
+Total: 48-56 hours (including tests, documentation, integration)
+
+RISK HEAT MAP
+═══════════════════════════════════════════════════════════════════════════════
+
+     LOW RISK           MEDIUM RISK        HIGH RISK
+     ────────           ───────────        ─────────
+Tier 1: Tier 1 items   -                  -
+        (0% risk)
+        
+Tier 2: Font weight    Letter spacing     -
+        Text transform  (Pango)
+        
+Tier 3: Corner radius  Global opacity     -
+        Dash patterns   (all renders)
+        Image opacity
+        
+Tier 4: Blend modes    Shape gradients    -
+        Image flip      Text shadows
+        Text decoration Box shadows
+        colors          Shape rotation
+
+CRITICAL PATH (What blocks what)
+═══════════════════════════════════════════════════════════════════════════════
+
+Independent (can start immediately):
+  → Tier 1 (all 4 quick wins)
+  → Font Weight (only replaces bold toggle)
+
+Depends on Tier 1:
+  → Global opacity (need pattern from other handlers)
+
+Depends on Data Model additions:
+  → Letter spacing (add to TextStyle)
+  → Corner radius (add to ShapeElement)
+  → Image opacity (add to ImageElement)
+
+Complex dependencies:
+  → Shape gradients (needs new FillStyle enum)
+  → Text drop shadow (needs TextShadow struct)
+  → Shape rotation (needs bounds recalc)
+
+ENTRY POINT FOR IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Read PHASE2_QUICK_START.md (detailed steps)
+2. Implement 4 quick wins in order:
+   a) Wire Stroke Width (15 min - warmup)
+   b) Underline Text (30 min - pattern building)
+   c) Strikethrough Text (30 min - practice)
+   d) Background Color (45 min - color dialog integration)
+3. Test save/load/undo/redo
+4. Review PHASE2_SUMMARY.md for next tier decision
+5. Continue with Tier 2 or adjust based on feedback
+
+SUPPORT DOCUMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE2_README.md           - Start here, overall orientation
+PHASE2_SUMMARY.md          - Executive overview, priorities
+PHASE2_ANALYSIS.md         - Deep technical dive (657 lines)
+PHASE2_QUICK_START.md      - Step-by-step implementation (294 lines)
+PHASE2_FEATURES.csv        - Structured feature database (21 rows)
+PHASE2_VISUAL_MAP.txt      - This file - visual overview
+
+═══════════════════════════════════════════════════════════════════════════════
+Status: READY FOR IMPLEMENTATION
+Date: November 10, 2025
+Next Action: Start with PHASE2_QUICK_START.md
+═══════════════════════════════════════════════════════════════════════════════

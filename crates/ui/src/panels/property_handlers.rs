@@ -11,11 +11,12 @@ mod shape_handlers;
 
 pub use text_handlers::{
     wire_font_family_signal, wire_font_size_signal, wire_bold_signal, wire_italic_signal,
-    wire_text_color_signal, wire_alignment_dropdown, wire_line_height_signal, wire_text_content_signal,
-    find_string_index,
+    wire_underline_signal, wire_strikethrough_signal, wire_text_color_signal,
+    wire_text_background_color_signal, wire_alignment_dropdown, wire_line_height_signal,
+    wire_text_content_signal, find_string_index,
 };
 pub use shape_handlers::{
-    wire_stroke_color_signal, wire_fill_color_signal, wire_auto_resize_signal,
+    wire_stroke_color_signal, wire_fill_color_signal, wire_stroke_width_signal, wire_auto_resize_signal,
     color_to_hex,
 };
 
@@ -61,7 +62,25 @@ pub fn wire_property_signals(
         drawing_area.clone(),
         render_state.clone(),
     );
+    wire_underline_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+    wire_strikethrough_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
     wire_text_color_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+    wire_text_background_color_signal(
         components,
         app_state.clone(),
         drawing_area.clone(),
@@ -94,6 +113,12 @@ pub fn wire_property_signals(
         render_state.clone(),
     );
     wire_fill_color_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+    wire_stroke_width_signal(
         components,
         app_state.clone(),
         drawing_area.clone(),
@@ -202,6 +227,8 @@ pub fn update_property_panel_on_selection(
     let mut stroke_applicable = false;
     let mut stroke_state: Option<Option<testruct_core::typography::Color>> = None;
     let mut stroke_mixed = false;
+    let mut stroke_width_state: Option<f32> = None;
+    let mut stroke_width_mixed = false;
 
     if !selected_ids.is_empty() {
         app_state.with_active_document(|doc| {
@@ -226,6 +253,15 @@ pub fn update_property_panel_on_selection(
                                     Some(prev) => {
                                         if *prev != shape.stroke {
                                             stroke_mixed = true;
+                                        }
+                                    }
+                                }
+
+                                match stroke_width_state {
+                                    None => stroke_width_state = Some(shape.stroke_width),
+                                    Some(prev) => {
+                                        if prev != shape.stroke_width {
+                                            stroke_width_mixed = true;
                                         }
                                     }
                                 }
@@ -314,6 +350,24 @@ pub fn update_property_panel_on_selection(
     components
         .text_align_combo
         .set_sensitive(text_controls_enabled);
+    components
+        .bold_button
+        .set_sensitive(text_controls_enabled);
+    components
+        .italic_button
+        .set_sensitive(text_controls_enabled);
+    components
+        .underline_button
+        .set_sensitive(text_controls_enabled);
+    components
+        .strikethrough_button
+        .set_sensitive(text_controls_enabled);
+    components
+        .text_color_button
+        .set_sensitive(text_controls_enabled);
+    components
+        .text_background_color_button
+        .set_sensitive(text_controls_enabled);
 
     if let Some(text) = selected_text {
         buffer.begin_irreversible_action();
@@ -346,6 +400,41 @@ pub fn update_property_panel_on_selection(
         };
         if components.text_align_combo.selected() != align_index {
             components.text_align_combo.set_selected(align_index);
+        }
+
+        // Update text formatting buttons state
+        if components.bold_button.is_active() != (text.style.weight == testruct_core::typography::FontWeight::Bold) {
+            components.bold_button.set_active(text.style.weight == testruct_core::typography::FontWeight::Bold);
+        }
+        if components.italic_button.is_active() != text.style.italic {
+            components.italic_button.set_active(text.style.italic);
+        }
+        if components.underline_button.is_active() != text.style.underline {
+            components.underline_button.set_active(text.style.underline);
+        }
+        if components.strikethrough_button.is_active() != text.style.strikethrough {
+            components.strikethrough_button.set_active(text.style.strikethrough);
+        }
+
+        // Update text background color button label
+        let bg_color_label = if let Some(color) = &text.style.background_color {
+            crate::panels::property_handlers::color_to_hex(color)
+        } else {
+            "なし".to_string()
+        };
+        components.text_background_color_button.set_label(&bg_color_label);
+    }
+
+    // Update stroke width spinner
+    if !stroke_applicable {
+        components.stroke_width_spin.set_sensitive(false);
+        components.stroke_width_spin.set_value(2.0); // Default value
+    } else {
+        components.stroke_width_spin.set_sensitive(true);
+        if !stroke_width_mixed {
+            if let Some(width) = stroke_width_state {
+                components.stroke_width_spin.set_value(width as f64);
+            }
         }
     }
 }

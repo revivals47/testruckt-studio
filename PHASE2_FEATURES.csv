@@ -1,0 +1,21 @@
+Feature,Category,Tier,Time (min),Data Model,UI Control,Handler,Rendering,Current Status,Implementation Path,Priority Score,Risk Level,User Value
+Wire Stroke Width Handler,Shape Styling,1,15,✅,⚠️ Exists,❌,✅,UI Only,Add signal handler to property_handlers_shape.rs,9,Low,High
+Underline Text,Text Decoration,1,30,✅,❌,❌,✅,Missing UI,Add toggle button + handler in text section,9,Low,High
+Strikethrough Text,Text Decoration,1,30,✅,❌,❌,✅,Missing UI,Add toggle button + handler in text section,9,Low,High
+Background Color,Text Color,1,45,✅,❌,❌,✅,Missing UI,Add color dialog button + handler,9,Low,High
+Full Font Weight Support,Typography,2,60,✅,⚠️ Bold only,⚠️ Partial,✅,Partial UI,Replace bold button with weight dropdown (6 options),8,Low,High
+Letter Spacing,Typography,2,90,❌,❌,❌,⚠️ Partial,Missing,Add to TextStyle + Pango integration,7.5,Medium,High
+Text Transform (case),Typography,2,60,❌,❌,❌,❌,Missing,Add enum + rendering + dropdown UI,7,Low,Medium
+Corner Radius for Rectangles,Shape Styling,3,90,❌,❌,❌,❌,Missing,Add to ShapeElement + Cairo rounded_rectangle,7,Low,Medium
+Stroke Dash Patterns,Shape Styling,3,90,❌,❌,❌,❌,Missing,Add pattern enum + Cairo set_dash,6.5,Low,Medium
+Image Opacity,Image Styling,3,60,❌,❌,❌,❌,Missing,Add opacity field + alpha blending,7,Low,Medium
+Global Element Opacity,Styling,3,60,❌,❌,❌,❌,Missing,Add to all element types + all render functions,6.5,Medium,Medium
+Text Drop Shadow,Text Effects,4,90,❌,❌,❌,❌,Missing,Add shadow struct + render offset text,6.5,Medium,Medium
+Shape Gradients,Shape Styling,4,120,❌,❌,❌,❌,Missing,Add FillStyle enum + Cairo gradient support,7.5,Medium,High
+Shape Rotation,Shape Styling,4,120,❌,❌,❌,❌,Missing,Add rotation field + Cairo transform,6.5,Medium,Low
+Image Rotation/Flip,Image Styling,4,90,❌,❌,❌,❌,Missing,Add rotation + flip fields + Cairo transforms,6.5,Medium,Low
+Box Shadow for Shapes,Shape Effects,4,120,❌,❌,❌,❌,Missing,Add shadow struct + blur effect,6,Medium,Low
+Blend Modes,Styling,4,120,❌,❌,❌,❌,Missing,Add enum + Cairo blend operators,5.5,Medium,Low
+Text Decoration Color,Text Decoration,4,90,❌,❌,❌,⚠️ Partial,Missing,Add decoration_color field + Pango attrs,6,Medium,Low
+Line Cap and Line Join,Shape Styling,3,75,❌,❌,❌,⚠️ Partial,Missing,Add enums + Cairo operators,5.5,Low,Low
+Text Outline,Text Effects,4,90,❌,❌,❌,❌,Missing,Add outline color/width + render stroked text,5.5,Medium,Low

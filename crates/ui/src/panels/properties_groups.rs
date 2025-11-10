@@ -160,10 +160,10 @@ pub(super) fn build_typography_section(
     )
 }
 
-/// Build text formatting section with bold/italic buttons
+/// Build text formatting section with bold/italic/underline/strikethrough buttons
 pub(super) fn build_text_formatting_buttons(
     container: &GtkBox,
-) -> (ToggleButton, ToggleButton) {
+) -> (ToggleButton, ToggleButton, ToggleButton, ToggleButton) {
     let formatting_section = GtkBox::new(Orientation::Vertical, 5);
     formatting_section.set_margin_start(12);
     formatting_section.set_margin_end(12);
@@ -173,23 +173,40 @@ pub(super) fn build_text_formatting_buttons(
     formatting_label.add_css_class("property-label");
     formatting_section.append(&formatting_label);
 
-    let buttons_box = GtkBox::new(Orientation::Horizontal, 5);
-    buttons_box.set_homogeneous(true);
+    // First row: Bold, Italic
+    let buttons_row1 = GtkBox::new(Orientation::Horizontal, 5);
+    buttons_row1.set_homogeneous(true);
 
     // Bold button
     let bold_button = ToggleButton::with_label("太字");
     bold_button.add_css_class("formatting-button");
-    buttons_box.append(&bold_button);
+    buttons_row1.append(&bold_button);
 
     // Italic button
     let italic_button = ToggleButton::with_label("斜体");
     italic_button.add_css_class("formatting-button");
-    buttons_box.append(&italic_button);
+    buttons_row1.append(&italic_button);
 
-    formatting_section.append(&buttons_box);
+    formatting_section.append(&buttons_row1);
+
+    // Second row: Underline, Strikethrough
+    let buttons_row2 = GtkBox::new(Orientation::Horizontal, 5);
+    buttons_row2.set_homogeneous(true);
+
+    // Underline button
+    let underline_button = ToggleButton::with_label("下線");
+    underline_button.add_css_class("formatting-button");
+    buttons_row2.append(&underline_button);
+
+    // Strikethrough button
+    let strikethrough_button = ToggleButton::with_label("打消し線");
+    strikethrough_button.add_css_class("formatting-button");
+    buttons_row2.append(&strikethrough_button);
+
+    formatting_section.append(&buttons_row2);
     container.append(&formatting_section);
 
-    (bold_button, italic_button)
+    (bold_button, italic_button, underline_button, strikethrough_button)
 }
 
 /// Build text color section with color picker button
@@ -212,6 +229,28 @@ pub(super) fn build_text_color_section(container: &GtkBox) -> Button {
     container.append(&text_color_section);
 
     text_color_button
+}
+
+/// Build text background color section with color picker button
+pub(super) fn build_text_background_color_section(container: &GtkBox) -> Button {
+    let bg_color_section = GtkBox::new(Orientation::Vertical, 5);
+    bg_color_section.set_margin_start(12);
+    bg_color_section.set_margin_end(12);
+
+    let bg_color_box = GtkBox::new(Orientation::Horizontal, 8);
+    let bg_color_label = Label::new(Some("背景色"));
+    bg_color_label.set_hexpand(true);
+    bg_color_label.set_xalign(0.0);
+    bg_color_box.append(&bg_color_label);
+
+    let bg_color_button = Button::with_label("色を選択");
+    bg_color_button.set_halign(gtk4::Align::End);
+    bg_color_box.append(&bg_color_button);
+
+    bg_color_section.append(&bg_color_box);
+    container.append(&bg_color_section);
+
+    bg_color_button
 }
 
 /// Build text options section (auto-resize)

@@ -145,6 +145,165 @@ pub fn wire_italic_signal(
     });
 }
 
+/// Wire underline button toggle
+pub fn wire_underline_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.underline_button.clone();
+
+    button.connect_toggled(move |btn| {
+        let is_underline = btn.is_active();
+
+        app_state.with_mutable_active_document(|doc| {
+            let selected = render_state.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        if let DocumentElement::Text(text) = element {
+                            if selected.contains(&text.id) {
+                                text.style.underline = is_underline;
+                                recompute_auto_height(text);
+                                tracing::debug!("✅ Underline: {}", is_underline);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        drawing_area.queue_draw();
+    });
+}
+
+/// Wire strikethrough button toggle
+pub fn wire_strikethrough_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.strikethrough_button.clone();
+
+    button.connect_toggled(move |btn| {
+        let is_strikethrough = btn.is_active();
+
+        app_state.with_mutable_active_document(|doc| {
+            let selected = render_state.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        if let DocumentElement::Text(text) = element {
+                            if selected.contains(&text.id) {
+                                text.style.strikethrough = is_strikethrough;
+                                recompute_auto_height(text);
+                                tracing::debug!("✅ Strikethrough: {}", is_strikethrough);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        drawing_area.queue_draw();
+    });
+}
+
+/// Wire text background color button for color picker dialog
+pub fn wire_text_background_color_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.text_background_color_button.clone();
+    let selected_ids_ref = render_state.selected_ids.clone();
+    let app_state_clone = app_state.clone();
+    let drawing_area_clone = drawing_area.clone();
+    let panel_clone = components.clone();
+
+    button.connect_clicked(move |widget| {
+        let selected_ids: Vec<uuid::Uuid> = {
+            let selected = selected_ids_ref.borrow();
+            if selected.is_empty() {
+                tracing::warn!("⚠️ テキスト背景色を変更するオブジェクトが選択されていません");
+                return;
+            }
+            selected.clone()
+        };
+
+        let parent_window = widget
+            .root()
+            .and_then(|root| root.downcast::<gtk4::Window>().ok());
+
+        let initial_color = app_state_clone
+            .with_active_document(|doc| {
+                if let Some(page) = doc.pages.first() {
+                    for element in &page.elements {
+                        if selected_ids.contains(&element.id()) {
+                            if let DocumentElement::Text(text) = element {
+                                if let Some(color) = &text.style.background_color {
+                                    return Some(color_to_rgba(color));
+                                }
+                            }
+                        }
+                    }
+                }
+                None
+            })
+            .flatten();
+
+        let dialog = ColorDialog::builder()
+            .modal(true)
+            .title("テキスト背景色を選択")
+            .with_alpha(false)
+            .build();
+
+        let selected_ids_for_cb = selected_ids.clone();
+        let app_state_for_cb = app_state_clone.clone();
+        let drawing_area_for_cb = drawing_area_clone.clone();
+        let panel_for_cb = panel_clone.clone();
+
+        dialog.choose_rgba(
+            parent_window.as_ref(),
+            initial_color.as_ref(),
+            None::<&gio::Cancellable>,
+            move |result| {
+                if let Ok(rgba) = result {
+                    let bg_color = rgba_to_color(&rgba);
+                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
+                        let mut changed = false;
+                        if let Some(page) = doc.pages.first_mut() {
+                            for element in &mut page.elements {
+                                if selected_ids_for_cb.contains(&element.id()) {
+                                    if let DocumentElement::Text(text) = element {
+                                        text.style.background_color = Some(bg_color.clone());
+                                        recompute_auto_height(text);
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                        changed
+                    });
+
+                    if updated.unwrap_or(false) {
+                        drawing_area_for_cb.queue_draw();
+                        crate::panels::property_handlers::update_property_panel_on_selection(
+                            &panel_for_cb,
+                            &app_state_for_cb,
+                            &selected_ids_for_cb,
+                        );
+                        tracing::debug!("✅ Text background color updated via dialog");
+                    }
+                }
+            },
+        );
+    });
+}
+
 /// Wire text color button for color picker dialog
 pub fn wire_text_color_signal(
     components: &PropertyPanelComponents,

@@ -271,3 +271,36 @@ pub fn color_to_hex(color: &testruct_core::typography::Color) -> String {
         clamp(color.b)
     )
 }
+
+/// Wire stroke width spinner to update shape stroke width
+pub fn wire_stroke_width_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let spinner = components.stroke_width_spin.clone();
+
+    spinner.connect_value_changed(move |spin| {
+        let stroke_width = spin.value() as f32;
+
+        app_state.with_mutable_active_document(|doc| {
+            let selected = render_state.selected_ids.borrow();
+            if !selected.is_empty() {
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        match element {
+                            DocumentElement::Shape(shape) if selected.contains(&shape.id) => {
+                                shape.stroke_width = stroke_width;
+                                tracing::debug!("✅ Stroke width changed to: {}pt", stroke_width);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        });
+
+        drawing_area.queue_draw();
+    });
+}
