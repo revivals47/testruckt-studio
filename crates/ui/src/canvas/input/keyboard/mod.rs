@@ -83,13 +83,18 @@ pub fn setup_keyboard_events(
         let app_state_ime_cb = app_state_ime.clone();
         let drawing_area_ime_cb = drawing_area_ime.clone();
 
+        eprintln!("📱 IME callback invoked with text: '{}'", composed_text);
+
         let tool_state_ref = render_state_ime_cb.tool_state.borrow();
         if let Some(text_id) = tool_state_ref.editing_text_id {
-            let cursor_pos = tool_state_ref.editing_cursor_pos;
+            let mut cursor_pos = tool_state_ref.editing_cursor_pos;
+            eprintln!("📝 Text ID: {:?}, Initial cursor: {}", text_id, cursor_pos);
             drop(tool_state_ref);
 
-            // Insert each composed character at the current cursor position
+            // Insert each composed character at the current cursor position, updating cursor for next char
             for ch in composed_text.chars() {
+                eprintln!("  Inserting '{}' at position {}", ch, cursor_pos);
+
                 // Use the existing character insertion logic
                 app_state_ime_cb.with_mutable_active_document(|doc| {
                     if let Some(page) = doc.pages.first_mut() {
@@ -100,28 +105,35 @@ pub fn setup_keyboard_events(
                                     if cursor_pos <= chars.len() {
                                         chars.insert(cursor_pos, ch);
                                         text.content = chars.iter().collect();
-                                        tracing::debug!("✅ IME inserted character: '{}'", ch);
+                                        tracing::debug!("✅ IME inserted character: '{}' at {}", ch, cursor_pos);
+                                    } else {
+                                        eprintln!("⚠️  Cursor pos {} exceeds text length {}", cursor_pos, chars.len());
                                     }
                                 }
                             }
                         }
                     }
                 });
+
+                // Increment cursor for next character
+                cursor_pos += 1;
             }
 
-            // Update cursor position and refresh canvas
+            // Update cursor position in tool state and refresh canvas
             let mut tool_state = render_state_ime_cb.tool_state.borrow_mut();
-            tool_state.editing_cursor_pos += composed_text.chars().count();
+            tool_state.editing_cursor_pos = cursor_pos;
             drop(tool_state);
 
             drawing_area_ime_cb.queue_draw();
+            eprintln!("✅ IME commit complete: inserted '{}' ({} chars), cursor now at {}",
+                     composed_text, composed_text.chars().count(), cursor_pos);
             tracing::debug!("🎌 IME commit: inserted '{}' ({} chars)", composed_text, composed_text.chars().count());
+        } else {
+            eprintln!("⚠️  IME callback but no text editing active!");
         }
     });
 
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
-        tracing::debug!("🔑 Key pressed: keyval={:?}", keyval);
-
         let render_state_kbd = render_state_keyboard.clone();
         let tool_state_ref = render_state_kbd.tool_state.borrow();
         let in_text_editing = tool_state_ref.editing_text_id.is_some();
@@ -129,14 +141,17 @@ pub fn setup_keyboard_events(
         let mut cursor_pos = tool_state_ref.editing_cursor_pos;
         drop(tool_state_ref);
 
+        eprintln!("🔑 Key pressed: keyval={:?}, in_text_editing={}", keyval, in_text_editing);
+
         if in_text_editing {
+            eprintln!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
             tracing::debug!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
         }
 
         // NOTE: IME key filtering is handled automatically by GTK4's EventControllerKey
         // when we call set_im_context(). The IME will emit ::commit signal when
         // composition is complete, which we handle in the callback registered above.
-        // Direct key handling continues here for non-composition keys (arrows, escape, etc).
+        // Direct key handling continues here for non-composition keys (arrows, escape, etc)
 
         // Determine if shift and control are pressed
         let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
