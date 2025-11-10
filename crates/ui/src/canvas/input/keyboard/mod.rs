@@ -216,8 +216,15 @@ pub fn setup_keyboard_events(
         }
 
         // Handle Paste: Ctrl+V
-        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::v {
-            keyboard_shortcuts::handle_paste(&app_state_keyboard, &drawing_area_keyboard);
+        if ctrl_pressed && keyval == gtk4::gdk::Key::v {
+            if in_text_editing {
+                // Paste text (including Japanese) during text editing mode
+                keyboard_shortcuts::handle_paste_text_in_editing(&app_state_keyboard, &render_state_kbd, &drawing_area_keyboard);
+                eprintln!("📋 Text paste in editing mode");
+            } else {
+                // Paste elements when not in text editing
+                keyboard_shortcuts::handle_paste(&app_state_keyboard, &drawing_area_keyboard);
+            }
             return gtk4::glib::Propagation::Stop;
         }
 

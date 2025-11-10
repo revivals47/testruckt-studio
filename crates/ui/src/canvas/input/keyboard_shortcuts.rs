@@ -303,3 +303,68 @@ pub fn move_selected_objects(
         });
     }
 }
+
+/// テキスト編集モード中のテキストペースト（Ctrl+V in text editing）
+///
+/// テキスト編集モード中にクリップボードからテキストをペースト（日本語含む）します。
+///
+/// # 引数
+///
+/// - `app_state`: アプリケーション状態
+/// - `render_state`: キャンバス描画状態
+/// - `drawing_area`: 描画エリア（再描画用）
+pub fn handle_paste_text_in_editing(
+    app_state: &AppState,
+    render_state: &CanvasRenderState,
+    drawing_area: &DrawingArea,
+) {
+    let tool_state = render_state.tool_state.borrow();
+    if let Some(text_id) = tool_state.editing_text_id {
+        let cursor_pos = tool_state.editing_cursor_pos;
+        drop(tool_state);
+
+        // Get text from clipboard using pbpaste
+        if let Ok(output) = std::process::Command::new("pbpaste").output() {
+            if let Ok(clipboard_text) = String::from_utf8(output.stdout) {
+                let pasted_text = clipboard_text.trim();
+                if !pasted_text.is_empty() {
+                    eprintln!("📋 Pasting text in editing mode: '{}' at cursor {}", pasted_text, cursor_pos);
+
+                    // Insert pasted text character by character
+                    app_state.with_mutable_active_document(|doc| {
+                        if let Some(page) = doc.pages.first_mut() {
+                            for element in &mut page.elements {
+                                if let DocumentElement::Text(text) = element {
+                                    if text.id == text_id {
+                                        let mut chars: Vec<char> = text.content.chars().collect();
+                                        let mut current_pos = cursor_pos;
+
+                                        for ch in pasted_text.chars() {
+                                            if current_pos <= chars.len() {
+                                                chars.insert(current_pos, ch);
+                                                current_pos += 1;
+                                            }
+                                        }
+
+                                        text.content = chars.iter().collect();
+                                        eprintln!("✅ Pasted {} characters, new content length: {}",
+                                                 pasted_text.chars().count(), text.content.chars().count());
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Update cursor position to end of pasted text
+                    let pasted_char_count = pasted_text.chars().count();
+                    let mut tool_state = render_state.tool_state.borrow_mut();
+                    tool_state.editing_cursor_pos = cursor_pos + pasted_char_count;
+                    drop(tool_state);
+
+                    drawing_area.queue_draw();
+                    tracing::info!("✅ Pasted {} characters into text element", pasted_char_count);
+                }
+            }
+        }
+    }
+}

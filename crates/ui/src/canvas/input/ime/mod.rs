@@ -2,6 +2,11 @@
 //!
 //! This module provides IMContext integration for handling Japanese, Chinese, and other
 //! multi-key composition input methods through GTK4's IMMulticontext.
+//!
+//! On macOS, due to GTK4 DrawingArea limitations, this also includes a workaround
+//! implementation in the `macos` submodule for alternative input methods.
+
+pub mod macos;
 
 use gtk4::prelude::*;
 use gtk4::{gdk, glib, IMMulticontext};
