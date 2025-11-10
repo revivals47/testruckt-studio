@@ -14,10 +14,7 @@ impl AlignmentTools {
             return;
         }
         let count = rects.len();
-        let min_x = rects
-            .iter()
-            .map(|r| r.origin.x)
-            .fold(f32::MAX, f32::min);
+        let min_x = rects.iter().map(|r| r.origin.x).fold(f32::MAX, f32::min);
         for rect in rects.iter_mut() {
             rect.origin.x = min_x;
         }
@@ -63,10 +60,7 @@ impl AlignmentTools {
             return;
         }
         let count = rects.len();
-        let min_y = rects
-            .iter()
-            .map(|r| r.origin.y)
-            .fold(f32::MAX, f32::min);
+        let min_y = rects.iter().map(|r| r.origin.y).fold(f32::MAX, f32::min);
         for rect in rects.iter_mut() {
             rect.origin.y = min_y;
         }
@@ -183,10 +177,7 @@ impl AlignmentTools {
 
         Some(Rect {
             origin: testruct_core::layout::Point::new(min_x, min_y),
-            size: testruct_core::layout::Size::new(
-                max_right - min_x,
-                max_bottom - min_y,
-            ),
+            size: testruct_core::layout::Size::new(max_right - min_x, max_bottom - min_y),
         })
     }
 }

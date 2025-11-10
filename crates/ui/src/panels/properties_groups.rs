@@ -27,9 +27,7 @@ pub(super) fn build_title_section(container: &GtkBox) {
 }
 
 /// Build text content editing section
-pub(super) fn build_text_content_section(
-    container: &GtkBox,
-) -> (gtk4::TextBuffer, gtk4::TextView) {
+pub(super) fn build_text_content_section(container: &GtkBox) -> (gtk4::TextBuffer, gtk4::TextView) {
     // Header
     let content_header = GtkBox::new(Orientation::Horizontal, 8);
     content_header.set_margin_start(12);
@@ -206,7 +204,12 @@ pub(super) fn build_text_formatting_buttons(
     formatting_section.append(&buttons_row2);
     container.append(&formatting_section);
 
-    (bold_button, italic_button, underline_button, strikethrough_button)
+    (
+        bold_button,
+        italic_button,
+        underline_button,
+        strikethrough_button,
+    )
 }
 
 /// Build text color section with color picker button

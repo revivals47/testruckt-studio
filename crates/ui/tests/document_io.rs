@@ -2,7 +2,9 @@
 
 use std::fs;
 use std::path::PathBuf;
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::Rect;
 use testruct_core::typography::Color;
 use uuid::Uuid;
@@ -21,7 +23,10 @@ fn create_test_document() -> Document {
             kind: ShapeKind::Rectangle,
             bounds: Rect {
                 origin: testruct_core::layout::Point { x: 10.0, y: 20.0 },
-                size: testruct_core::layout::Size { width: 100.0, height: 50.0 },
+                size: testruct_core::layout::Size {
+                    width: 100.0,
+                    height: 50.0,
+                },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -65,14 +70,12 @@ fn test_load_document() {
     let _ = fs::remove_file(&file_path);
 
     let original_doc = create_test_document();
-    testruct_ui::io::save_document(&original_doc, &file_path)
-        .expect("Failed to save document");
+    testruct_ui::io::save_document(&original_doc, &file_path).expect("Failed to save document");
 
     // Give filesystem time to flush
     std::thread::sleep(std::time::Duration::from_millis(50));
 
-    let loaded_doc = testruct_ui::io::load_document(&file_path)
-        .expect("Failed to load document");
+    let loaded_doc = testruct_ui::io::load_document(&file_path).expect("Failed to load document");
 
     assert_eq!(loaded_doc.metadata.title, original_doc.metadata.title);
     assert_eq!(loaded_doc.pages.len(), original_doc.pages.len());
@@ -95,8 +98,7 @@ fn test_save_load_roundtrip() {
     let original_doc = create_test_document();
 
     // Save
-    testruct_ui::io::save_document(&original_doc, &file_path)
-        .expect("Failed to save document");
+    testruct_ui::io::save_document(&original_doc, &file_path).expect("Failed to save document");
 
     // Verify file was written
     assert!(file_path.exists(), "File should exist after saving");
@@ -105,8 +107,7 @@ fn test_save_load_roundtrip() {
     std::thread::sleep(std::time::Duration::from_millis(50));
 
     // Load
-    let loaded_doc = testruct_ui::io::load_document(&file_path)
-        .expect("Failed to load document");
+    let loaded_doc = testruct_ui::io::load_document(&file_path).expect("Failed to load document");
 
     // Verify content matches
     assert_eq!(loaded_doc.id, original_doc.id);
@@ -114,7 +115,10 @@ fn test_save_load_roundtrip() {
 
     // Check first page content
     assert_eq!(loaded_doc.pages.len(), 1);
-    assert_eq!(original_doc.pages[0].elements.len(), loaded_doc.pages[0].elements.len());
+    assert_eq!(
+        original_doc.pages[0].elements.len(),
+        loaded_doc.pages[0].elements.len()
+    );
 
     if let Some(element) = loaded_doc.pages[0].elements.first() {
         if let DocumentElement::Shape(shape) = element {
@@ -152,15 +156,13 @@ fn test_save_creates_valid_json() {
     let _ = fs::remove_file(&file_path);
 
     let document = create_test_document();
-    testruct_ui::io::save_document(&document, &file_path)
-        .expect("Failed to save document");
+    testruct_ui::io::save_document(&document, &file_path).expect("Failed to save document");
 
-    let content = fs::read_to_string(&file_path)
-        .expect("Failed to read saved file");
+    let content = fs::read_to_string(&file_path).expect("Failed to read saved file");
 
     // Verify it's valid JSON
-    let _json: serde_json::Value = serde_json::from_str(&content)
-        .expect("Saved file is not valid JSON");
+    let _json: serde_json::Value =
+        serde_json::from_str(&content).expect("Saved file is not valid JSON");
 
     // Clean up
     let _ = fs::remove_file(&file_path);

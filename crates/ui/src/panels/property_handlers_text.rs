@@ -2,7 +2,7 @@
 //!
 //! Handles text-specific property panel controls (font family, size, bold, italic, color, etc.)
 
-use gtk4::{prelude::*, gdk, gio, ColorDialog, StringList};
+use gtk4::{gdk, gio, prelude::*, ColorDialog, StringList};
 use testruct_core::document::DocumentElement;
 
 use super::PropertyPanelComponents;

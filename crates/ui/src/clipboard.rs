@@ -3,9 +3,9 @@
 //! Provides a global clipboard for storing document elements that can be
 //! pasted into the document.
 
+use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use testruct_core::document::DocumentElement;
-use once_cell::sync::Lazy;
 
 /// Clipboard data structure holding copied elements and metadata
 #[derive(Clone, Debug)]
@@ -138,7 +138,7 @@ fn offset_element_bounds(element: &mut DocumentElement, offset: (f32, f32)) {
 mod tests {
     use super::*;
     use testruct_core::document::TextElement;
-    use testruct_core::layout::{Point, Size, Rect};
+    use testruct_core::layout::{Point, Rect, Size};
     use testruct_core::typography::TextStyle;
 
     fn create_test_text(x: f32, y: f32, content: &str) -> TextElement {
@@ -232,9 +232,7 @@ mod tests {
 
         // IDs should be different
         if let (Some(p1), Some(p2)) = (pasted1, pasted2) {
-            if let (DocumentElement::Text(t1), DocumentElement::Text(t2)) =
-                (&p1[0], &p2[0])
-            {
+            if let (DocumentElement::Text(t1), DocumentElement::Text(t2)) = (&p1[0], &p2[0]) {
                 assert_ne!(t1.id, t2.id);
             }
         }

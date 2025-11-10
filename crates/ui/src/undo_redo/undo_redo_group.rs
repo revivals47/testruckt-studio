@@ -2,8 +2,8 @@
 //!
 //! Provides commands for grouping and ungrouping document elements.
 
-use super::Command;
 use super::undo_redo_shape::elem_id;
+use super::Command;
 use std::sync::{Arc, Mutex};
 use testruct_core::document::{Document, DocumentElement, GroupElement};
 use testruct_core::layout::{Point, Rect, Size};
@@ -134,7 +134,11 @@ impl Command for GroupCommand {
         let page = &mut doc.pages[self.page_index];
 
         // Find and remove the group
-        if let Some(pos) = page.elements.iter().position(|e| elem_id(e) == self.group_id) {
+        if let Some(pos) = page
+            .elements
+            .iter()
+            .position(|e| elem_id(e) == self.group_id)
+        {
             if let DocumentElement::Group(group) = page.elements.remove(pos) {
                 // Add children back
                 for child in group.children {

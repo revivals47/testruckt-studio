@@ -33,8 +33,7 @@ impl MacOSImeWorkaround {
     /// native pasteboard notifications via NSPasteboard
     pub fn check_clipboard_change(&self) -> Option<String> {
         // Get current clipboard content using pbpaste
-        if let Ok(output) = std::process::Command::new("pbpaste")
-            .output() {
+        if let Ok(output) = std::process::Command::new("pbpaste").output() {
             if let Ok(clipboard_text) = String::from_utf8(output.stdout) {
                 let current = clipboard_text.trim().to_string();
                 let last = self.last_clipboard_content.borrow();

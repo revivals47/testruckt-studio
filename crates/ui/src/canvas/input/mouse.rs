@@ -48,9 +48,9 @@
 use crate::app::AppState;
 use crate::canvas::mouse::{test_resize_handle, CanvasMousePos, ResizeHandle};
 use crate::canvas::CanvasRenderState;
+use gtk4::gdk;
 use gtk4::prelude::*;
 use gtk4::{DrawingArea, EventControllerMotion};
-use gtk4::gdk;
 
 /// マウス動作追跡を初期化
 ///
@@ -114,7 +114,8 @@ pub fn setup_mouse_tracking(
 
                         if elem_id == *selected_id {
                             // Test for resize handle hit
-                            if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 8.0) {
+                            if let Some(handle) = test_resize_handle(canvas_mouse_pos, bounds, 8.0)
+                            {
                                 cursor_name = match handle {
                                     ResizeHandle::TopLeft | ResizeHandle::BottomRight => {
                                         "nwse-resize"

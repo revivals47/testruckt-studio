@@ -16,15 +16,15 @@
 //! | Return | 改行挿入 |
 //! | その他 | 通常文字入力（ASCII、Unicode） |
 
+use super::super::ime::ImeManager;
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
 use gtk4::DrawingArea;
-use testruct_core::document::DocumentElement;
-use uuid::Uuid;
-use super::super::ime::ImeManager;
 use std::cell::RefCell;
 use std::rc::Rc;
+use testruct_core::document::DocumentElement;
+use uuid::Uuid;
 
 /// テキスト編集キー処理
 ///
@@ -60,10 +60,8 @@ pub fn handle_text_editing_key(
             tool_state.editing_cursor_pos = 0;
             drop(tool_state);
 
-            // Note: IME focus_out() is not called here because:
-            // - On GTK4, EventControllerKey automatically handles IMContext
-            // - Calling focus_out() on custom DrawingArea causes issues on macOS
-            // - The IMContext state will be reset naturally when focus changes
+            // NOTE: IME focus management is handled automatically by GTK4
+            // on macOS with EventControllerKey, so no explicit focus_out/reset needed
 
             drawing_area.queue_draw();
             tracing::info!("✅ Exited text editing mode");
@@ -99,10 +97,7 @@ pub fn handle_text_editing_key(
                 tool_state.editing_cursor_pos = *cursor_pos;
                 drop(tool_state);
                 drawing_area.queue_draw();
-                tracing::info!(
-                    "✅ Deleted character at cursor position {}",
-                    cursor_pos
-                );
+                tracing::info!("✅ Deleted character at cursor position {}", cursor_pos);
             }
             Some(true)
         }

@@ -132,7 +132,7 @@ fn load_and_render_image(
         surface_data.push(chunk[2]); // B
         surface_data.push(chunk[1]); // G
         surface_data.push(chunk[0]); // R
-        surface_data.push(255);      // A (fully opaque)
+        surface_data.push(255); // A (fully opaque)
     }
 
     // Create Cairo image surface
@@ -143,10 +143,12 @@ fn load_and_render_image(
         img_width as i32,
         img_height as i32,
         stride,
-    ).map_err(|e| format!("Failed to create Cairo surface: {:?}", e))?;
+    )
+    .map_err(|e| format!("Failed to create Cairo surface: {:?}", e))?;
 
     // Draw the image to fit bounds
-    ctx.save().map_err(|e| format!("Failed to save context: {:?}", e))?;
+    ctx.save()
+        .map_err(|e| format!("Failed to save context: {:?}", e))?;
 
     // Fill background
     ctx.set_source_rgb(1.0, 1.0, 1.0);
@@ -156,7 +158,8 @@ fn load_and_render_image(
         bounds.size.width as f64,
         bounds.size.height as f64,
     );
-    ctx.fill().map_err(|e| format!("Failed to fill background: {:?}", e))?;
+    ctx.fill()
+        .map_err(|e| format!("Failed to fill background: {:?}", e))?;
 
     // Calculate scale to fit image in bounds while maintaining aspect ratio
     let scale_x = bounds.size.width as f64 / img_width as f64;
@@ -174,8 +177,10 @@ fn load_and_render_image(
     ctx.scale(scale, scale);
     ctx.set_source_surface(&surface, 0.0, 0.0)
         .map_err(|e| format!("Failed to set image source: {:?}", e))?;
-    ctx.paint().map_err(|e| format!("Failed to paint image: {:?}", e))?;
+    ctx.paint()
+        .map_err(|e| format!("Failed to paint image: {:?}", e))?;
 
-    ctx.restore().map_err(|e| format!("Failed to restore context: {:?}", e))?;
+    ctx.restore()
+        .map_err(|e| format!("Failed to restore context: {:?}", e))?;
     Ok(())
 }

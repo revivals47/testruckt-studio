@@ -87,39 +87,9 @@ impl ImeManager {
         tracing::debug!("✅ IME context initialized with key controller");
     }
 
-    /// Filter a key event through the Input Method Engine
-    ///
-    /// Returns `true` if the IME handled the key (composition in progress),
-    /// `false` if the key should be processed directly (ASCII, arrows, etc).
-    ///
-    /// This is the critical step that allows Japanese IME to intercept keys
-    /// and manage composition.
-    ///
-    /// NOTE: In GTK4, we let the EventControllerKey handle key filtering through
-    /// the IMContext automatically when we call set_im_context(). This method
-    /// is kept for potential future use.
-    pub fn filter_key_legacy(&self, _keyval: u32, _state: gdk::ModifierType) -> bool {
-        // In GTK4, key filtering is handled automatically by EventControllerKey
-        // when IMContext is set via set_im_context()
-        // This method is kept for reference but not actively used
-        false
-    }
-
-    /// Notify IME that text editing has begun (focus gained)
-    pub fn focus_in(&self) {
-        if let Some(ref context) = *self.context.borrow() {
-            context.focus_in();
-            tracing::debug!("📱 IME focus_in() called");
-        }
-    }
-
-    /// Notify IME that text editing has ended (focus lost)
-    pub fn focus_out(&self) {
-        if let Some(ref context) = *self.context.borrow() {
-            context.focus_out();
-            tracing::debug!("📱 IME focus_out() called");
-        }
-    }
+    // NOTE: On macOS with DrawingArea, filter_key() and focus_in/out() don't work
+    // GTK4's EventControllerKey handles key routing automatically when set_im_context() is called
+    // The workaround approach uses paste (Cmd+V) instead of direct IME composition
 
     /// Register a callback for composed text insertion
     ///

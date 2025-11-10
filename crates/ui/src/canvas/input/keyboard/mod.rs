@@ -32,8 +32,8 @@
 //! - テキスト配置の変更（`text_alignment_keys` で処理）
 //! - Escape キーで編集終了
 
-pub mod text_editing_keys;
 pub mod text_alignment_keys;
+pub mod text_editing_keys;
 // IME module is declared in parent input module
 
 use crate::app::AppState;
@@ -44,10 +44,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 // Import keyboard shortcuts and key handlers
-use super::keyboard_shortcuts;
-use super::ime::ImeManager;
-use self::text_editing_keys::handle_text_editing_key;
 use self::text_alignment_keys::handle_text_alignment;
+use self::text_editing_keys::handle_text_editing_key;
+use super::ime::ImeManager;
+use super::keyboard_shortcuts;
 
 /// キーボードイベント処理を初期化
 ///
@@ -72,66 +72,85 @@ pub fn setup_keyboard_events(
     ime_manager.borrow().setup_with_controller(&key_controller);
 
     // Register callback for IME-composed text insertion
-    let ime_manager_for_cb = ime_manager.clone();
     let render_state_ime = render_state.clone();
     let app_state_ime = app_state.clone();
     let drawing_area_ime = drawing_area.clone();
 
-    ime_manager.borrow().set_text_insertion_callback(move |composed_text: String| {
-        // When IME delivers composed text (e.g., 日本語), insert it at cursor
-        let render_state_ime_cb = render_state_ime.clone();
-        let app_state_ime_cb = app_state_ime.clone();
-        let drawing_area_ime_cb = drawing_area_ime.clone();
+    ime_manager
+        .borrow()
+        .set_text_insertion_callback(move |composed_text: String| {
+            // When IME delivers composed text (e.g., 日本語), insert it at cursor
+            let render_state_ime_cb = render_state_ime.clone();
+            let app_state_ime_cb = app_state_ime.clone();
+            let drawing_area_ime_cb = drawing_area_ime.clone();
 
-        eprintln!("📱 IME callback invoked with text: '{}'", composed_text);
+            eprintln!("📱 IME callback invoked with text: '{}'", composed_text);
 
-        let tool_state_ref = render_state_ime_cb.tool_state.borrow();
-        if let Some(text_id) = tool_state_ref.editing_text_id {
-            let mut cursor_pos = tool_state_ref.editing_cursor_pos;
-            eprintln!("📝 Text ID: {:?}, Initial cursor: {}", text_id, cursor_pos);
-            drop(tool_state_ref);
+            let tool_state_ref = render_state_ime_cb.tool_state.borrow();
+            if let Some(text_id) = tool_state_ref.editing_text_id {
+                let mut cursor_pos = tool_state_ref.editing_cursor_pos;
+                eprintln!("📝 Text ID: {:?}, Initial cursor: {}", text_id, cursor_pos);
+                drop(tool_state_ref);
 
-            // Insert each composed character at the current cursor position, updating cursor for next char
-            for ch in composed_text.chars() {
-                eprintln!("  Inserting '{}' at position {}", ch, cursor_pos);
+                // Insert each composed character at the current cursor position, updating cursor for next char
+                for ch in composed_text.chars() {
+                    eprintln!("  Inserting '{}' at position {}", ch, cursor_pos);
 
-                // Use the existing character insertion logic
-                app_state_ime_cb.with_mutable_active_document(|doc| {
-                    if let Some(page) = doc.pages.first_mut() {
-                        for element in &mut page.elements {
-                            if let testruct_core::document::DocumentElement::Text(text) = element {
-                                if text.id == text_id {
-                                    let mut chars: Vec<char> = text.content.chars().collect();
-                                    if cursor_pos <= chars.len() {
-                                        chars.insert(cursor_pos, ch);
-                                        text.content = chars.iter().collect();
-                                        tracing::debug!("✅ IME inserted character: '{}' at {}", ch, cursor_pos);
-                                    } else {
-                                        eprintln!("⚠️  Cursor pos {} exceeds text length {}", cursor_pos, chars.len());
+                    // Use the existing character insertion logic
+                    app_state_ime_cb.with_mutable_active_document(|doc| {
+                        if let Some(page) = doc.pages.first_mut() {
+                            for element in &mut page.elements {
+                                if let testruct_core::document::DocumentElement::Text(text) =
+                                    element
+                                {
+                                    if text.id == text_id {
+                                        let mut chars: Vec<char> = text.content.chars().collect();
+                                        if cursor_pos <= chars.len() {
+                                            chars.insert(cursor_pos, ch);
+                                            text.content = chars.iter().collect();
+                                            tracing::debug!(
+                                                "✅ IME inserted character: '{}' at {}",
+                                                ch,
+                                                cursor_pos
+                                            );
+                                        } else {
+                                            eprintln!(
+                                                "⚠️  Cursor pos {} exceeds text length {}",
+                                                cursor_pos,
+                                                chars.len()
+                                            );
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
 
-                // Increment cursor for next character
-                cursor_pos += 1;
+                    // Increment cursor for next character
+                    cursor_pos += 1;
+                }
+
+                // Update cursor position in tool state and refresh canvas
+                let mut tool_state = render_state_ime_cb.tool_state.borrow_mut();
+                tool_state.editing_cursor_pos = cursor_pos;
+                drop(tool_state);
+
+                drawing_area_ime_cb.queue_draw();
+                eprintln!(
+                    "✅ IME commit complete: inserted '{}' ({} chars), cursor now at {}",
+                    composed_text,
+                    composed_text.chars().count(),
+                    cursor_pos
+                );
+                tracing::debug!(
+                    "🎌 IME commit: inserted '{}' ({} chars)",
+                    composed_text,
+                    composed_text.chars().count()
+                );
+            } else {
+                eprintln!("⚠️  IME callback but no text editing active!");
             }
-
-            // Update cursor position in tool state and refresh canvas
-            let mut tool_state = render_state_ime_cb.tool_state.borrow_mut();
-            tool_state.editing_cursor_pos = cursor_pos;
-            drop(tool_state);
-
-            drawing_area_ime_cb.queue_draw();
-            eprintln!("✅ IME commit complete: inserted '{}' ({} chars), cursor now at {}",
-                     composed_text, composed_text.chars().count(), cursor_pos);
-            tracing::debug!("🎌 IME commit: inserted '{}' ({} chars)", composed_text, composed_text.chars().count());
-        } else {
-            eprintln!("⚠️  IME callback but no text editing active!");
-        }
-    });
+        });
 
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
         let render_state_kbd = render_state_keyboard.clone();
@@ -144,15 +163,25 @@ pub fn setup_keyboard_events(
         // Determine if shift and control are pressed (must be before logging)
         // NOTE: On macOS, Command key maps to META_MASK
         let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
-        let ctrl_pressed = state.contains(gtk4::gdk::ModifierType::CONTROL_MASK) ||
-                          state.contains(gtk4::gdk::ModifierType::SUPER_MASK) ||
-                          state.contains(gtk4::gdk::ModifierType::META_MASK);
+        let ctrl_pressed = state.contains(gtk4::gdk::ModifierType::CONTROL_MASK)
+            || state.contains(gtk4::gdk::ModifierType::SUPER_MASK)
+            || state.contains(gtk4::gdk::ModifierType::META_MASK);
 
-        eprintln!("🔑 Key pressed: keyval={:?}, in_text_editing={}, ctrl={}, shift={}, state={:?}", keyval, in_text_editing, ctrl_pressed, shift_pressed, state);
+        eprintln!(
+            "🔑 Key pressed: keyval={:?}, in_text_editing={}, ctrl={}, shift={}, state={:?}",
+            keyval, in_text_editing, ctrl_pressed, shift_pressed, state
+        );
 
         if in_text_editing {
-            eprintln!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
-            tracing::debug!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
+            eprintln!(
+                "📝 In text editing mode - Text ID: {:?}, Cursor pos: {}",
+                editing_text_id, cursor_pos
+            );
+            tracing::debug!(
+                "📝 In text editing mode - Text ID: {:?}, Cursor pos: {}",
+                editing_text_id,
+                cursor_pos
+            );
         }
 
         // NOTE: IME key filtering is handled automatically by GTK4's EventControllerKey
@@ -208,13 +237,21 @@ pub fn setup_keyboard_events(
 
         // Handle Copy: Ctrl+C
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::c {
-            keyboard_shortcuts::handle_copy(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_copy(
+                &render_state_kbd,
+                &app_state_keyboard,
+                &drawing_area_keyboard,
+            );
             return gtk4::glib::Propagation::Stop;
         }
 
         // Handle Cut: Ctrl+X
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::x {
-            keyboard_shortcuts::handle_cut(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_cut(
+                &render_state_kbd,
+                &app_state_keyboard,
+                &drawing_area_keyboard,
+            );
             return gtk4::glib::Propagation::Stop;
         }
 
@@ -222,7 +259,11 @@ pub fn setup_keyboard_events(
         if ctrl_pressed && keyval == gtk4::gdk::Key::v {
             if in_text_editing {
                 // Paste text (including Japanese) during text editing mode
-                keyboard_shortcuts::handle_paste_text_in_editing(&app_state_keyboard, &render_state_kbd, &drawing_area_keyboard);
+                keyboard_shortcuts::handle_paste_text_in_editing(
+                    &app_state_keyboard,
+                    &render_state_kbd,
+                    &drawing_area_keyboard,
+                );
                 eprintln!("📋 Text paste in editing mode");
             } else {
                 // Paste elements when not in text editing
@@ -233,7 +274,11 @@ pub fn setup_keyboard_events(
 
         // Handle Duplicate: Ctrl+D
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::d {
-            keyboard_shortcuts::handle_duplicate(&render_state_kbd, &app_state_keyboard, &drawing_area_keyboard);
+            keyboard_shortcuts::handle_duplicate(
+                &render_state_kbd,
+                &app_state_keyboard,
+                &drawing_area_keyboard,
+            );
             return gtk4::glib::Propagation::Stop;
         }
 
@@ -313,4 +358,3 @@ pub fn setup_keyboard_events(
     });
     drawing_area.add_controller(key_controller);
 }
-

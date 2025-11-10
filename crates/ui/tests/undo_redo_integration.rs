@@ -1,7 +1,9 @@
 //! Integration tests for Undo/Redo functionality
 
 use std::sync::{Arc, Mutex};
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 use testruct_ui::undo_redo::Command;
@@ -23,7 +25,10 @@ fn create_test_shape() -> DocumentElement {
         kind: ShapeKind::Rectangle,
         bounds: Rect {
             origin: Point { x: 10.0, y: 20.0 },
-            size: Size { width: 100.0, height: 50.0 },
+            size: Size {
+                width: 100.0,
+                height: 50.0,
+            },
         },
         stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -43,11 +48,7 @@ fn test_create_command_undo_redo() {
     let doc = create_test_document();
     let shape = create_test_shape();
 
-    let mut cmd = testruct_ui::undo_redo::CreateCommand::new(
-        doc.clone(),
-        shape,
-        0,
-    );
+    let mut cmd = testruct_ui::undo_redo::CreateCommand::new(doc.clone(), shape, 0);
 
     // Execute command
     assert!(cmd.execute().is_ok());
@@ -69,11 +70,7 @@ fn test_delete_command_creation() {
     }
 
     // Create delete command
-    let mut cmd = testruct_ui::undo_redo::DeleteCommand::new(
-        doc.clone(),
-        shape_id,
-        0,
-    );
+    let mut cmd = testruct_ui::undo_redo::DeleteCommand::new(doc.clone(), shape_id, 0);
 
     // Execute should succeed
     assert!(cmd.execute().is_ok());
@@ -86,11 +83,7 @@ fn test_stack_push_command() {
     let doc = create_test_document();
     let shape = create_test_shape();
 
-    let cmd = testruct_ui::undo_redo::CreateCommand::new(
-        doc,
-        shape,
-        0,
-    );
+    let cmd = testruct_ui::undo_redo::CreateCommand::new(doc, shape, 0);
 
     stack.push(Box::new(cmd));
 
@@ -104,11 +97,7 @@ fn test_undo_operation() {
     let doc = create_test_document();
     let shape = create_test_shape();
 
-    let cmd = testruct_ui::undo_redo::CreateCommand::new(
-        doc,
-        shape,
-        0,
-    );
+    let cmd = testruct_ui::undo_redo::CreateCommand::new(doc, shape, 0);
 
     stack.push(Box::new(cmd));
     assert!(stack.can_undo());
@@ -127,11 +116,7 @@ fn test_redo_operation() {
     let doc = create_test_document();
     let shape = create_test_shape();
 
-    let cmd = testruct_ui::undo_redo::CreateCommand::new(
-        doc,
-        shape,
-        0,
-    );
+    let cmd = testruct_ui::undo_redo::CreateCommand::new(doc, shape, 0);
 
     stack.push(Box::new(cmd));
 
@@ -155,11 +140,7 @@ fn test_multiple_commands_stack() {
     // Push 3 create commands
     for _ in 0..3 {
         let shape = create_test_shape();
-        let cmd = testruct_ui::undo_redo::CreateCommand::new(
-            doc.clone(),
-            shape,
-            0,
-        );
+        let cmd = testruct_ui::undo_redo::CreateCommand::new(doc.clone(), shape, 0);
         stack.push(Box::new(cmd));
     }
 

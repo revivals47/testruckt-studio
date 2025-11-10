@@ -3,8 +3,8 @@
 //! Provides commands for pasting and duplicating text elements
 //! and other document elements.
 
-use super::Command;
 use super::undo_redo_shape::elem_id;
+use super::Command;
 use std::sync::{Arc, Mutex};
 use testruct_core::document::{Document, DocumentElement};
 use uuid::Uuid;
@@ -59,7 +59,10 @@ impl Command for PasteCommand {
             page.elements.retain(|e| elem_id(e) != *id);
         }
 
-        Ok(format!("Removed {} pasted elements", self.pasted_element_ids.len()))
+        Ok(format!(
+            "Removed {} pasted elements",
+            self.pasted_element_ids.len()
+        ))
     }
 
     fn description(&self) -> &str {
@@ -78,11 +81,7 @@ pub struct DuplicateCommand {
 
 impl DuplicateCommand {
     /// Create a new duplicate command
-    pub fn new(
-        document: Arc<Mutex<Document>>,
-        element_ids: Vec<Uuid>,
-        page_index: usize,
-    ) -> Self {
+    pub fn new(document: Arc<Mutex<Document>>, element_ids: Vec<Uuid>, page_index: usize) -> Self {
         Self {
             document,
             page_index,
@@ -141,7 +140,10 @@ impl Command for DuplicateCommand {
             }
         }
 
-        Ok(format!("Duplicated {} objects", self.element_ids_to_duplicate.len()))
+        Ok(format!(
+            "Duplicated {} objects",
+            self.element_ids_to_duplicate.len()
+        ))
     }
 
     fn undo(&mut self) -> Result<String, String> {

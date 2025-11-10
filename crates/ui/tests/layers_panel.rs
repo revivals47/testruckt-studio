@@ -1,7 +1,9 @@
 //! Integration tests for Layers Panel functionality
 
 use std::sync::{Arc, Mutex};
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 use uuid::Uuid;
@@ -20,8 +22,14 @@ fn create_test_document_with_shapes() -> Arc<Mutex<Document>> {
                 id: Uuid::new_v4(),
                 kind: ShapeKind::Rectangle,
                 bounds: Rect {
-                    origin: Point { x: (i as f32) * 50.0, y: 10.0 },
-                    size: Size { width: 40.0, height: 40.0 },
+                    origin: Point {
+                        x: (i as f32) * 50.0,
+                        y: 10.0,
+                    },
+                    size: Size {
+                        width: 40.0,
+                        height: 40.0,
+                    },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -112,10 +120,7 @@ fn test_layer_names_generation() {
     // Check that we can get display names for each layer
     for (index, element) in page.elements.iter().enumerate() {
         let name = match element {
-            DocumentElement::Shape(shape) => format!(
-                "{:?}",
-                shape.kind
-            ),
+            DocumentElement::Shape(shape) => format!("{:?}", shape.kind),
             DocumentElement::Text(_) => "Text".to_string(),
             DocumentElement::Image(_) => "Image".to_string(),
             DocumentElement::Frame(_) => "Frame".to_string(),
@@ -175,7 +180,10 @@ fn test_layer_children_in_group() {
         kind: ShapeKind::Rectangle,
         bounds: Rect {
             origin: Point { x: 0.0, y: 0.0 },
-            size: Size { width: 50.0, height: 50.0 },
+            size: Size {
+                width: 50.0,
+                height: 50.0,
+            },
         },
         stroke: None,
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -186,7 +194,10 @@ fn test_layer_children_in_group() {
         kind: ShapeKind::Ellipse,
         bounds: Rect {
             origin: Point { x: 60.0, y: 0.0 },
-            size: Size { width: 50.0, height: 50.0 },
+            size: Size {
+                width: 50.0,
+                height: 50.0,
+            },
         },
         stroke: None,
         fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
@@ -198,7 +209,10 @@ fn test_layer_children_in_group() {
         name: "Test Group".to_string(),
         bounds: Rect {
             origin: Point { x: 0.0, y: 0.0 },
-            size: Size { width: 110.0, height: 50.0 },
+            size: Size {
+                width: 110.0,
+                height: 50.0,
+            },
         },
         children: vec![child1, child2],
     });

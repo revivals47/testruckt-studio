@@ -46,9 +46,9 @@ use crate::canvas::mouse::calculate_resize_bounds;
 use crate::canvas::rendering::snap_rect_to_grid;
 use crate::canvas::tools::{ShapeFactory, ToolMode};
 use crate::canvas::CanvasRenderState;
+use gtk4::gdk;
 use gtk4::prelude::*;
 use gtk4::{DrawingArea, GestureDrag};
-use gtk4::gdk;
 use testruct_core::document::DocumentElement;
 use testruct_core::layout::{Point, Rect, Size};
 
@@ -77,7 +77,7 @@ pub fn setup_drag_gesture(
         // Conversion to canvas coordinates happens only in drag_end
         let mut tool_state = state.tool_state.borrow_mut();
         tool_state.drag_start = Some((x, y));
-        tool_state.last_drag_offset = Some((0.0, 0.0));  // Reset offset tracking
+        tool_state.last_drag_offset = Some((0.0, 0.0)); // Reset offset tracking
     });
 
     let render_state_update = render_state.clone();
@@ -112,7 +112,13 @@ pub fn setup_drag_gesture(
 
         tracing::info!(
             "drag update [{:?}]: from ({:.0}, {:.0}) to ({:.0}, {:.0}), offset=({:.1}, {:.1})",
-            current_tool, start_x, start_y, current_x, current_y, offset_x, offset_y
+            current_tool,
+            start_x,
+            start_y,
+            current_x,
+            current_y,
+            offset_x,
+            offset_y
         );
 
         if is_resizing {
@@ -141,7 +147,12 @@ pub fn setup_drag_gesture(
                         for element in page.elements.iter_mut() {
                             match element {
                                 DocumentElement::Text(text) if text.id == object_id => {
-                                    let mut new_bounds = calculate_resize_bounds(&text.bounds, handle, delta_x, delta_y);
+                                    let mut new_bounds = calculate_resize_bounds(
+                                        &text.bounds,
+                                        handle,
+                                        delta_x,
+                                        delta_y,
+                                    );
                                     if snap_enabled {
                                         new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                     }
@@ -149,7 +160,12 @@ pub fn setup_drag_gesture(
                                     return true;
                                 }
                                 DocumentElement::Shape(shape) if shape.id == object_id => {
-                                    let mut new_bounds = calculate_resize_bounds(&shape.bounds, handle, delta_x, delta_y);
+                                    let mut new_bounds = calculate_resize_bounds(
+                                        &shape.bounds,
+                                        handle,
+                                        delta_x,
+                                        delta_y,
+                                    );
                                     if snap_enabled {
                                         new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                     }
@@ -157,7 +173,12 @@ pub fn setup_drag_gesture(
                                     return true;
                                 }
                                 DocumentElement::Image(image) if image.id == object_id => {
-                                    let mut new_bounds = calculate_resize_bounds(&image.bounds, handle, delta_x, delta_y);
+                                    let mut new_bounds = calculate_resize_bounds(
+                                        &image.bounds,
+                                        handle,
+                                        delta_x,
+                                        delta_y,
+                                    );
                                     if snap_enabled {
                                         new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
                                     }
@@ -191,7 +212,7 @@ pub fn setup_drag_gesture(
 
             // Get ruler size and apply document coordinate conversion
             let config = state.config.borrow();
-            let ruler_size = 20.0;  // From RulerConfig::default()
+            let ruler_size = 20.0; // From RulerConfig::default()
             let pan_x = config.pan_x;
             let pan_y = config.pan_y;
             let zoom = config.zoom;

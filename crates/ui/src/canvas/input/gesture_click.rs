@@ -23,19 +23,19 @@
 //! 選択オブジェクトのリサイズハンドル（8方向）を検出し、クリック時に
 //! リサイズ操作の開始位置として設定します。
 
+use super::ime::ImeManager;
 use crate::app::AppState;
 use crate::canvas::mouse::{test_resize_handle, CanvasMousePos};
 use crate::canvas::selection::HitTest;
 use crate::canvas::tools::ToolMode;
 use crate::canvas::CanvasRenderState;
+use gtk4::gdk;
 use gtk4::prelude::*;
 use gtk4::{DrawingArea, GestureClick, ScrolledWindow};
-use gtk4::gdk;
-use testruct_core::document::DocumentElement;
-use testruct_core::layout::Rect;
-use super::ime::ImeManager;
 use std::cell::RefCell;
 use std::rc::Rc;
+use testruct_core::document::DocumentElement;
+use testruct_core::layout::Rect;
 
 /// クリックジェスチャーを設定
 pub fn setup_click_gesture(
@@ -153,10 +153,8 @@ pub fn setup_click_gesture(
                                         drawing_area_click.grab_focus();
                                         eprintln!("  ✅ Called grab_focus()");
 
-                                        // Note: IME focus_in() is not called here because:
-                                        // - On GTK4, EventControllerKey automatically handles IMContext
-                                        // - Calling focus_in() on custom DrawingArea causes issues on macOS
-                                        // - The IMContext is already connected via set_im_context()
+                                        // NOTE: IME focus management is handled automatically by GTK4
+                                        // on macOS with EventControllerKey, so no explicit focus_in/out needed
 
                                         drawing_area_click.queue_draw();
 

@@ -84,8 +84,8 @@
 //! ```
 
 use crate::app::AppState;
-use crate::canvas::CanvasRenderState;
 use crate::canvas::input::{gesture_click, gesture_drag, ime::ImeManager};
+use crate::canvas::CanvasRenderState;
 use gtk4::DrawingArea;
 use std::cell::RefCell;
 use std::rc::Rc;

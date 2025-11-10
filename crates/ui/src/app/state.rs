@@ -1,11 +1,11 @@
 use std::sync::{Arc, Mutex};
 
 use crate::undo_redo::UndoRedoStack;
+use gtk4::glib::WeakRef;
+use gtk4::ApplicationWindow;
 use testruct_core::workspace::assets::AssetCatalog;
 use testruct_core::{Document, DocumentId, Project};
 use testruct_db::ItemBank;
-use gtk4::ApplicationWindow;
-use gtk4::glib::WeakRef;
 
 #[derive(Clone)]
 pub struct AppState {

@@ -1,7 +1,9 @@
 //! Integration tests for Multi-page document support
 
 use std::sync::{Arc, Mutex};
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 use uuid::Uuid;
@@ -23,7 +25,10 @@ fn create_multipage_document() -> Arc<Mutex<Document>> {
                     x: (elem_num as f32) * 60.0,
                     y: 0.0,
                 },
-                size: Size { width: 50.0, height: 50.0 },
+                size: Size {
+                    width: 50.0,
+                    height: 50.0,
+                },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -44,7 +49,10 @@ fn create_multipage_document() -> Arc<Mutex<Document>> {
                         x: (elem_num as f32) * 60.0,
                         y: (page_num as f32) * 10.0,
                     },
-                    size: Size { width: 50.0, height: 50.0 },
+                    size: Size {
+                        width: 50.0,
+                        height: 50.0,
+                    },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -178,7 +186,10 @@ fn test_page_element_independence() {
         kind: ShapeKind::Rectangle,
         bounds: Rect {
             origin: Point { x: 0.0, y: 0.0 },
-            size: Size { width: 50.0, height: 50.0 },
+            size: Size {
+                width: 50.0,
+                height: 50.0,
+            },
         },
         stroke: None,
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -193,7 +204,10 @@ fn test_page_element_independence() {
         kind: ShapeKind::Ellipse,
         bounds: Rect {
             origin: Point { x: 10.0, y: 10.0 },
-            size: Size { width: 40.0, height: 40.0 },
+            size: Size {
+                width: 40.0,
+                height: 40.0,
+            },
         },
         stroke: None,
         fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),

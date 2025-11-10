@@ -92,7 +92,12 @@ pub fn draw_ellipse(
 }
 
 /// Draw a line shape
-pub fn draw_line(ctx: &Context, bounds: &Rect, stroke: &Option<Color>, stroke_width: f32) -> Result<(), cairo::Error> {
+pub fn draw_line(
+    ctx: &Context,
+    bounds: &Rect,
+    stroke: &Option<Color>,
+    stroke_width: f32,
+) -> Result<(), cairo::Error> {
     if let Some(stroke_color) = stroke {
         ctx.set_source_rgb(
             stroke_color.r as f64,

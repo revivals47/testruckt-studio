@@ -229,7 +229,8 @@ pub fn draw_text_cursor(
 
     // Get actual line spacing from Pango layout
     let (_, logical_rect) = layout.extents();
-    let line_height = (logical_rect.height() as f64 / pango::SCALE as f64) / (text.matches('\n').count() as f64 + 1.0).max(1.0);
+    let line_height = (logical_rect.height() as f64 / pango::SCALE as f64)
+        / (text.matches('\n').count() as f64 + 1.0).max(1.0);
 
     // Split text into lines and find which line the cursor is on
     let lines: Vec<&str> = text.split('\n').collect();
@@ -256,7 +257,10 @@ pub fn draw_text_cursor(
     };
 
     // Measure text up to cursor position on the current line
-    let text_before_cursor_in_line = current_line_text.chars().take(pos_in_line).collect::<String>();
+    let text_before_cursor_in_line = current_line_text
+        .chars()
+        .take(pos_in_line)
+        .collect::<String>();
 
     let layout_line = pangocairo::functions::create_layout(ctx);
     layout_line.set_text(&text_before_cursor_in_line);

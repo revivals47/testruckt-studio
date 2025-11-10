@@ -29,11 +29,7 @@ pub struct DeleteCommand {
 
 impl DeleteCommand {
     /// Create a new delete command
-    pub fn new(
-        document: Arc<Mutex<Document>>,
-        element_id: Uuid,
-        page_index: usize,
-    ) -> Self {
+    pub fn new(document: Arc<Mutex<Document>>, element_id: Uuid, page_index: usize) -> Self {
         Self {
             document,
             element_id,

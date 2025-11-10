@@ -69,13 +69,13 @@
 //!
 //! 詳細は各モジュールドキュメントを参照してください。
 
-mod keyboard;
-mod keyboard_shortcuts;
-mod mouse;
 mod gesture;
 mod gesture_click;
 mod gesture_drag;
 pub mod ime;
+mod keyboard;
+mod keyboard_shortcuts;
+mod mouse;
 
 pub use self::keyboard_shortcuts::move_selected_objects;
 
@@ -83,9 +83,9 @@ use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
 use gtk4::DrawingArea;
+use ime::ImeManager;
 use std::cell::RefCell;
 use std::rc::Rc;
-use ime::ImeManager;
 
 /// キャンバスのポインタイベント処理を初期化
 ///

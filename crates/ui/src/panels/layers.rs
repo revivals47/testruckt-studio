@@ -84,7 +84,9 @@ fn create_layer_item(element: &testruct_core::document::DocumentElement, index: 
             ("Shape", shape_type.to_string())
         }
         testruct_core::document::DocumentElement::Frame(_) => ("Frame", "Frame".to_string()),
-        testruct_core::document::DocumentElement::Group(group) => ("Group", format!("Group: {}", group.name)),
+        testruct_core::document::DocumentElement::Group(group) => {
+            ("Group", format!("Group: {}", group.name))
+        }
     };
 
     // Create element label

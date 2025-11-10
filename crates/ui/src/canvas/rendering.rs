@@ -16,8 +16,7 @@ pub use super::grid_rendering::{Guide, GuideOrientation, RulerConfig};
 
 // Re-export from rendering_text module
 pub use super::rendering_text::{
-    draw_text_cursor, draw_text_editing_frame, draw_text_element, measure_text_height,
-    TEXT_PADDING,
+    draw_text_cursor, draw_text_editing_frame, draw_text_element, measure_text_height, TEXT_PADDING,
 };
 
 // Re-export from rendering_selection module
@@ -150,7 +149,10 @@ pub fn snap_point_to_grid(point: &Point, spacing: f32) -> Point {
 }
 
 /// Snap a rectangle's origin to the grid
-pub fn snap_rect_to_grid(rect: &testruct_core::layout::Rect, spacing: f32) -> testruct_core::layout::Rect {
+pub fn snap_rect_to_grid(
+    rect: &testruct_core::layout::Rect,
+    spacing: f32,
+) -> testruct_core::layout::Rect {
     testruct_core::layout::Rect::new(snap_point_to_grid(&rect.origin, spacing), rect.size.clone())
 }
 

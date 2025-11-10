@@ -9,15 +9,15 @@ mod text_handlers;
 #[path = "property_handlers_shape.rs"]
 mod shape_handlers;
 
-pub use text_handlers::{
-    wire_font_family_signal, wire_font_size_signal, wire_bold_signal, wire_italic_signal,
-    wire_underline_signal, wire_strikethrough_signal, wire_text_color_signal,
-    wire_text_background_color_signal, wire_alignment_dropdown, wire_line_height_signal,
-    wire_text_content_signal, find_string_index,
-};
 pub use shape_handlers::{
-    wire_stroke_color_signal, wire_fill_color_signal, wire_stroke_width_signal, wire_auto_resize_signal,
-    color_to_hex,
+    color_to_hex, wire_auto_resize_signal, wire_fill_color_signal, wire_stroke_color_signal,
+    wire_stroke_width_signal,
+};
+pub use text_handlers::{
+    find_string_index, wire_alignment_dropdown, wire_bold_signal, wire_font_family_signal,
+    wire_font_size_signal, wire_italic_signal, wire_line_height_signal, wire_strikethrough_signal,
+    wire_text_background_color_signal, wire_text_color_signal, wire_text_content_signal,
+    wire_underline_signal,
 };
 
 use gtk4::prelude::*;
@@ -350,9 +350,7 @@ pub fn update_property_panel_on_selection(
     components
         .text_align_combo
         .set_sensitive(text_controls_enabled);
-    components
-        .bold_button
-        .set_sensitive(text_controls_enabled);
+    components.bold_button.set_sensitive(text_controls_enabled);
     components
         .italic_button
         .set_sensitive(text_controls_enabled);
@@ -403,8 +401,12 @@ pub fn update_property_panel_on_selection(
         }
 
         // Update text formatting buttons state
-        if components.bold_button.is_active() != (text.style.weight == testruct_core::typography::FontWeight::Bold) {
-            components.bold_button.set_active(text.style.weight == testruct_core::typography::FontWeight::Bold);
+        if components.bold_button.is_active()
+            != (text.style.weight == testruct_core::typography::FontWeight::Bold)
+        {
+            components
+                .bold_button
+                .set_active(text.style.weight == testruct_core::typography::FontWeight::Bold);
         }
         if components.italic_button.is_active() != text.style.italic {
             components.italic_button.set_active(text.style.italic);
@@ -413,7 +415,9 @@ pub fn update_property_panel_on_selection(
             components.underline_button.set_active(text.style.underline);
         }
         if components.strikethrough_button.is_active() != text.style.strikethrough {
-            components.strikethrough_button.set_active(text.style.strikethrough);
+            components
+                .strikethrough_button
+                .set_active(text.style.strikethrough);
         }
 
         // Update text background color button label
@@ -422,7 +426,9 @@ pub fn update_property_panel_on_selection(
         } else {
             "なし".to_string()
         };
-        components.text_background_color_button.set_label(&bg_color_label);
+        components
+            .text_background_color_button
+            .set_label(&bg_color_label);
     }
 
     // Update stroke width spinner

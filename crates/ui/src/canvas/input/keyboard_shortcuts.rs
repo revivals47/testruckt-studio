@@ -322,7 +322,10 @@ pub fn handle_paste_text_in_editing(
     let tool_state = render_state.tool_state.borrow();
     if let Some(text_id) = tool_state.editing_text_id {
         let cursor_pos = tool_state.editing_cursor_pos;
-        eprintln!("✅ Text editing active: ID={:?}, cursor={}", text_id, cursor_pos);
+        eprintln!(
+            "✅ Text editing active: ID={:?}, cursor={}",
+            text_id, cursor_pos
+        );
         drop(tool_state);
 
         // Get text from clipboard using pbpaste
@@ -331,9 +334,20 @@ pub fn handle_paste_text_in_editing(
             eprintln!("✅ pbpaste executed, status: {}", output.status);
             if let Ok(clipboard_text) = String::from_utf8(output.stdout) {
                 let pasted_text = clipboard_text.trim();
-                eprintln!("📋 Clipboard content (len={}): {:?}", pasted_text.len(), if pasted_text.len() > 50 { &pasted_text[..50] } else { pasted_text });
+                eprintln!(
+                    "📋 Clipboard content (len={}): {:?}",
+                    pasted_text.len(),
+                    if pasted_text.len() > 50 {
+                        &pasted_text[..50]
+                    } else {
+                        pasted_text
+                    }
+                );
                 if !pasted_text.is_empty() {
-                    eprintln!("📋 Pasting text in editing mode: '{}' at cursor {}", pasted_text, cursor_pos);
+                    eprintln!(
+                        "📋 Pasting text in editing mode: '{}' at cursor {}",
+                        pasted_text, cursor_pos
+                    );
 
                     // Insert pasted text character by character
                     app_state.with_mutable_active_document(|doc| {
@@ -352,8 +366,11 @@ pub fn handle_paste_text_in_editing(
                                         }
 
                                         text.content = chars.iter().collect();
-                                        eprintln!("✅ Pasted {} characters, new content length: {}",
-                                                 pasted_text.chars().count(), text.content.chars().count());
+                                        eprintln!(
+                                            "✅ Pasted {} characters, new content length: {}",
+                                            pasted_text.chars().count(),
+                                            text.content.chars().count()
+                                        );
                                     }
                                 }
                             }
@@ -367,7 +384,10 @@ pub fn handle_paste_text_in_editing(
                     drop(tool_state);
 
                     drawing_area.queue_draw();
-                    tracing::info!("✅ Pasted {} characters into text element", pasted_char_count);
+                    tracing::info!(
+                        "✅ Pasted {} characters into text element",
+                        pasted_char_count
+                    );
                 }
             }
         }

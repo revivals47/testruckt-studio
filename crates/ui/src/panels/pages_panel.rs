@@ -7,11 +7,11 @@
 //! - Page properties editing
 
 use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, Button, Label, Orientation, ScrolledWindow, Picture};
+use gtk4::{Box as GtkBox, Button, Label, Orientation, Picture, ScrolledWindow};
 use testruct_core::document::{Document, Page};
 
 use crate::app::AppState;
-use crate::canvas::{CanvasView, page_thumbnail::generate_page_thumbnail};
+use crate::canvas::{page_thumbnail::generate_page_thumbnail, CanvasView};
 
 /// Pages panel for document page management
 pub struct PagesPanel {
@@ -30,7 +30,9 @@ impl PagesPanel {
         let pages_box = Self::build_pages_list(document, app_state, canvas_view);
         scrolled.set_child(Some(&pages_box));
 
-        PagesPanel { container: scrolled }
+        PagesPanel {
+            container: scrolled,
+        }
     }
 
     /// Build pages list from document

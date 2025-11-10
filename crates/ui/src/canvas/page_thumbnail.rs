@@ -16,17 +16,27 @@ pub fn generate_page_thumbnail(page: &Page) -> Result<Vec<u8>, String> {
     let surface = ImageSurface::create(Format::Rgb24, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
         .map_err(|e| format!("Failed to create surface: {:?}", e))?;
 
-    let context = Context::new(&surface).map_err(|e| format!("Failed to create context: {:?}", e))?;
+    let context =
+        Context::new(&surface).map_err(|e| format!("Failed to create context: {:?}", e))?;
 
     // Draw white background
     context.set_source_rgb(1.0, 1.0, 1.0);
-    context.paint().map_err(|e| format!("Failed to paint background: {:?}", e))?;
+    context
+        .paint()
+        .map_err(|e| format!("Failed to paint background: {:?}", e))?;
 
     // Draw a border
     context.set_source_rgb(0.8, 0.8, 0.8);
     context.set_line_width(1.0);
-    context.rectangle(0.5, 0.5, THUMBNAIL_WIDTH as f64 - 1.0, THUMBNAIL_HEIGHT as f64 - 1.0);
-    context.stroke().map_err(|e| format!("Failed to stroke border: {:?}", e))?;
+    context.rectangle(
+        0.5,
+        0.5,
+        THUMBNAIL_WIDTH as f64 - 1.0,
+        THUMBNAIL_HEIGHT as f64 - 1.0,
+    );
+    context
+        .stroke()
+        .map_err(|e| format!("Failed to stroke border: {:?}", e))?;
 
     // Render elements at small scale
     render_page_elements(&context, page)?;
@@ -64,11 +74,15 @@ fn render_page_elements(context: &Context, page: &Page) -> Result<(), String> {
                         context.rectangle(x, y, w, h);
                     }
                     testruct_core::document::ShapeKind::Ellipse => {
-                        context.save().map_err(|e| format!("Failed to save context: {:?}", e))?;
+                        context
+                            .save()
+                            .map_err(|e| format!("Failed to save context: {:?}", e))?;
                         context.translate(x + w / 2.0, y + h / 2.0);
                         context.scale(w / 2.0, h / 2.0);
                         context.arc(0.0, 0.0, 1.0, 0.0, 2.0 * std::f64::consts::PI);
-                        context.restore().map_err(|e| format!("Failed to restore context: {:?}", e))?;
+                        context
+                            .restore()
+                            .map_err(|e| format!("Failed to restore context: {:?}", e))?;
                     }
                     testruct_core::document::ShapeKind::Line => {
                         context.move_to(x, y);
@@ -99,7 +113,9 @@ fn render_page_elements(context: &Context, page: &Page) -> Result<(), String> {
 
                 // Draw image placeholder with diagonal
                 context.rectangle(x, y, w, h);
-                context.stroke().map_err(|e| format!("Failed to stroke: {:?}", e))?;
+                context
+                    .stroke()
+                    .map_err(|e| format!("Failed to stroke: {:?}", e))?;
                 context.move_to(x, y);
                 context.line_to(x + w, y + h);
             }
@@ -130,7 +146,9 @@ fn render_page_elements(context: &Context, page: &Page) -> Result<(), String> {
     }
 
     context.set_dash(&[], 0.0);
-    context.stroke().map_err(|e| format!("Failed to stroke: {:?}", e))?;
+    context
+        .stroke()
+        .map_err(|e| format!("Failed to stroke: {:?}", e))?;
 
     Ok(())
 }

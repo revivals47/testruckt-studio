@@ -6,13 +6,13 @@
 use std::collections::VecDeque;
 
 // Re-export command implementations from submodules
+mod undo_redo_group;
 mod undo_redo_shape;
 mod undo_redo_text;
-mod undo_redo_group;
 
-pub use undo_redo_shape::{CreateCommand, DeleteCommand};
-pub use undo_redo_text::{PasteCommand, DuplicateCommand};
 pub use undo_redo_group::GroupCommand;
+pub use undo_redo_shape::{CreateCommand, DeleteCommand};
+pub use undo_redo_text::{DuplicateCommand, PasteCommand};
 
 /// Command trait for undo/redo operations
 pub trait Command: std::fmt::Debug {

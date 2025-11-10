@@ -31,7 +31,9 @@ impl DndLayersPanel {
         let layers_box = Self::build_dnd_layers_list(elements, app_state, canvas_view);
         scrolled.set_child(Some(&layers_box));
 
-        DndLayersPanel { container: scrolled }
+        DndLayersPanel {
+            container: scrolled,
+        }
     }
 
     /// Build drag-and-drop enabled layers list

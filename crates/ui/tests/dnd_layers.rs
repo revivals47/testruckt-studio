@@ -1,7 +1,9 @@
 //! Tests for drag-and-drop layers panel functionality
 
 use std::sync::{Arc, Mutex};
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 use uuid::Uuid;
@@ -20,8 +22,14 @@ fn create_test_document_with_layers() -> Arc<Mutex<Document>> {
                 id: Uuid::new_v4(),
                 kind: ShapeKind::Rectangle,
                 bounds: Rect {
-                    origin: Point { x: (i as f32) * 30.0, y: 10.0 },
-                    size: Size { width: 25.0, height: 25.0 },
+                    origin: Point {
+                        x: (i as f32) * 30.0,
+                        y: 10.0,
+                    },
+                    size: Size {
+                        width: 25.0,
+                        height: 25.0,
+                    },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
@@ -172,7 +180,11 @@ fn test_layer_boundaries() {
 
     // Try to move front layer forward (should not change)
     let front_id = page.elements[page.elements.len() - 1].id();
-    let front_pos = page.elements.iter().position(|e| e.id() == front_id).unwrap();
+    let front_pos = page
+        .elements
+        .iter()
+        .position(|e| e.id() == front_id)
+        .unwrap();
 
     if front_pos < page.elements.len() - 1 {
         page.elements.swap(front_pos, front_pos + 1);

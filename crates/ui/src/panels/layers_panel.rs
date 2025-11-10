@@ -35,7 +35,9 @@ impl LayersPanel {
         let layers_box = Self::build_layers_list(elements, app_state, canvas_view);
         scrolled.set_child(Some(&layers_box));
 
-        LayersPanel { container: scrolled }
+        LayersPanel {
+            container: scrolled,
+        }
     }
 
     /// Build layers list from document elements

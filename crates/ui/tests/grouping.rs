@@ -1,7 +1,9 @@
 //! Integration tests for Grouping functionality
 
 use std::sync::{Arc, Mutex};
-use testruct_core::document::{Document, DocumentBuilder, Page, DocumentElement, ShapeKind, ShapeElement};
+use testruct_core::document::{
+    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind,
+};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::Color;
 use testruct_ui::undo_redo::Command;
@@ -23,7 +25,10 @@ fn create_test_shape(x: f32, y: f32) -> DocumentElement {
         kind: ShapeKind::Rectangle,
         bounds: Rect {
             origin: Point { x, y },
-            size: Size { width: 100.0, height: 50.0 },
+            size: Size {
+                width: 100.0,
+                height: 50.0,
+            },
         },
         stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),

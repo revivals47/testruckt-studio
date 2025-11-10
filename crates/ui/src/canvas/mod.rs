@@ -99,8 +99,13 @@ impl CanvasView {
         if let Some(parent) = drawing_area.parent() {
             eprintln!("DrawingArea parent: {:?}", parent);
             let alloc = parent.allocation();
-            eprintln!("Parent allocation: x={}, y={}, w={}, h={}",
-                alloc.x(), alloc.y(), alloc.width(), alloc.height());
+            eprintln!(
+                "Parent allocation: x={}, y={}, w={}, h={}",
+                alloc.x(),
+                alloc.y(),
+                alloc.width(),
+                alloc.height()
+            );
         }
         eprintln!("=== End Hierarchy ===\n");
 
@@ -325,12 +330,9 @@ impl CanvasView {
             }
             DocumentElement::Image(image) => {
                 // Draw image element with actual image or fallback to placeholder
-                if let Err(e) = rendering::draw_image_element(
-                    ctx,
-                    &image.bounds,
-                    &image.source,
-                    app_state,
-                ) {
+                if let Err(e) =
+                    rendering::draw_image_element(ctx, &image.bounds, &image.source, app_state)
+                {
                     tracing::warn!("Failed to render image: {}", e);
                     // Fallback to placeholder if rendering fails
                     rendering::draw_image_placeholder(ctx, &image.bounds)?;
@@ -351,19 +353,46 @@ impl CanvasView {
             DocumentElement::Shape(shape) => {
                 match shape.kind {
                     ShapeKind::Rectangle => {
-                        rendering::draw_rectangle(ctx, &shape.bounds, &shape.stroke, shape.stroke_width, &shape.fill)?;
+                        rendering::draw_rectangle(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            shape.stroke_width,
+                            &shape.fill,
+                        )?;
                     }
                     ShapeKind::Ellipse => {
-                        rendering::draw_ellipse(ctx, &shape.bounds, &shape.stroke, shape.stroke_width, &shape.fill)?;
+                        rendering::draw_ellipse(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            shape.stroke_width,
+                            &shape.fill,
+                        )?;
                     }
                     ShapeKind::Line => {
-                        rendering::draw_line(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
+                        rendering::draw_line(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            shape.stroke_width,
+                        )?;
                     }
                     ShapeKind::Arrow => {
-                        rendering::draw_arrow(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
+                        rendering::draw_arrow(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            shape.stroke_width,
+                        )?;
                     }
                     ShapeKind::Polygon => {
-                        rendering::draw_polygon(ctx, &shape.bounds, &shape.stroke, shape.stroke_width)?;
+                        rendering::draw_polygon(
+                            ctx,
+                            &shape.bounds,
+                            &shape.stroke,
+                            shape.stroke_width,
+                        )?;
                     }
                 }
 

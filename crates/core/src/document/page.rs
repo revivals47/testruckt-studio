@@ -138,7 +138,7 @@ pub struct ShapeElement {
     pub kind: ShapeKind,
     pub bounds: super::super::layout::Rect,
     pub stroke: Option<crate::typography::Color>,
-    pub stroke_width: f32,  // ← 新規追加（デフォルト: 2.0）
+    pub stroke_width: f32, // ← 新規追加（デフォルト: 2.0）
     pub fill: Option<crate::typography::Color>,
 }
 
