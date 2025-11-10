@@ -33,12 +33,16 @@ use gtk4::{DrawingArea, GestureClick, ScrolledWindow};
 use gtk4::gdk;
 use testruct_core::document::DocumentElement;
 use testruct_core::layout::Rect;
+use super::ime::ImeManager;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// クリックジェスチャーを設定
 pub fn setup_click_gesture(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
+    ime_manager: Rc<RefCell<ImeManager>>,
 ) {
     let click_gesture = GestureClick::new();
     click_gesture.set_button(gdk::BUTTON_PRIMARY);
@@ -47,6 +51,7 @@ pub fn setup_click_gesture(
     let render_state_click = render_state.clone();
     let app_state_click = app_state.clone();
     let drawing_area_click = drawing_area.clone();
+    let ime_manager_click = ime_manager.clone();
 
     click_gesture.connect_pressed(move |gesture, n_press, x, y| {
         let state = render_state_click.clone();
@@ -147,6 +152,12 @@ pub fn setup_click_gesture(
                                         // Give focus to drawing area to receive keyboard input
                                         drawing_area_click.grab_focus();
                                         eprintln!("  ✅ Called grab_focus()");
+
+                                        // Note: IME focus_in() is not called here because:
+                                        // - On GTK4, EventControllerKey automatically handles IMContext
+                                        // - Calling focus_in() on custom DrawingArea causes issues on macOS
+                                        // - The IMContext is already connected via set_im_context()
+
                                         drawing_area_click.queue_draw();
 
                                         tracing::info!(

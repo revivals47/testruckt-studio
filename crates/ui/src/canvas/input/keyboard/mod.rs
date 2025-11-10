@@ -34,14 +34,18 @@
 
 pub mod text_editing_keys;
 pub mod text_alignment_keys;
+// IME module is declared in parent input module
 
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
 use gtk4::{DrawingArea, EventControllerKey};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 // Import keyboard shortcuts and key handlers
 use super::keyboard_shortcuts;
+use super::ime::ImeManager;
 use self::text_editing_keys::handle_text_editing_key;
 use self::text_alignment_keys::handle_text_alignment;
 
@@ -52,15 +56,68 @@ use self::text_alignment_keys::handle_text_alignment;
 /// - `drawing_area`: GTK DrawingArea ウィジェット
 /// - `render_state`: キャンバス描画状態
 /// - `app_state`: アプリケーション全体の状態
+/// - `ime_manager`: Shared IME manager for handling Japanese/Chinese input
 pub fn setup_keyboard_events(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
+    ime_manager: Rc<RefCell<ImeManager>>,
 ) {
     let key_controller = EventControllerKey::new();
     let render_state_keyboard = render_state.clone();
     let app_state_keyboard = app_state.clone();
     let drawing_area_keyboard = drawing_area.clone();
+
+    // Setup IME (Input Method Editor) for Japanese and other input methods
+    ime_manager.borrow().setup_with_controller(&key_controller);
+
+    // Register callback for IME-composed text insertion
+    let ime_manager_for_cb = ime_manager.clone();
+    let render_state_ime = render_state.clone();
+    let app_state_ime = app_state.clone();
+    let drawing_area_ime = drawing_area.clone();
+
+    ime_manager.borrow().set_text_insertion_callback(move |composed_text: String| {
+        // When IME delivers composed text (e.g., 日本語), insert it at cursor
+        let render_state_ime_cb = render_state_ime.clone();
+        let app_state_ime_cb = app_state_ime.clone();
+        let drawing_area_ime_cb = drawing_area_ime.clone();
+
+        let tool_state_ref = render_state_ime_cb.tool_state.borrow();
+        if let Some(text_id) = tool_state_ref.editing_text_id {
+            let cursor_pos = tool_state_ref.editing_cursor_pos;
+            drop(tool_state_ref);
+
+            // Insert each composed character at the current cursor position
+            for ch in composed_text.chars() {
+                // Use the existing character insertion logic
+                app_state_ime_cb.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
+                        for element in &mut page.elements {
+                            if let testruct_core::document::DocumentElement::Text(text) = element {
+                                if text.id == text_id {
+                                    let mut chars: Vec<char> = text.content.chars().collect();
+                                    if cursor_pos <= chars.len() {
+                                        chars.insert(cursor_pos, ch);
+                                        text.content = chars.iter().collect();
+                                        tracing::debug!("✅ IME inserted character: '{}'", ch);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Update cursor position and refresh canvas
+            let mut tool_state = render_state_ime_cb.tool_state.borrow_mut();
+            tool_state.editing_cursor_pos += composed_text.chars().count();
+            drop(tool_state);
+
+            drawing_area_ime_cb.queue_draw();
+            tracing::debug!("🎌 IME commit: inserted '{}' ({} chars)", composed_text, composed_text.chars().count());
+        }
+    });
 
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
         tracing::debug!("🔑 Key pressed: keyval={:?}", keyval);
@@ -75,6 +132,11 @@ pub fn setup_keyboard_events(
         if in_text_editing {
             tracing::debug!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
         }
+
+        // NOTE: IME key filtering is handled automatically by GTK4's EventControllerKey
+        // when we call set_im_context(). The IME will emit ::commit signal when
+        // composition is complete, which we handle in the callback registered above.
+        // Direct key handling continues here for non-composition keys (arrows, escape, etc).
 
         // Determine if shift and control are pressed
         let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
@@ -117,6 +179,7 @@ pub fn setup_keyboard_events(
                     text_id,
                     keyval,
                     &mut cursor_pos,
+                    &ime_manager,
                 ) {
                     if should_stop {
                         return gtk4::glib::Propagation::Stop;

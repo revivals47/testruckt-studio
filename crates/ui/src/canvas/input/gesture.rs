@@ -85,8 +85,10 @@
 
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
-use crate::canvas::input::{gesture_click, gesture_drag};
+use crate::canvas::input::{gesture_click, gesture_drag, ime::ImeManager};
 use gtk4::DrawingArea;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// クリックおよびドラッグジェスチャーを設定
 ///
@@ -100,19 +102,21 @@ use gtk4::DrawingArea;
 /// - `drawing_area`: GTK DrawingArea ウィジェット
 /// - `render_state`: キャンバス描画状態
 /// - `app_state`: アプリケーション全体の状態
+/// - `ime_manager`: Shared IME manager for focus management
 ///
 /// # 例
 ///
 /// ```ignore
 /// use crate::canvas::input::gesture;
 ///
-/// gesture::setup_gestures(&drawing_area, &render_state, &app_state);
+/// gesture::setup_gestures(&drawing_area, &render_state, &app_state, ime_manager);
 /// ```
 pub fn setup_gestures(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
+    ime_manager: Rc<RefCell<ImeManager>>,
 ) {
-    gesture_click::setup_click_gesture(drawing_area, render_state, app_state);
+    gesture_click::setup_click_gesture(drawing_area, render_state, app_state, ime_manager);
     gesture_drag::setup_drag_gesture(drawing_area, render_state, app_state);
 }

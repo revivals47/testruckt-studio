@@ -22,6 +22,9 @@ use gtk4::prelude::*;
 use gtk4::DrawingArea;
 use testruct_core::document::DocumentElement;
 use uuid::Uuid;
+use super::super::ime::ImeManager;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// テキスト編集キー処理
 ///
@@ -47,6 +50,7 @@ pub fn handle_text_editing_key(
     text_id: Uuid,
     keyval: gtk4::gdk::Key,
     cursor_pos: &mut usize,
+    ime_manager: &Rc<RefCell<ImeManager>>,
 ) -> Option<bool> {
     match keyval {
         gtk4::gdk::Key::Escape => {
@@ -55,6 +59,12 @@ pub fn handle_text_editing_key(
             tool_state.editing_text_id = None;
             tool_state.editing_cursor_pos = 0;
             drop(tool_state);
+
+            // Note: IME focus_out() is not called here because:
+            // - On GTK4, EventControllerKey automatically handles IMContext
+            // - Calling focus_out() on custom DrawingArea causes issues on macOS
+            // - The IMContext state will be reset naturally when focus changes
+
             drawing_area.queue_draw();
             tracing::info!("✅ Exited text editing mode");
             Some(true)

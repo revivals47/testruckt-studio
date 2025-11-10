@@ -75,6 +75,7 @@ mod mouse;
 mod gesture;
 mod gesture_click;
 mod gesture_drag;
+pub mod ime;
 
 pub use self::keyboard_shortcuts::move_selected_objects;
 
@@ -82,6 +83,9 @@ use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
 use gtk4::DrawingArea;
+use std::cell::RefCell;
+use std::rc::Rc;
+use ime::ImeManager;
 
 /// キャンバスのポインタイベント処理を初期化
 ///
@@ -99,13 +103,18 @@ use gtk4::DrawingArea;
 /// - マウス動作追跡（EventControllerMotion）
 /// - クリックジェスチャー（GestureClick）
 /// - ドラッグジェスチャー（GestureDrag）
+/// - IME (Input Method Editor) for Japanese input
 pub fn wire_pointer_events(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
 ) {
     drawing_area.set_focusable(true);
-    keyboard::setup_keyboard_events(drawing_area, render_state, app_state);
+
+    // Create IME manager and share it across keyboard and gesture modules
+    let ime_manager = Rc::new(RefCell::new(ImeManager::new()));
+
+    keyboard::setup_keyboard_events(drawing_area, render_state, app_state, ime_manager.clone());
     mouse::setup_mouse_tracking(drawing_area, render_state, app_state);
-    gesture::setup_gestures(drawing_area, render_state, app_state);
+    gesture::setup_gestures(drawing_area, render_state, app_state, ime_manager);
 }

@@ -1,0 +1,453 @@
+================================================================================
+JAPANESE IME IMPLEMENTATION FOR TESTRUCT - ANALYSIS SUMMARY
+================================================================================
+
+Date: 2025-11-10
+Project: Testruct Desktop (GTK4/Rust)
+
+================================================================================
+1. CURRENT STATUS
+================================================================================
+
+NO IME SUPPORT CURRENTLY IMPLEMENTED
+- Codebase search found zero references to IMContext or related classes
+- Keyboard input limited to keyval.to_unicode() which only handles:
+  * Direct keyboard characters (ASCII, Latin, accented)
+  * NOT multi-key compositions (Japanese, Chinese, Korean)
+- All GTK4 IME dependencies already available in project
+
+KEY FINDING: keyval.to_unicode() is the CRITICAL LIMITATION
+- Location: /crates/ui/src/canvas/input/keyboard/text_editing_keys.rs:218
+- Problem: Completely bypasses input method composition
+- Result: Japanese IME input does NOT work at all
+
+
+================================================================================
+2. INFRASTRUCTURE STATUS
+================================================================================
+
+EXISTING GOOD FOUNDATION:
+✓ EventControllerKey already configured for keyboard events
+✓ DrawingArea properly receives focus via grab_focus() (line 148 gesture_click.rs)
+✓ Text editing mode active when needed
+✓ All GTK dependencies present (gtk4 0.7, glib 0.18)
+✓ Existing text insertion logic in text_editing_keys.rs (reusable)
+
+WHAT'S MISSING:
+✗ IMMulticontext instance not created
+✗ No connection between EventControllerKey and IMContext
+✗ No signal handlers for commit/preedit
+✗ No preedit rendering/display logic
+✗ No surrounding text tracking (optional but helpful)
+
+
+================================================================================
+3. TECHNICAL REQUIREMENTS
+================================================================================
+
+GTK4 IME ARCHITECTURE (for DrawingArea):
+1. Create IMMulticontext instance
+   - NOT abstract IMContext (DrawingArea isn't a built-in text widget)
+   - IMMulticontext supports multiple input method switching
+
+2. Connect IMContext to EventControllerKey
+   - Use: key_controller.set_im_context(Some(&context))
+   - This routes key events through IME layer first
+
+3. Implement required signal handlers:
+   - ::commit → receive composed text (CRITICAL)
+   - ::preedit-changed → show intermediate composition (NICE-TO-HAVE)
+   - ::preedit-start/end → UI feedback (OPTIONAL)
+   - ::retrieve-surrounding → contextual IME info (OPTIONAL)
+
+4. Key event flow:
+   User presses key
+     ↓
+   EventControllerKey::key-pressed signal
+     ↓
+   IMContext.filter_key(keyval, modifiers) → bool
+     ├─ TRUE: IME handled (wait for ::commit signal later)
+     └─ FALSE: Direct input (process immediately)
+
+CRITICAL GOTCHAS:
+⚠ GTK4 removed filter_keypress(event) - must use filter_key(keyval, mods)
+⚠ DrawingArea has NO built-in preedit display (unlike Text/TextView widgets)
+⚠ Must manually track cursor location for IME hints
+⚠ Preedit display is NOT automatic - must implement custom rendering
+
+
+================================================================================
+4. IMPLEMENTATION COMPLEXITY & EFFORT
+================================================================================
+
+EFFORT BREAKDOWN:
+- Phase 1 (IMContext integration): 1-1.5 days
+  * Create IME module structure
+  * Wrap IMMulticontext
+  * Connect to EventControllerKey
+  * Implement commit signal handler
+  * Update keyboard handler to call filter_key()
+
+- Phase 2 (Preedit display): 0.5-1 day
+  * Track preedit state
+  * Render underline in canvas
+  * Connect preedit-changed signal
+  * Implement visual feedback
+
+- Phase 3 (Polish & testing): 0.5-1 day
+  * Edge case handling
+  * Performance tuning
+  * Integration testing
+  * Documentation
+
+TOTAL ESTIMATED TIME: 2-3.5 days for production-ready implementation
+
+COMPLEXITY: MEDIUM
+- Not "hard" (well-documented APIs)
+- Not "trivial" (custom rendering + signal handling)
+- Main challenge: no built-in preedit rendering in DrawingArea
+
+
+================================================================================
+5. MODIFIED FILES
+================================================================================
+
+MUST MODIFY:
+1. /crates/ui/src/canvas/input/keyboard/mod.rs
+   - Lines 55-227: Main event handler
+   - Add: IMManager creation and filter_key() call
+   - Change: Route text input through IME commit signal
+
+2. /crates/ui/src/canvas/input/keyboard/text_editing_keys.rs
+   - Lines 216-252: Character insertion logic
+   - Change: Keep for direct keys (arrows, delete, etc)
+   - Remove: Direct character insertion (let IME handle)
+
+3. /crates/ui/src/canvas/input/gesture_click.rs
+   - Line 148: Focus management
+   - Add: ime_manager.focus_in() after grab_focus()
+   - Add: ime_manager.focus_out() when exiting edit mode
+
+MUST CREATE:
+1. /crates/ui/src/canvas/input/ime/mod.rs
+   - ImeManager struct with IMMulticontext
+   - Signal connection methods
+   - Focus/key handling methods
+
+NO CHANGES NEEDED:
+- /crates/ui/Cargo.toml (all deps present)
+- /crates/ui/src/canvas/rendering*.rs (initially)
+  * Later: Add preedit rendering in Phase 2
+
+
+================================================================================
+6. IMPLEMENTATION PLAN
+================================================================================
+
+STEP-BY-STEP:
+
+Phase 1: Basic IME Integration
+1. Create crates/ui/src/canvas/input/ime/mod.rs
+   pub struct ImeManager {
+       context: IMMulticontext,
+       preedit_string: String,
+       preedit_cursor: usize,
+   }
+
+2. Implement core methods:
+   - fn new() -> Self
+   - fn connect_to_drawing_area(&self, key_controller, drawing_area)
+   - fn filter_key(&self, keyval, modifiers) -> bool
+   - fn focus_in(&self) / focus_out(&self)
+   - fn reset(&self)
+
+3. Connect ::commit signal
+   context.connect_commit(|_, text: &str| {
+       // Insert 'text' at current cursor position
+       app_state.with_active_document(|doc| {
+           // Find editing text element
+           // Insert composed Japanese text
+       });
+       drawing_area.queue_draw();
+   });
+
+4. Update keyboard/mod.rs
+   - Create ImeManager instance
+   - Call ime_manager.filter_key() before processing keys
+   - Return Stop if filter_key() returns true
+   - Integrate with existing text editing handlers
+
+5. Update gesture_click.rs
+   - Call ime_manager.focus_in() when entering text edit
+   - Call ime_manager.focus_out() when exiting text edit
+
+Phase 2: Preedit Display (Optional but Recommended)
+1. Track preedit state in render_state
+2. Connect ::preedit-changed signal
+3. Render underline under preedit text in canvas
+4. Connect ::preedit-start/end for UI feedback
+
+Phase 3: Polish & Testing
+1. Handle edge cases (rapid typing, focus loss)
+2. Test with ibus, fcitx5, other IMEs
+3. Performance validation
+4. Documentation updates
+
+
+================================================================================
+7. CODE EXAMPLE - MINIMAL WORKING IMPLEMENTATION
+================================================================================
+
+File: crates/ui/src/canvas/input/ime/mod.rs
+────────────────────────────────────────────
+
+use gtk4::prelude::*;
+use gtk4::{IMMulticontext, DrawingArea, EventControllerKey};
+use gdk::gdk::ModifierType;
+use glib::clone;
+
+pub struct ImeManager {
+    context: IMMulticontext,
+}
+
+impl ImeManager {
+    pub fn new() -> Self {
+        Self {
+            context: IMMulticontext::new(),
+        }
+    }
+
+    pub fn setup(
+        &self,
+        key_controller: &EventControllerKey,
+        drawing_area: &DrawingArea,
+        app_state: &AppState,
+        render_state: &CanvasRenderState,
+    ) {
+        // Connect IMContext to key controller
+        key_controller.set_im_context(Some(&self.context));
+        self.context.set_client_widget(drawing_area);
+
+        // Connect commit signal - MOST IMPORTANT
+        self.context.connect_commit(
+            clone!(@strong app_state, @strong render_state, @weak drawing_area => move |_, text: &str| {
+                eprintln!("IME Commit: '{}'", text);
+
+                // Get current editing state
+                let tool_state = render_state.tool_state.borrow();
+                if let Some(text_id) = tool_state.editing_text_id {
+                    let mut cursor_pos = tool_state.editing_cursor_pos;
+                    drop(tool_state);
+
+                    // Insert composed text
+                    app_state.with_active_document(|doc| {
+                        if let Some(page) = doc.pages.first_mut() {
+                            for element in &mut page.elements {
+                                if let DocumentElement::Text(text_elem) = element {
+                                    if text_elem.id == text_id {
+                                        let mut chars: Vec<char> = text_elem.content.chars().collect();
+                                        for ch in text.chars() {
+                                            chars.insert(cursor_pos, ch);
+                                            cursor_pos += 1;
+                                        }
+                                        text_elem.content = chars.iter().collect();
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Update cursor position
+                    let mut tool_state = render_state.tool_state.borrow_mut();
+                    tool_state.editing_cursor_pos = cursor_pos;
+
+                    drawing_area.queue_draw();
+                }
+            })
+        );
+    }
+
+    pub fn filter_key(&self, keyval: gdk::Key, modifiers: ModifierType) -> bool {
+        self.context.filter_key(keyval, modifiers)
+    }
+
+    pub fn focus_in(&self) {
+        self.context.focus_in();
+    }
+
+    pub fn focus_out(&self) {
+        self.context.focus_out();
+    }
+}
+
+
+Usage in keyboard/mod.rs:
+─────────────────────────
+
+pub fn setup_keyboard_events(
+    drawing_area: &DrawingArea,
+    render_state: &CanvasRenderState,
+    app_state: &AppState,
+) {
+    let key_controller = EventControllerKey::new();
+
+    // NEW: Create and setup IME
+    let ime_manager = std::rc::Rc::new(ImeManager::new());
+    ime_manager.setup(&key_controller, drawing_area, app_state, render_state);
+
+    let ime_clone = ime_manager.clone();
+
+    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+        let tool_state_ref = render_state.tool_state.borrow();
+        let in_text_editing = tool_state_ref.editing_text_id.is_some();
+        drop(tool_state_ref);
+
+        if in_text_editing {
+            // NEW: Let IME try to handle key first
+            if ime_clone.filter_key(keyval, state) {
+                return gtk4::glib::Propagation::Stop;
+            }
+        }
+
+        // OLD: Handle other keys (arrows, escape, etc)
+        match keyval {
+            gtk4::gdk::Key::Escape if in_text_editing => {
+                let mut tool_state = render_state.tool_state.borrow_mut();
+                tool_state.editing_text_id = None;
+                drop(tool_state);
+                ime_clone.focus_out();
+                gtk4::glib::Propagation::Stop
+            }
+            _ => gtk4::glib::Propagation::Proceed
+        }
+    });
+
+    drawing_area.add_controller(key_controller);
+}
+
+
+================================================================================
+8. TESTING PLAN
+================================================================================
+
+MANUAL TESTING:
+1. Install Japanese IME
+   $ sudo apt install ibus ibus-anthy
+   $ export GTK_IM_MODULE=ibus
+
+2. Run Testruct
+   $ cargo run --release
+
+3. Create text element and enter edit mode
+
+4. Switch to Japanese input (Ctrl+Space or equivalent)
+
+5. Type "konnichiha" (the romanized input)
+   - Preedit should show: "こ" with underline
+   - Pressing space should show candidate list
+   - Selecting candidate should commit full text
+
+6. Verify Japanese characters appear in text element
+
+EDGE CASES:
+- Rapid key presses
+- Cut/paste with Japanese text
+- Multi-line text with composition
+- Undo/redo with composed text
+- Switching between input methods
+- Focus loss/regain during composition
+
+
+================================================================================
+9. KNOWN ISSUES & GOTCHAS
+================================================================================
+
+ISSUE 1: GTK4 removed filter_keypress(event)
+Status: SOLVED
+Solution: Use filter_key(keyval, modifiers) instead
+Reference: Chromium source findings
+
+ISSUE 2: Preedit text not automatically displayed
+Status: EXPECTED (DrawingArea limitation)
+Solution: Implement custom preedit rendering (Phase 2)
+
+ISSUE 3: IME not responding
+Status: USUALLY ENVIRONMENT
+Solution: Set GTK_IM_MODULE=ibus environment variable
+
+ISSUE 4: Double character insertion
+Status: POSSIBLE BUG
+Solution: Ensure filter_key() return value is checked properly
+
+ISSUE 5: Cursor position tracking
+Status: REQUIRES IMPLEMENTATION
+Solution: Call ime_context.reset() after document updates
+         Track character position, not byte position
+
+
+================================================================================
+10. RESOURCES & DOCUMENTATION
+================================================================================
+
+OFFICIAL GTK4 DOCUMENTATION:
+- IMContext: https://docs.gtk.org/gtk4/class.IMContext.html
+- IMMulticontext: https://docs.gtk.org/gtk4/class.IMMulticontext.html
+- Input Handling: https://docs.gtk.org/gtk4/input-handling.html
+- Text Input Blog: https://blogs.gnome.org/gtk/2021/08/18/text-input-in-gtk-4/
+
+GTK-RS BINDINGS:
+- IMContextExt: https://gtk-rs.org/gtk4-rs/git/docs/gtk4/prelude/trait.IMContextExt.html
+- IMMulticontext: https://gtk-rs.org/gtk4-rs/stable/latest/docs/gtk4/struct.IMMulticontext.html
+- EventControllerKey: https://gtk-rs.org/gtk4-rs/git/docs/gtk4/struct.EventControllerKey.html
+
+EXAMPLES & REFERENCES:
+- GTK test code: https://gitlab.gnome.org/GNOME/gtk/-/blob/master/tests/input.c
+- GNOME Text Editor: https://gitlab.gnome.org/GNOME/gnome-text-editor
+- Chromium GTK IME: https://github.com/chromium/chromium/blob/master/ui/gtk/input_method_context_impl_gtk.cc
+
+
+================================================================================
+11. SUCCESS CRITERIA
+================================================================================
+
+When implementation is complete, verify:
+
+✓ Japanese input through ibus/fcitx5 works
+✓ Preedit text displays with visual feedback (underline)
+✓ Cursor position correctly tracked during composition
+✓ Composed text inserted at correct cursor position
+✓ No regression in ASCII/direct key input
+✓ Escape key still exits edit mode
+✓ Arrow keys work for cursor navigation
+✓ Backspace/Delete work in edit mode
+✓ Works with multiple IMEs
+✓ No performance degradation
+
+
+================================================================================
+12. SUMMARY
+================================================================================
+
+CURRENT STATE:
+- No IME support in Testruct
+- keyval.to_unicode() insufficient for Japanese
+- All infrastructure in place for implementation
+
+IMPLEMENTATION EFFORT:
+- 2-3.5 days (medium complexity)
+- No new dependencies needed
+- Modular approach (phases for incremental progress)
+
+NEXT STEPS:
+1. Create ime/mod.rs module
+2. Implement ImeManager struct
+3. Integrate with existing keyboard handler
+4. Test with Japanese input
+5. Add preedit display (optional enhancement)
+
+RISK ASSESSMENT:
+- LOW: APIs well-documented and stable
+- LOW: Dependencies all present
+- MEDIUM: Custom preedit rendering complexity
+- Overall: Well-understood problem, straightforward implementation
+
