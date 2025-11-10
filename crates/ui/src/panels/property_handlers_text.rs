@@ -1,8 +1,8 @@
 //! Text property signal handlers
 //!
-//! Handles text-specific property panel controls (font family, size, bold, italic, etc.)
+//! Handles text-specific property panel controls (font family, size, bold, italic, color, etc.)
 
-use gtk4::{prelude::*, StringList};
+use gtk4::{prelude::*, gdk, gio, ColorDialog, StringList};
 use testruct_core::document::DocumentElement;
 
 use super::PropertyPanelComponents;
@@ -142,6 +142,97 @@ pub fn wire_italic_signal(
         });
 
         drawing_area.queue_draw();
+    });
+}
+
+/// Wire text color button for color picker dialog
+pub fn wire_text_color_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let button = components.text_color_button.clone();
+    let selected_ids_ref = render_state.selected_ids.clone();
+    let app_state_clone = app_state.clone();
+    let drawing_area_clone = drawing_area.clone();
+    let panel_clone = components.clone();
+
+    button.connect_clicked(move |widget| {
+        let selected_ids: Vec<uuid::Uuid> = {
+            let selected = selected_ids_ref.borrow();
+            if selected.is_empty() {
+                tracing::warn!("⚠️ テキスト色を変更するオブジェクトが選択されていません");
+                return;
+            }
+            selected.clone()
+        };
+
+        let parent_window = widget
+            .root()
+            .and_then(|root| root.downcast::<gtk4::Window>().ok());
+
+        let initial_color = app_state_clone
+            .with_active_document(|doc| {
+                if let Some(page) = doc.pages.first() {
+                    for element in &page.elements {
+                        if selected_ids.contains(&element.id()) {
+                            if let DocumentElement::Text(text) = element {
+                                return Some(color_to_rgba(&text.style.color));
+                            }
+                        }
+                    }
+                }
+                None
+            })
+            .flatten();
+
+        let dialog = ColorDialog::builder()
+            .modal(true)
+            .title("テキスト色を選択")
+            .with_alpha(false)
+            .build();
+
+        let selected_ids_for_cb = selected_ids.clone();
+        let app_state_for_cb = app_state_clone.clone();
+        let drawing_area_for_cb = drawing_area_clone.clone();
+        let panel_for_cb = panel_clone.clone();
+
+        dialog.choose_rgba(
+            parent_window.as_ref(),
+            initial_color.as_ref(),
+            None::<&gio::Cancellable>,
+            move |result| {
+                if let Ok(rgba) = result {
+                    let text_color = rgba_to_color(&rgba);
+                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
+                        let mut changed = false;
+                        if let Some(page) = doc.pages.first_mut() {
+                            for element in &mut page.elements {
+                                if selected_ids_for_cb.contains(&element.id()) {
+                                    if let DocumentElement::Text(text) = element {
+                                        text.style.color = text_color.clone();
+                                        recompute_auto_height(text);
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                        changed
+                    });
+
+                    if updated.unwrap_or(false) {
+                        drawing_area_for_cb.queue_draw();
+                        crate::panels::property_handlers::update_property_panel_on_selection(
+                            &panel_for_cb,
+                            &app_state_for_cb,
+                            &selected_ids_for_cb,
+                        );
+                        tracing::debug!("✅ Text color updated via dialog");
+                    }
+                }
+            },
+        );
     });
 }
 
@@ -295,4 +386,17 @@ pub fn find_string_index(dropdown: &gtk4::DropDown, value: &str) -> Option<u32> 
         }
     }
     None
+}
+
+fn color_to_rgba(color: &testruct_core::typography::Color) -> gdk::RGBA {
+    gdk::RGBA::new(color.r, color.g, color.b, color.a)
+}
+
+fn rgba_to_color(rgba: &gdk::RGBA) -> testruct_core::typography::Color {
+    testruct_core::typography::Color {
+        r: rgba.red() as f32,
+        g: rgba.green() as f32,
+        b: rgba.blue() as f32,
+        a: rgba.alpha() as f32,
+    }
 }

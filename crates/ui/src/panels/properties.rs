@@ -25,6 +25,7 @@ pub struct PropertyPanelComponents {
     pub auto_resize_switch: Switch,
     pub bold_button: gtk4::ToggleButton,
     pub italic_button: gtk4::ToggleButton,
+    pub text_color_button: Button,
     pub fill_color_button: Button,
     pub stroke_color_button: Button,
     pub stroke_width_spin: SpinButton,
@@ -105,6 +106,9 @@ fn build_property_panel_components() -> PropertyPanelComponents {
     // Text formatting section (bold/italic buttons)
     let (bold_button, italic_button) = build_text_formatting_buttons(&container);
 
+    // Text color section (color picker button)
+    let text_color_button = build_text_color_section(&container);
+
     // Shape styling section
     let (fill_color_button, stroke_color_button, stroke_width_spin) =
         build_shape_styling_section(&container);
@@ -125,6 +129,7 @@ fn build_property_panel_components() -> PropertyPanelComponents {
         auto_resize_switch,
         bold_button,
         italic_button,
+        text_color_button,
         fill_color_button,
         stroke_color_button,
         stroke_width_spin,

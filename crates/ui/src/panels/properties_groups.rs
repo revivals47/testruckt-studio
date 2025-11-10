@@ -192,6 +192,28 @@ pub(super) fn build_text_formatting_buttons(
     (bold_button, italic_button)
 }
 
+/// Build text color section with color picker button
+pub(super) fn build_text_color_section(container: &GtkBox) -> Button {
+    let text_color_section = GtkBox::new(Orientation::Vertical, 5);
+    text_color_section.set_margin_start(12);
+    text_color_section.set_margin_end(12);
+
+    let text_color_box = GtkBox::new(Orientation::Horizontal, 8);
+    let text_color_label = Label::new(Some("テキスト色"));
+    text_color_label.set_hexpand(true);
+    text_color_label.set_xalign(0.0);
+    text_color_box.append(&text_color_label);
+
+    let text_color_button = Button::with_label("色を選択");
+    text_color_button.set_halign(gtk4::Align::End);
+    text_color_box.append(&text_color_button);
+
+    text_color_section.append(&text_color_box);
+    container.append(&text_color_section);
+
+    text_color_button
+}
+
 /// Build text options section (auto-resize)
 pub(super) fn build_text_options_section(container: &GtkBox) -> Switch {
     let text_options_header = GtkBox::new(Orientation::Horizontal, 8);

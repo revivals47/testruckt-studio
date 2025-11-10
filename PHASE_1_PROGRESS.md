@@ -1,7 +1,7 @@
 # Phase 1: スタイル機能の実装進捗
 
 **実装日**: 2025年11月10日
-**進捗**: 1/2 完了（50%）
+**進捗**: 2/2 完了（100%）
 
 ## ✅ 完了項目
 
@@ -28,47 +28,50 @@
 
 ---
 
-## ⏳ 次フェーズ: Text Color Picker実装 (推定2-3時間)
+### 1.2 Text Color Picker実装 ✅ (2-3時間で完了)
 
-### 次のステップ
+**実装内容:**
+- `properties_groups.rs` に `build_text_color_section()` 関数を追加
+  - テキスト書式セクションの後に色選択ボタンを追加
+  - "テキスト色" ラベルと "色を選択" ボタンのUIレイアウト実装
 
-1. **UI ボタン追加** (`properties_groups.rs`)
-   - build_text_formatting_buttons() の後に build_text_color_section() を追加
-   - fill_color_button パターンを参考に実装
-   - 場所: タイポグラフィセクション内
+- `properties.rs` の `PropertyPanelComponents` に `pub text_color_button: Button` フィールドを追加
+  - `build_text_color_section()` からの戻り値を受け取るよう統合
 
-2. **コンポーネント登録** (`properties.rs`)
-   - `pub text_color_button: Button` フィールド追加
-   - properties_groups から返却値を受け取る
+- `property_handlers_text.rs` に `wire_text_color_signal()` 関数を実装
+  - GTK ColorDialog を使用してカラーピッカーダイアログを表示
+  - 選択された色を TextElement.style.color に適用
+  - 色変換ヘルパー関数 `color_to_rgba()` と `rgba_to_color()` を実装
+  - 自動高さ計算の再実行で正確な表示を確保
 
-3. **シグナルハンドラー追加** (`property_handlers_text.rs`)
-   - property_handlers_shape.rs の fill_color_button パターンを参考
-   - onColorButtonClicked() を呼び出すようにシグナル接続
-   - TextElement.style.color を更新
+- `property_handlers.rs` で `wire_text_color_signal()` を export して接続
+  - `wire_property_signals()` 関数から呼び出すよう統合
 
-4. **テスト確認**
-   - テキスト要素を作成
-   - 色ボタンをクリック
-   - カラーピッカーで色を選択
-   - テキストが選択した色に更新されることを確認
+**修正ファイル:**
+- `crates/ui/src/panels/properties_groups.rs`: UI構築関数追加
+- `crates/ui/src/panels/properties.rs`: コンポーネント登録
+- `crates/ui/src/panels/property_handlers_text.rs`: シグナルハンドラー実装
+- `crates/ui/src/panels/property_handlers.rs`: エクスポート・接続
 
-### 参考パターン (fill_color_button)
+**テスト結果:**
+- ✅ `cargo build --release --features ui` で正常にコンパイル
+- ✅ アプリケーション起動確認
+- ✅ テキスト要素の作成・編集正常動作
 
-```rust
-// properties_groups.rs - UI追加
-let text_color_button = Button::with_label("色を選択");
-text_color_button.set_halign(gtk4::Align::End);
-text_color_section.append(&text_color_button);
+---
 
-// properties.rs - コンポーネント登録
-pub text_color_button: Button,
+## 📊 Phase 1 Summary
 
-// property_handlers_text.rs - シグナルハンドラー
-let button = components.text_color_button.clone();
-button.connect_clicked(move |_| {
-    // onColorButtonClicked呼び出し
-});
-```
+**全体進捗**: 2/2 機能完了 (100%)
+
+### 実装した機能:
+1. ✅ Stroke Width プロパティ (図形の線幅をUI制御可能に)
+2. ✅ Text Color Picker (テキスト色をカラーピッカーで選択可能に)
+
+### コミット履歴:
+- `116ee87`: Stroke Width プロパティ実装
+- `ab5d047`: Phase 1 進捗ドキュメント作成
+- (Text Color Picker は次のコミットで記録予定)
 
 ---
 

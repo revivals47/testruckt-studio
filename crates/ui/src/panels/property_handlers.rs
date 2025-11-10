@@ -11,7 +11,7 @@ mod shape_handlers;
 
 pub use text_handlers::{
     wire_font_family_signal, wire_font_size_signal, wire_bold_signal, wire_italic_signal,
-    wire_alignment_dropdown, wire_line_height_signal, wire_text_content_signal,
+    wire_text_color_signal, wire_alignment_dropdown, wire_line_height_signal, wire_text_content_signal,
     find_string_index,
 };
 pub use shape_handlers::{
@@ -56,6 +56,12 @@ pub fn wire_property_signals(
         render_state.clone(),
     );
     wire_italic_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+    wire_text_color_signal(
         components,
         app_state.clone(),
         drawing_area.clone(),
