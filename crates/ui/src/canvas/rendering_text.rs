@@ -196,11 +196,9 @@ pub fn draw_text_cursor(
     let x_offset = bounds.origin.x as f64 + TEXT_PADDING;
     let y_offset = bounds.origin.y as f64 + TEXT_PADDING;
 
-    // Create Pango layout to get accurate text metrics
+    // Create Pango layout for the FULL text to handle line wrapping correctly
     let layout = pangocairo::functions::create_layout(ctx);
-
-    // Calculate cursor position by measuring text up to cursor position
-    let text_before_cursor = text.chars().take(cursor_pos).collect::<String>();
+    layout.set_text(text);
 
     // Set font with styling
     let mut font_desc = pango::FontDescription::new();
@@ -229,21 +227,38 @@ pub fn draw_text_cursor(
     let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
     layout.set_width((available_width * pango::SCALE as f64) as i32);
 
-    // Measure the width of text before cursor to position cursor accurately
-    layout.set_text(&text_before_cursor);
-    let (ink_rect, _logical_rect) = layout.pixel_extents();
+    // Get line height from the layout
+    let (_, logical_rect) = layout.extents();
+    let line_height = (logical_rect.height() as f64 / pango::SCALE as f64).max(style.font_size as f64 * 1.2);
 
-    let cursor_x = x_offset + ink_rect.width() as f64;
-    let cursor_y = y_offset;
+    // Convert character position to byte position for Pango
+    let byte_pos = text.chars().take(cursor_pos).map(|c| c.len_utf8()).sum::<usize>();
 
-    // Line height is approximately 1.2 times the font size, adjusted by Pango metrics
-    let line_height = (style.font_size as f64 * 1.2).max(ink_rect.height() as f64 + 2.0);
+    // Get cursor position using Pango's indexing
+    // Find which line the cursor is on by getting the cursor rectangle
+    let mut line_x = 0.0;
+    let mut line_y = 0.0;
+
+    // Use a simpler approach: count newlines to find which line we're on
+    let text_up_to_cursor = text.chars().take(cursor_pos).collect::<String>();
+    let line_number = text_up_to_cursor.matches('\n').count();
+
+    // Get width of the last line (after the last newline)
+    let last_line = text_up_to_cursor.split('\n').last().unwrap_or("");
+    let layout_line = pangocairo::functions::create_layout(ctx);
+    layout_line.set_text(last_line);
+    layout_line.set_font_description(Some(&font_desc));
+    layout_line.set_width((available_width * pango::SCALE as f64) as i32);
+
+    let (ink_rect, _logical_rect) = layout_line.pixel_extents();
+    line_x = x_offset + ink_rect.width() as f64;
+    line_y = y_offset + (line_number as f64 * line_height);
 
     // Draw text cursor as a thin vertical line
     ctx.set_source_rgb(0.0, 0.5, 1.0); // Blue cursor
     ctx.set_line_width(2.0);
-    ctx.move_to(cursor_x, cursor_y);
-    ctx.line_to(cursor_x, cursor_y + line_height);
+    ctx.move_to(line_x, line_y);
+    ctx.line_to(line_x, line_y + line_height);
     ctx.stroke()?;
 
     ctx.restore()?;
