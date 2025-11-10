@@ -141,7 +141,14 @@ pub fn setup_keyboard_events(
         let mut cursor_pos = tool_state_ref.editing_cursor_pos;
         drop(tool_state_ref);
 
-        eprintln!("🔑 Key pressed: keyval={:?}, in_text_editing={}", keyval, in_text_editing);
+        // Determine if shift and control are pressed (must be before logging)
+        // NOTE: On macOS, Command key maps to META_MASK
+        let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
+        let ctrl_pressed = state.contains(gtk4::gdk::ModifierType::CONTROL_MASK) ||
+                          state.contains(gtk4::gdk::ModifierType::SUPER_MASK) ||
+                          state.contains(gtk4::gdk::ModifierType::META_MASK);
+
+        eprintln!("🔑 Key pressed: keyval={:?}, in_text_editing={}, ctrl={}, shift={}, state={:?}", keyval, in_text_editing, ctrl_pressed, shift_pressed, state);
 
         if in_text_editing {
             eprintln!("📝 In text editing mode - Text ID: {:?}, Cursor pos: {}", editing_text_id, cursor_pos);
@@ -152,10 +159,6 @@ pub fn setup_keyboard_events(
         // when we call set_im_context(). The IME will emit ::commit signal when
         // composition is complete, which we handle in the callback registered above.
         // Direct key handling continues here for non-composition keys (arrows, escape, etc)
-
-        // Determine if shift and control are pressed
-        let shift_pressed = state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
-        let ctrl_pressed = state.contains(gtk4::gdk::ModifierType::CONTROL_MASK);
 
         // Handle Ctrl+Shift+I to insert image
         if ctrl_pressed && shift_pressed && keyval == gtk4::gdk::Key::i {

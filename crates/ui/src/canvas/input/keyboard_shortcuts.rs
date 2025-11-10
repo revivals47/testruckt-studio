@@ -318,15 +318,20 @@ pub fn handle_paste_text_in_editing(
     render_state: &CanvasRenderState,
     drawing_area: &DrawingArea,
 ) {
+    eprintln!("🔧 handle_paste_text_in_editing called");
     let tool_state = render_state.tool_state.borrow();
     if let Some(text_id) = tool_state.editing_text_id {
         let cursor_pos = tool_state.editing_cursor_pos;
+        eprintln!("✅ Text editing active: ID={:?}, cursor={}", text_id, cursor_pos);
         drop(tool_state);
 
         // Get text from clipboard using pbpaste
+        eprintln!("📋 Running pbpaste command...");
         if let Ok(output) = std::process::Command::new("pbpaste").output() {
+            eprintln!("✅ pbpaste executed, status: {}", output.status);
             if let Ok(clipboard_text) = String::from_utf8(output.stdout) {
                 let pasted_text = clipboard_text.trim();
+                eprintln!("📋 Clipboard content (len={}): {:?}", pasted_text.len(), if pasted_text.len() > 50 { &pasted_text[..50] } else { pasted_text });
                 if !pasted_text.is_empty() {
                     eprintln!("📋 Pasting text in editing mode: '{}' at cursor {}", pasted_text, cursor_pos);
 
