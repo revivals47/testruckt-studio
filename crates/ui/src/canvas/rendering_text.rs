@@ -227,8 +227,9 @@ pub fn draw_text_cursor(
     let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
     layout.set_width((available_width * pango::SCALE as f64) as i32);
 
-    // Calculate line height using just font size with reasonable spacing
-    let line_height = style.font_size as f64 * 1.5;
+    // Get actual line spacing from Pango layout
+    let (_, logical_rect) = layout.extents();
+    let line_height = (logical_rect.height() as f64 / pango::SCALE as f64) / (text.matches('\n').count() as f64 + 1.0).max(1.0);
 
     // Split text into lines and find which line the cursor is on
     let lines: Vec<&str> = text.split('\n').collect();
