@@ -227,32 +227,44 @@ pub fn draw_text_cursor(
     let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
     layout.set_width((available_width * pango::SCALE as f64) as i32);
 
-    // Get line height from the layout
-    let (_, logical_rect) = layout.extents();
-    let line_height = (logical_rect.height() as f64 / pango::SCALE as f64).max(style.font_size as f64 * 1.2);
+    // Calculate line height using just font size with reasonable spacing
+    let line_height = style.font_size as f64 * 1.5;
 
-    // Convert character position to byte position for Pango
-    let byte_pos = text.chars().take(cursor_pos).map(|c| c.len_utf8()).sum::<usize>();
+    // Split text into lines and find which line the cursor is on
+    let lines: Vec<&str> = text.split('\n').collect();
+    let mut char_count = 0;
+    let mut current_line = 0;
+    let mut pos_in_line = 0;
 
-    // Get cursor position using Pango's indexing
-    // Find which line the cursor is on by getting the cursor rectangle
-    let mut line_x = 0.0;
-    let mut line_y = 0.0;
+    for (line_idx, line) in lines.iter().enumerate() {
+        let line_len = line.chars().count();
+        if char_count + line_len >= cursor_pos {
+            // Cursor is on this line
+            current_line = line_idx;
+            pos_in_line = cursor_pos - char_count;
+            break;
+        }
+        char_count += line_len + 1; // +1 for the newline character
+    }
 
-    // Use a simpler approach: count newlines to find which line we're on
-    let text_up_to_cursor = text.chars().take(cursor_pos).collect::<String>();
-    let line_number = text_up_to_cursor.matches('\n').count();
+    // Get the current line text
+    let current_line_text = if current_line < lines.len() {
+        lines[current_line]
+    } else {
+        ""
+    };
 
-    // Get width of the last line (after the last newline)
-    let last_line = text_up_to_cursor.split('\n').last().unwrap_or("");
+    // Measure text up to cursor position on the current line
+    let text_before_cursor_in_line = current_line_text.chars().take(pos_in_line).collect::<String>();
+
     let layout_line = pangocairo::functions::create_layout(ctx);
-    layout_line.set_text(last_line);
+    layout_line.set_text(&text_before_cursor_in_line);
     layout_line.set_font_description(Some(&font_desc));
     layout_line.set_width((available_width * pango::SCALE as f64) as i32);
 
     let (ink_rect, _logical_rect) = layout_line.pixel_extents();
-    line_x = x_offset + ink_rect.width() as f64;
-    line_y = y_offset + (line_number as f64 * line_height);
+    let line_x = x_offset + ink_rect.width() as f64;
+    let line_y = y_offset + (current_line as f64 * line_height);
 
     // Draw text cursor as a thin vertical line
     ctx.set_source_rgb(0.0, 0.5, 1.0); // Blue cursor
