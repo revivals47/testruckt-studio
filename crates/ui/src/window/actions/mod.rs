@@ -25,6 +25,7 @@ mod tools_actions;
 mod view_actions;
 
 use crate::window::actions::common::add_window_action;
+use gtk4::prelude::*;
 use gtk4::Box as GtkBox;
 
 /// Register all window-level actions
@@ -38,7 +39,7 @@ pub fn register_window_actions(
     toolbar_buttons: &crate::toolbar::ToolbarButtons,
 ) {
     // Register actions from each module
-    file_actions::register(window, state.clone());
+    file_actions::register(window, state.clone(), canvas_view);
     export_actions::register(window, state.clone());
     edit_actions::register(window, state.clone(), canvas_view);
     view_actions::register(
@@ -63,37 +64,63 @@ pub fn register_window_actions(
     });
 
     // Register lock action
+    let lock_state = state.clone();
     let lock_render_state = canvas_view.render_state().selected_ids.clone();
+    let lock_drawing_area = canvas_view.drawing_area();
     add_window_action(window, "lock", move |_| {
         tracing::info!("Action: lock selected objects");
-        let selected_ids = lock_render_state.borrow();
-        if selected_ids.is_empty() {
-            tracing::warn!("⚠️  No objects selected to lock");
-            return;
-        }
+        let selected_ids_vec: Vec<uuid::Uuid> = {
+            let selected_ids = lock_render_state.borrow();
+            if selected_ids.is_empty() {
+                tracing::warn!("⚠️  No objects selected to lock");
+                return;
+            }
+            selected_ids.clone().into_iter().collect()
+        };
 
-        // TODO: Implement actual lock logic when element lock property is added
-        tracing::info!(
-            "✅ {} object(s) locked (lock feature in progress)",
-            selected_ids.len()
-        );
+        let locked_count = lock_state.with_active_page(|page| {
+            let mut count = 0;
+            for element in &mut page.elements {
+                if selected_ids_vec.contains(&element.id()) {
+                    element.set_locked(true);
+                    count += 1;
+                }
+            }
+            count
+        }).unwrap_or(0);
+
+        tracing::info!("✅ {} object(s) locked", locked_count);
+        lock_drawing_area.queue_draw();
     });
 
     // Register unlock action
+    let unlock_state = state.clone();
     let unlock_render_state = canvas_view.render_state().selected_ids.clone();
+    let unlock_drawing_area = canvas_view.drawing_area();
     add_window_action(window, "unlock", move |_| {
         tracing::info!("Action: unlock selected objects");
-        let selected_ids = unlock_render_state.borrow();
-        if selected_ids.is_empty() {
-            tracing::warn!("⚠️  No objects selected to unlock");
-            return;
-        }
+        let selected_ids_vec: Vec<uuid::Uuid> = {
+            let selected_ids = unlock_render_state.borrow();
+            if selected_ids.is_empty() {
+                tracing::warn!("⚠️  No objects selected to unlock");
+                return;
+            }
+            selected_ids.clone().into_iter().collect()
+        };
 
-        // TODO: Implement actual unlock logic when element lock property is added
-        tracing::info!(
-            "✅ {} object(s) unlocked (unlock feature in progress)",
-            selected_ids.len()
-        );
+        let unlocked_count = unlock_state.with_active_page(|page| {
+            let mut count = 0;
+            for element in &mut page.elements {
+                if selected_ids_vec.contains(&element.id()) {
+                    element.set_locked(false);
+                    count += 1;
+                }
+            }
+            count
+        }).unwrap_or(0);
+
+        tracing::info!("✅ {} object(s) unlocked", unlocked_count);
+        unlock_drawing_area.queue_draw();
     });
 
     // Set keyboard accelerators

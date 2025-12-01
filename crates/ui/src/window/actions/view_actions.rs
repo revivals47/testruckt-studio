@@ -142,4 +142,20 @@ pub fn register(
         tracing::info!("✅ Snap to grid toggled: {}", new_state);
         let _ = snap_grid_canvas.queue_draw();
     });
+
+    // Toggle layers panel
+    add_window_action(window, "toggle-layers", move |_| {
+        tracing::info!("Action: toggle layers panel");
+        // Layers panel is not yet implemented - placeholder for future integration
+        tracing::warn!("⚠️  Layers panel toggle not yet implemented");
+    });
+
+    // Toggle properties panel (the right side panel)
+    let properties_toggle = properties_panel.clone();
+    add_window_action(window, "toggle-properties", move |_| {
+        tracing::info!("Action: toggle properties panel");
+        let is_visible = properties_toggle.is_visible();
+        properties_toggle.set_visible(!is_visible);
+        tracing::info!("✅ Properties panel visibility toggled: {}", !is_visible);
+    });
 }

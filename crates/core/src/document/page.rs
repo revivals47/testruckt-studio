@@ -1,6 +1,16 @@
 use super::PageMetadata;
 use serde::{Deserialize, Serialize};
 
+/// Default visibility value for elements (true for backwards compatibility)
+fn default_visible() -> bool {
+    true
+}
+
+/// Default locked value for elements (false for backwards compatibility)
+fn default_locked() -> bool {
+    false
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PageId(uuid::Uuid);
 
@@ -106,6 +116,50 @@ impl DocumentElement {
             DocumentElement::Group(g) => g.id,
         }
     }
+
+    /// Check if the element is visible
+    pub fn is_visible(&self) -> bool {
+        match self {
+            DocumentElement::Frame(f) => f.visible,
+            DocumentElement::Text(t) => t.visible,
+            DocumentElement::Image(i) => i.visible,
+            DocumentElement::Shape(s) => s.visible,
+            DocumentElement::Group(g) => g.visible,
+        }
+    }
+
+    /// Set the element's visibility
+    pub fn set_visible(&mut self, visible: bool) {
+        match self {
+            DocumentElement::Frame(f) => f.visible = visible,
+            DocumentElement::Text(t) => t.visible = visible,
+            DocumentElement::Image(i) => i.visible = visible,
+            DocumentElement::Shape(s) => s.visible = visible,
+            DocumentElement::Group(g) => g.visible = visible,
+        }
+    }
+
+    /// Check if the element is locked
+    pub fn is_locked(&self) -> bool {
+        match self {
+            DocumentElement::Frame(f) => f.locked,
+            DocumentElement::Text(t) => t.locked,
+            DocumentElement::Image(i) => i.locked,
+            DocumentElement::Shape(s) => s.locked,
+            DocumentElement::Group(g) => g.locked,
+        }
+    }
+
+    /// Set the element's locked state
+    pub fn set_locked(&mut self, locked: bool) {
+        match self {
+            DocumentElement::Frame(f) => f.locked = locked,
+            DocumentElement::Text(t) => t.locked = locked,
+            DocumentElement::Image(i) => i.locked = locked,
+            DocumentElement::Shape(s) => s.locked = locked,
+            DocumentElement::Group(g) => g.locked = locked,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -113,6 +167,10 @@ pub struct FrameElement {
     pub id: uuid::Uuid,
     pub bounds: super::super::layout::Rect,
     pub children: Vec<DocumentElement>,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+    #[serde(default = "default_locked")]
+    pub locked: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -123,6 +181,10 @@ pub struct TextElement {
     pub bounds: super::super::layout::Rect,
     #[serde(default)]
     pub auto_resize_height: bool,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+    #[serde(default = "default_locked")]
+    pub locked: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -130,6 +192,10 @@ pub struct ImageElement {
     pub id: uuid::Uuid,
     pub source: crate::workspace::assets::AssetRef,
     pub bounds: super::super::layout::Rect,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+    #[serde(default = "default_locked")]
+    pub locked: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -140,6 +206,10 @@ pub struct ShapeElement {
     pub stroke: Option<crate::typography::Color>,
     pub stroke_width: f32, // ← 新規追加（デフォルト: 2.0）
     pub fill: Option<crate::typography::Color>,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+    #[serde(default = "default_locked")]
+    pub locked: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -148,6 +218,10 @@ pub struct GroupElement {
     pub name: String,
     pub bounds: super::super::layout::Rect,
     pub children: Vec<DocumentElement>,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+    #[serde(default = "default_locked")]
+    pub locked: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

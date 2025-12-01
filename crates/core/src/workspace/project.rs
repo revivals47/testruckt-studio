@@ -33,6 +33,10 @@ impl Project {
         self.documents.get_mut(&id)
     }
 
+    pub fn remove_document(&mut self, id: DocumentId) -> Option<Document> {
+        self.documents.remove(&id)
+    }
+
     pub fn apply_template(&self, template: TemplateRef) -> Option<Document> {
         self.templates.get(template.id).map(|tmpl| {
             let mut builder = crate::document::DocumentBuilder::new().with_title(&tmpl.name);

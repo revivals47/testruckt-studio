@@ -218,6 +218,213 @@ pub struct GuideInfo {
     pub is_vertical: bool, // true = vertical (x), false = horizontal (y)
 }
 
+/// Information about an object's alignment points
+#[derive(Debug, Clone)]
+pub struct ObjectAlignmentPoints {
+    pub id: uuid::Uuid,
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
+    pub center_x: f32,
+    pub center_y: f32,
+}
+
+impl ObjectAlignmentPoints {
+    /// Create alignment points from a rectangle bounds
+    pub fn from_rect(id: uuid::Uuid, bounds: &Rect) -> Self {
+        Self {
+            id,
+            left: bounds.origin.x,
+            right: bounds.origin.x + bounds.size.width,
+            top: bounds.origin.y,
+            bottom: bounds.origin.y + bounds.size.height,
+            center_x: bounds.origin.x + bounds.size.width / 2.0,
+            center_y: bounds.origin.y + bounds.size.height / 2.0,
+        }
+    }
+}
+
+/// Smart guide engine for object-to-object alignment
+pub struct SmartGuideEngine {
+    pub snap_threshold: f32,
+}
+
+impl Default for SmartGuideEngine {
+    fn default() -> Self {
+        Self {
+            snap_threshold: 8.0,
+        }
+    }
+}
+
+impl SmartGuideEngine {
+    /// Calculate smart guide snap lines for a dragging object against other objects
+    /// Returns the adjusted position and snap lines to display
+    pub fn calculate_snap(
+        &self,
+        dragging_bounds: &Rect,
+        other_objects: &[ObjectAlignmentPoints],
+        canvas_width: f32,
+        canvas_height: f32,
+    ) -> SmartGuideResult {
+        let dragging = ObjectAlignmentPoints::from_rect(uuid::Uuid::nil(), dragging_bounds);
+
+        let mut snap_lines = Vec::new();
+        let mut adjusted_x = dragging_bounds.origin.x;
+        let mut adjusted_y = dragging_bounds.origin.y;
+        let mut snapped_x = false;
+        let mut snapped_y = false;
+
+        // Check alignment with each other object
+        for other in other_objects {
+            // Skip self (shouldn't happen but just in case)
+            if other.id == dragging.id {
+                continue;
+            }
+
+            // Vertical alignments (X axis)
+            if !snapped_x {
+                // Left to left
+                if (dragging.left - other.left).abs() <= self.snap_threshold {
+                    adjusted_x = other.left;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.left,
+                        is_horizontal: false,
+                        bounds: (0.0, canvas_height),
+                    });
+                    snapped_x = true;
+                }
+                // Right to right
+                else if (dragging.right - other.right).abs() <= self.snap_threshold {
+                    adjusted_x = other.right - dragging_bounds.size.width;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.right,
+                        is_horizontal: false,
+                        bounds: (0.0, canvas_height),
+                    });
+                    snapped_x = true;
+                }
+                // Left to right
+                else if (dragging.left - other.right).abs() <= self.snap_threshold {
+                    adjusted_x = other.right;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.right,
+                        is_horizontal: false,
+                        bounds: (0.0, canvas_height),
+                    });
+                    snapped_x = true;
+                }
+                // Right to left
+                else if (dragging.right - other.left).abs() <= self.snap_threshold {
+                    adjusted_x = other.left - dragging_bounds.size.width;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.left,
+                        is_horizontal: false,
+                        bounds: (0.0, canvas_height),
+                    });
+                    snapped_x = true;
+                }
+                // Center to center (X)
+                else if (dragging.center_x - other.center_x).abs() <= self.snap_threshold {
+                    adjusted_x = other.center_x - dragging_bounds.size.width / 2.0;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.center_x,
+                        is_horizontal: false,
+                        bounds: (0.0, canvas_height),
+                    });
+                    snapped_x = true;
+                }
+            }
+
+            // Horizontal alignments (Y axis)
+            if !snapped_y {
+                // Top to top
+                if (dragging.top - other.top).abs() <= self.snap_threshold {
+                    adjusted_y = other.top;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.top,
+                        is_horizontal: true,
+                        bounds: (0.0, canvas_width),
+                    });
+                    snapped_y = true;
+                }
+                // Bottom to bottom
+                else if (dragging.bottom - other.bottom).abs() <= self.snap_threshold {
+                    adjusted_y = other.bottom - dragging_bounds.size.height;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.bottom,
+                        is_horizontal: true,
+                        bounds: (0.0, canvas_width),
+                    });
+                    snapped_y = true;
+                }
+                // Top to bottom
+                else if (dragging.top - other.bottom).abs() <= self.snap_threshold {
+                    adjusted_y = other.bottom;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.bottom,
+                        is_horizontal: true,
+                        bounds: (0.0, canvas_width),
+                    });
+                    snapped_y = true;
+                }
+                // Bottom to top
+                else if (dragging.bottom - other.top).abs() <= self.snap_threshold {
+                    adjusted_y = other.top - dragging_bounds.size.height;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.top,
+                        is_horizontal: true,
+                        bounds: (0.0, canvas_width),
+                    });
+                    snapped_y = true;
+                }
+                // Center to center (Y)
+                else if (dragging.center_y - other.center_y).abs() <= self.snap_threshold {
+                    adjusted_y = other.center_y - dragging_bounds.size.height / 2.0;
+                    snap_lines.push(SnapLine {
+                        line_type: SnapLineType::ObjectEdge,
+                        position: other.center_y,
+                        is_horizontal: true,
+                        bounds: (0.0, canvas_width),
+                    });
+                    snapped_y = true;
+                }
+            }
+
+            // If we've snapped both axes, no need to check more objects
+            if snapped_x && snapped_y {
+                break;
+            }
+        }
+
+        SmartGuideResult {
+            adjusted_position: Point { x: adjusted_x, y: adjusted_y },
+            snap_lines,
+            snapped_x,
+            snapped_y,
+        }
+    }
+}
+
+/// Result of smart guide calculation
+#[derive(Debug, Clone)]
+pub struct SmartGuideResult {
+    pub adjusted_position: Point,
+    pub snap_lines: Vec<SnapLine>,
+    pub snapped_x: bool,
+    pub snapped_y: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

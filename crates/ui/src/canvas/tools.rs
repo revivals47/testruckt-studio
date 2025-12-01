@@ -86,6 +86,8 @@ impl ShapeFactory {
             stroke: None,
             stroke_width: 2.0,
             fill: None,
+            visible: true,
+            locked: false,
         })
     }
 
@@ -107,6 +109,8 @@ impl ShapeFactory {
             stroke: None,
             stroke_width: 2.0,
             fill: None,
+            visible: true,
+            locked: false,
         })
     }
 
@@ -127,6 +131,8 @@ impl ShapeFactory {
                 },
             },
             auto_resize_height: false,
+            visible: true,
+            locked: false,
         })
     }
 
@@ -151,6 +157,8 @@ impl ShapeFactory {
             stroke: None,
             stroke_width: 2.0,
             fill: None,
+            visible: true,
+            locked: false,
         })
     }
 
@@ -175,6 +183,8 @@ impl ShapeFactory {
             stroke: None,
             stroke_width: 2.0,
             fill: None,
+            visible: true,
+            locked: false,
         })
     }
 
@@ -193,6 +203,8 @@ impl ShapeFactory {
                     height: height as f32,
                 },
             },
+            visible: true,
+            locked: false,
         })
     }
 }

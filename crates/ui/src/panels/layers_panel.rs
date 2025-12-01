@@ -96,10 +96,75 @@ impl LayersPanel {
 
         // Visibility toggle checkbox
         let visibility_btn = gtk4::CheckButton::new();
-        visibility_btn.set_active(true);
+        visibility_btn.set_active(element.is_visible());
         visibility_btn.set_width_request(24);
-        visibility_btn.set_tooltip_text(Some("Toggle visibility (not yet implemented)"));
+        visibility_btn.set_tooltip_text(Some("Toggle visibility"));
+
+        // Connect visibility toggle signal
+        {
+            let state_c = app_state.clone();
+            let canvas_c = canvas_view.drawing_area();
+            let id_c = element_id;
+
+            visibility_btn.connect_toggled(move |btn| {
+                let visible = btn.is_active();
+                state_c.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
+                        if let Some(element) = page.elements.iter_mut().find(|e| e.id() == id_c) {
+                            element.set_visible(visible);
+                            tracing::info!(
+                                "✅ Layer visibility set to {} for element {:?}",
+                                visible,
+                                id_c
+                            );
+                        }
+                    }
+                });
+                canvas_c.queue_draw();
+            });
+        }
+
         item_box.append(&visibility_btn);
+
+        // Lock toggle checkbox
+        let lock_btn = gtk4::CheckButton::new();
+        lock_btn.set_active(element.is_locked());
+        lock_btn.set_width_request(24);
+        lock_btn.set_tooltip_text(Some("Toggle lock"));
+
+        // Add lock icon indicator
+        let lock_icon = if element.is_locked() { "🔒" } else { "🔓" };
+        let lock_label = Label::new(Some(lock_icon));
+        lock_label.set_width_request(20);
+
+        // Connect lock toggle signal
+        {
+            let state_c = app_state.clone();
+            let canvas_c = canvas_view.drawing_area();
+            let id_c = element_id;
+            let label_c = lock_label.clone();
+
+            lock_btn.connect_toggled(move |btn| {
+                let locked = btn.is_active();
+                label_c.set_text(if locked { "🔒" } else { "🔓" });
+                state_c.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
+                        if let Some(element) = page.elements.iter_mut().find(|e| e.id() == id_c) {
+                            element.set_locked(locked);
+                            tracing::info!(
+                                "✅ Layer lock set to {} for element {:?}",
+                                locked,
+                                id_c
+                            );
+                        }
+                    }
+                });
+                canvas_c.queue_draw();
+            });
+        }
+
+        item_box.append(&lock_label);
+        item_box.append(&lock_btn);
 
         // Get element type and name
         let type_label = match element {

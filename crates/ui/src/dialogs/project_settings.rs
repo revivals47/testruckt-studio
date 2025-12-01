@@ -154,9 +154,8 @@ pub fn show_project_settings(parent: &Window, app_state: AppState) {
         let new_autosave_enabled = autosave_check.is_active();
         let new_autosave_minutes = autosave_spin.value() as u32;
 
-        // Update project settings
-        if let Some(_) = app_state_save.with_active_document(|_doc| {
-            let mut project = app_state_save.project();
+        // Update project settings using with_project for mutable access
+        app_state_save.with_project(|project| {
             project.settings.default_canvas_width = new_width;
             project.settings.default_canvas_height = new_height;
             project.settings.grid_size = new_grid_size;
@@ -165,9 +164,11 @@ pub fn show_project_settings(parent: &Window, app_state: AppState) {
             project.settings.snap_distance = new_snap_dist;
             project.settings.autosave_enabled = new_autosave_enabled;
             project.settings.autosave_minutes = new_autosave_minutes;
-        }) {
-            tracing::info!("✅ Project settings saved successfully");
-        }
+            tracing::info!(
+                "✅ Project settings saved: width={}, height={}, grid={}, snap_grid={}, snap_guides={}, snap_dist={}, autosave={}, interval={}",
+                new_width, new_height, new_grid_size, new_snap_grid, new_snap_guides, new_snap_dist, new_autosave_enabled, new_autosave_minutes
+            );
+        });
 
         dialog_ref.close();
     });

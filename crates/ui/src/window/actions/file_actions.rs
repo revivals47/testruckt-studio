@@ -1,23 +1,34 @@
 //! File and page management action handlers
 
 use super::common::add_window_action;
+use crate::canvas::CanvasView;
 use gtk4::prelude::*;
 
 /// Register file menu actions
-pub fn register(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
+pub fn register(
+    window: &gtk4::ApplicationWindow,
+    state: crate::app::AppState,
+    canvas_view: &CanvasView,
+) {
     // File menu actions
     let new_state = state.clone();
+    let new_drawing_area = canvas_view.drawing_area();
+    let new_render_state = canvas_view.render_state().clone();
     add_window_action(window, "new", move |_| {
         tracing::info!("Action: new document");
         perform_new_document(&new_state);
+        new_render_state.selected_ids.borrow_mut().clear();
+        new_drawing_area.queue_draw();
     });
 
     let open_state = state.clone();
     let window_weak_open = window.downgrade();
+    let open_drawing_area = canvas_view.drawing_area();
+    let open_render_state = canvas_view.render_state().clone();
     add_window_action(window, "open", move |_| {
         tracing::info!("Action: open document");
         if let Some(window) = window_weak_open.upgrade() {
-            perform_open_document(&window, &open_state);
+            perform_open_document(&window, &open_state, open_drawing_area.clone(), open_render_state.clone());
         }
     });
 
@@ -33,6 +44,23 @@ pub fn register(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
         tracing::info!("Action: save document as");
         if let Some(window) = window_weak_save.upgrade() {
             perform_save_as_document(&window, &save_as_state);
+        }
+    });
+
+    // Recent files action
+    let recent_state = state.clone();
+    let window_weak_recent = window.downgrade();
+    let recent_drawing_area = canvas_view.drawing_area();
+    let recent_render_state = canvas_view.render_state().clone();
+    add_window_action(window, "recent-files", move |_| {
+        tracing::info!("Action: show recent files");
+        if let Some(window) = window_weak_recent.upgrade() {
+            crate::dialogs::show_recent_files_dialog(
+                &window.clone().upcast(),
+                recent_state.clone(),
+                recent_drawing_area.clone(),
+                recent_render_state.clone(),
+            );
         }
     });
 
@@ -116,16 +144,19 @@ fn perform_new_document(state: &crate::app::AppState) {
         .build()
         .expect("Failed to create document");
 
-    // Get project and add document
-    let mut project = state.project();
     let doc_id = doc.id;
-    project.add_document(doc.clone());
+    state.set_active_document(doc);
 
     tracing::info!("✅ New document created with ID: {:?}", doc_id);
 }
 
 /// Perform open document with file dialog
-fn perform_open_document(window: &gtk4::ApplicationWindow, state: &crate::app::AppState) {
+fn perform_open_document(
+    window: &gtk4::ApplicationWindow,
+    state: &crate::app::AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
     tracing::info!("Opening document");
 
     let window_clone = window.clone();
@@ -135,9 +166,12 @@ fn perform_open_document(window: &gtk4::ApplicationWindow, state: &crate::app::A
         if let Some(path) = crate::io::file_dialog::show_open_dialog(&window_clone).await {
             match crate::io::file_io::load_document(&path) {
                 Ok(document) => {
-                    let mut project = state_clone.project();
-                    project.add_document(document);
-                    tracing::info!("✅ Document loaded: {}", path.display());
+                    state_clone.set_active_document(document);
+                    // Add to recent files
+                    state_clone.add_recent_file(path.clone());
+                    render_state.selected_ids.borrow_mut().clear();
+                    drawing_area.queue_draw();
+                    tracing::info!("✅ Document loaded and activated: {}", path.display());
                 }
                 Err(e) => {
                     tracing::error!("❌ Failed to load document: {}", e);
@@ -190,6 +224,8 @@ fn perform_save_as_document(window: &gtk4::ApplicationWindow, state: &crate::app
                     &path,
                 ) {
                     Ok(_) => {
+                        // Add to recent files
+                        state_clone.add_recent_file(path.clone());
                         tracing::info!("✅ Document saved as: {}", path.display());
                     }
                     Err(e) => {

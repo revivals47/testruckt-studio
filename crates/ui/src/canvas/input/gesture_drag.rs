@@ -44,6 +44,7 @@
 use crate::app::AppState;
 use crate::canvas::mouse::calculate_resize_bounds;
 use crate::canvas::rendering::snap_rect_to_grid;
+use crate::canvas::snapping::{ObjectAlignmentPoints, SmartGuideEngine};
 use crate::canvas::tools::{ShapeFactory, ToolMode};
 use crate::canvas::CanvasRenderState;
 use gtk4::gdk;
@@ -200,6 +201,73 @@ pub fn setup_drag_gesture(
 
             // Don't show drag_box preview during resize
             *state.drag_box.borrow_mut() = None;
+        } else if current_tool == ToolMode::Select {
+            // SMART GUIDES: Calculate and show smart guides during Select tool dragging
+            let selected = state.selected_ids.borrow();
+            if !selected.is_empty() && (offset_x.abs() > 2.0 || offset_y.abs() > 2.0) {
+                let selected_ids: Vec<uuid::Uuid> = selected.clone();
+                drop(selected);
+
+                let config = state.config.borrow();
+                let delta_x = offset_x / config.zoom;
+                let delta_y = offset_y / config.zoom;
+                drop(config);
+
+                // Get bounds of first selected element for smart guide calculation
+                if let Some(first_id) = selected_ids.first() {
+                    let first_id = *first_id;
+                    let snap_data: Option<(Rect, Vec<ObjectAlignmentPoints>)> = app_state_drag_update.with_active_document(|doc| {
+                        let page = doc.pages.first()?;
+                        let mut dragging_bounds: Option<Rect> = None;
+                        let mut others: Vec<ObjectAlignmentPoints> = Vec::new();
+
+                        for element in &page.elements {
+                            let (id, bounds) = match element {
+                                DocumentElement::Shape(s) => (s.id, &s.bounds),
+                                DocumentElement::Text(t) => (t.id, &t.bounds),
+                                DocumentElement::Image(i) => (i.id, &i.bounds),
+                                DocumentElement::Frame(f) => (f.id, &f.bounds),
+                                DocumentElement::Group(g) => (g.id, &g.bounds),
+                            };
+
+                            if id == first_id {
+                                // Calculate the preview position
+                                let preview_bounds = Rect {
+                                    origin: Point {
+                                        x: bounds.origin.x + delta_x as f32,
+                                        y: bounds.origin.y + delta_y as f32,
+                                    },
+                                    size: bounds.size.clone(),
+                                };
+                                dragging_bounds = Some(preview_bounds);
+                            } else if !selected_ids.contains(&id) {
+                                others.push(ObjectAlignmentPoints::from_rect(id, bounds));
+                            }
+                        }
+
+                        Some((dragging_bounds?, others))
+                    }).flatten();
+
+                    if let Some((bounds, others)) = snap_data {
+                        // Calculate smart guides
+                        let smart_engine = SmartGuideEngine::default();
+                        let result = smart_engine.calculate_snap(
+                            &bounds,
+                            &others,
+                            1200.0, // canvas width
+                            1600.0, // canvas height
+                        );
+
+                        // Update snap lines for rendering
+                        *state.snap_lines.borrow_mut() = result.snap_lines;
+                    }
+                }
+            } else {
+                drop(selected);
+                // Clear snap lines if not dragging
+                state.snap_lines.borrow_mut().clear();
+            }
+            *state.drag_box.borrow_mut() = None;
         } else {
             // SHAPE CREATION: Show drag_box preview for new shapes
             // Apply window offset correction for drag_box preview
@@ -243,6 +311,8 @@ pub fn setup_drag_gesture(
             };
 
             *state.drag_box.borrow_mut() = Some(drag_rect);
+            // Clear snap lines for shape creation
+            state.snap_lines.borrow_mut().clear();
         }
 
         drawing_area_drag.queue_draw();
@@ -382,6 +452,10 @@ pub fn setup_drag_gesture(
                             for element in page.elements.iter_mut() {
                                 match element {
                                     DocumentElement::Shape(shape) if selected_ids.contains(&shape.id) => {
+                                        // Skip locked elements
+                                        if shape.locked {
+                                            continue;
+                                        }
                                         let mut new_bounds = shape.bounds.clone();
                                         new_bounds.origin.x += delta_x as f32;
                                         new_bounds.origin.y += delta_y as f32;
@@ -391,6 +465,10 @@ pub fn setup_drag_gesture(
                                         shape.bounds = new_bounds;
                                     }
                                     DocumentElement::Text(text) if selected_ids.contains(&text.id) => {
+                                        // Skip locked elements
+                                        if text.locked {
+                                            continue;
+                                        }
                                         let mut new_bounds = text.bounds.clone();
                                         new_bounds.origin.x += delta_x as f32;
                                         new_bounds.origin.y += delta_y as f32;
@@ -400,6 +478,10 @@ pub fn setup_drag_gesture(
                                         text.bounds = new_bounds;
                                     }
                                     DocumentElement::Image(image) if selected_ids.contains(&image.id) => {
+                                        // Skip locked elements
+                                        if image.locked {
+                                            continue;
+                                        }
                                         let mut new_bounds = image.bounds.clone();
                                         new_bounds.origin.x += delta_x as f32;
                                         new_bounds.origin.y += delta_y as f32;
@@ -409,6 +491,10 @@ pub fn setup_drag_gesture(
                                         image.bounds = new_bounds;
                                     }
                                     DocumentElement::Frame(frame) if selected_ids.contains(&frame.id) => {
+                                        // Skip locked elements
+                                        if frame.locked {
+                                            continue;
+                                        }
                                         let mut new_bounds = frame.bounds.clone();
                                         new_bounds.origin.x += delta_x as f32;
                                         new_bounds.origin.y += delta_y as f32;
@@ -534,6 +620,8 @@ pub fn setup_drag_gesture(
         drop(tool_state);
 
         *state.drag_box.borrow_mut() = None;
+        // Clear smart guide snap lines
+        state.snap_lines.borrow_mut().clear();
         drawing_area_end.queue_draw();
     });
 

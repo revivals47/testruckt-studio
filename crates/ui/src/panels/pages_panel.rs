@@ -214,11 +214,19 @@ impl PagesPanel {
         let select_btn = Button::with_label("Select");
         select_btn.set_hexpand(true);
         let state_c = app_state.clone();
-        let page_id = page.id;
+        let canvas_c = canvas_view.drawing_area();
+        let page_index = index;
 
         select_btn.connect_clicked(move |_| {
-            tracing::info!("✅ Page selected");
-            // TODO: Implement page switching logic
+            match state_c.set_active_page_index(page_index) {
+                Ok(()) => {
+                    tracing::info!("✅ Page {} selected", page_index + 1);
+                    canvas_c.queue_draw();
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️  Failed to select page: {}", e);
+                }
+            }
         });
 
         controls_box.append(&select_btn);

@@ -86,7 +86,7 @@
 use crate::app::AppState;
 use crate::canvas::input::{gesture_click, gesture_drag, ime::ImeManager};
 use crate::canvas::CanvasRenderState;
-use gtk4::DrawingArea;
+use gtk4::{DrawingArea, Entry};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -103,20 +103,22 @@ use std::rc::Rc;
 /// - `render_state`: キャンバス描画状態
 /// - `app_state`: アプリケーション全体の状態
 /// - `ime_manager`: Shared IME manager for focus management
+/// - `ime_entry`: IME入力用のEntryウィジェット（日本語入力対応）
 ///
 /// # 例
 ///
 /// ```ignore
 /// use crate::canvas::input::gesture;
 ///
-/// gesture::setup_gestures(&drawing_area, &render_state, &app_state, ime_manager);
+/// gesture::setup_gestures(&drawing_area, &render_state, &app_state, ime_manager, &ime_entry);
 /// ```
 pub fn setup_gestures(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
     ime_manager: Rc<RefCell<ImeManager>>,
+    ime_entry: &Entry,
 ) {
-    gesture_click::setup_click_gesture(drawing_area, render_state, app_state, ime_manager);
+    gesture_click::setup_click_gesture(drawing_area, render_state, app_state, ime_manager, ime_entry);
     gesture_drag::setup_drag_gesture(drawing_area, render_state, app_state);
 }

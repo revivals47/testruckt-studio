@@ -16,7 +16,7 @@ pub mod snapping;
 pub mod text_editor;
 pub mod tools;
 
-use gtk4::{prelude::*, DrawingArea, Overlay, ScrolledWindow};
+use gtk4::{prelude::*, DrawingArea, Entry, Overlay, ScrolledWindow};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -34,6 +34,8 @@ pub struct CanvasRenderState {
     pub drag_box: Rc<RefCell<Option<testruct_core::layout::Rect>>>,
     pub tool_state: Rc<RefCell<tools::ToolState>>,
     pub dirty_region: DirtyRegionTracker,
+    /// Active smart guide snap lines to render
+    pub snap_lines: Rc<RefCell<Vec<snapping::SnapLine>>>,
 }
 
 impl Default for CanvasRenderState {
@@ -45,6 +47,7 @@ impl Default for CanvasRenderState {
             drag_box: Rc::new(RefCell::new(None)),
             tool_state: Rc::new(RefCell::new(tools::ToolState::default())),
             dirty_region: dirty_region::new_tracker(),
+            snap_lines: Rc::new(RefCell::new(Vec::new())),
         }
     }
 }
@@ -54,6 +57,7 @@ pub struct CanvasView {
     drawing_area: DrawingArea,
     overlay: Overlay,
     render_state: CanvasRenderState,
+    ime_entry: Entry,
 }
 
 impl CanvasView {
@@ -75,6 +79,18 @@ impl CanvasView {
         overlay.set_hexpand(true);
         overlay.set_vexpand(true);
 
+        // Create IME input entry (for Japanese input support on macOS)
+        let ime_entry = Entry::new();
+        ime_entry.set_visible(false); // Hidden by default
+        ime_entry.set_can_focus(true);
+        ime_entry.set_halign(gtk4::Align::Start);
+        ime_entry.set_valign(gtk4::Align::Start);
+        ime_entry.set_margin_start(100);
+        ime_entry.set_margin_top(100);
+        ime_entry.set_width_chars(30);
+        ime_entry.add_css_class("ime-input");
+        overlay.add_overlay(&ime_entry);
+
         // TEST: Use overlay directly instead of ScrolledWindow to isolate event issue
         // Wrap in ScrolledWindow for panning/zooming
         let container = ScrolledWindow::new();
@@ -85,11 +101,106 @@ impl CanvasView {
 
         let render_state = CanvasRenderState::default();
 
+        // Connect IME Entry signals for Japanese input (must be after render_state is created)
+        let render_state_ime = render_state.clone();
+        let app_state_ime = app_state.clone();
+        let drawing_area_ime = drawing_area.clone();
+        ime_entry.connect_changed(move |entry| {
+            let text = entry.text().to_string();
+            let tool_state = render_state_ime.tool_state.borrow();
+            if let Some(text_id) = tool_state.editing_text_id {
+                drop(tool_state);
+
+                // Update text element content
+                app_state_ime.with_mutable_active_document(|doc| {
+                    if let Some(page) = doc.pages.first_mut() {
+                        for element in &mut page.elements {
+                            if let testruct_core::document::DocumentElement::Text(text_elem) = element {
+                                if text_elem.id == text_id {
+                                    text_elem.content = text.clone();
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Update cursor position to end
+                let mut tool_state = render_state_ime.tool_state.borrow_mut();
+                tool_state.editing_cursor_pos = text.chars().count();
+                drop(tool_state);
+
+                drawing_area_ime.queue_draw();
+            }
+        });
+
+        // Handle Enter key to exit text editing
+        let render_state_activate = render_state.clone();
+        let ime_entry_activate = ime_entry.clone();
+        let drawing_area_activate = drawing_area.clone();
+        ime_entry.connect_activate(move |_entry| {
+            // Exit text editing mode
+            let mut tool_state = render_state_activate.tool_state.borrow_mut();
+            tool_state.editing_text_id = None;
+            tool_state.editing_cursor_pos = 0;
+            drop(tool_state);
+
+            ime_entry_activate.set_visible(false);
+            ime_entry_activate.set_text("");
+            drawing_area_activate.grab_focus();
+            drawing_area_activate.queue_draw();
+            eprintln!("✅ IME Entry: Text editing completed (Enter)");
+        });
+
+        // Handle Escape and Shift+Enter keys
+        let render_state_key = render_state.clone();
+        let ime_entry_key = ime_entry.clone();
+        let drawing_area_key = drawing_area.clone();
+        let key_controller = gtk4::EventControllerKey::new();
+        key_controller.connect_key_pressed(move |_ctrl, keyval, _keycode, state| {
+            // Shift+Enter: Insert newline
+            if keyval == gtk4::gdk::Key::Return
+                && state.contains(gtk4::gdk::ModifierType::SHIFT_MASK)
+            {
+                // Insert newline at cursor position
+                let current_text = ime_entry_key.text().to_string();
+                let cursor_pos = ime_entry_key.position() as usize;
+
+                // Convert to chars for proper Unicode handling
+                let chars: Vec<char> = current_text.chars().collect();
+                let (before, after) = chars.split_at(cursor_pos.min(chars.len()));
+                let new_text: String =
+                    before.iter().collect::<String>() + "\n" + &after.iter().collect::<String>();
+
+                ime_entry_key.set_text(&new_text);
+                ime_entry_key.set_position((cursor_pos + 1) as i32);
+                eprintln!("✅ IME Entry: Newline inserted at position {}", cursor_pos);
+                return gtk4::glib::Propagation::Stop;
+            }
+
+            // Escape: Cancel editing
+            if keyval == gtk4::gdk::Key::Escape {
+                // Exit text editing mode
+                let mut tool_state = render_state_key.tool_state.borrow_mut();
+                tool_state.editing_text_id = None;
+                tool_state.editing_cursor_pos = 0;
+                drop(tool_state);
+
+                ime_entry_key.set_visible(false);
+                ime_entry_key.set_text("");
+                drawing_area_key.grab_focus();
+                drawing_area_key.queue_draw();
+                eprintln!("✅ IME Entry: Text editing cancelled (Escape)");
+                return gtk4::glib::Propagation::Stop;
+            }
+            gtk4::glib::Propagation::Proceed
+        });
+        ime_entry.add_controller(key_controller);
+
         // Setup drawing function
         Self::setup_draw_func(&drawing_area, &app_state, &render_state);
 
         // Wire up all event handlers - must happen AFTER container setup
-        input::wire_pointer_events(&drawing_area, &render_state, &app_state);
+        input::wire_pointer_events(&drawing_area, &render_state, &app_state, &ime_entry);
 
         // DEBUG: Log widget hierarchy and allocation information
         eprintln!("\n=== Canvas Widget Hierarchy ===");
@@ -114,6 +225,7 @@ impl CanvasView {
             drawing_area,
             overlay,
             render_state,
+            ime_entry,
         }
     }
 
@@ -158,8 +270,8 @@ impl CanvasView {
             return Ok(());
         };
 
-        // Get the first page (for now, single-page support)
-        let Some(page) = document.pages.first() else {
+        // Get the active page using the app state's active page index
+        let Some(page) = app_state.active_page() else {
             return Ok(());
         };
 
@@ -188,7 +300,7 @@ impl CanvasView {
 
         // Draw page elements
         let selected = render_state.selected_ids.borrow();
-        Self::draw_elements(ctx, page, &selected, render_state, app_state)?;
+        Self::draw_elements(ctx, &page, &selected, render_state, app_state)?;
         drop(selected);
 
         // Draw drag preview box (blue outline while dragging)
@@ -203,6 +315,33 @@ impl CanvasView {
             );
             ctx.stroke()?;
         }
+
+        // Draw smart guide snap lines
+        let snap_lines = render_state.snap_lines.borrow();
+        if !snap_lines.is_empty() {
+            ctx.set_source_rgb(1.0, 0.4, 0.7); // Magenta/pink color for smart guides
+            ctx.set_line_width(1.0 / config.zoom); // Thin line adjusted for zoom
+
+            // Set dashed line pattern
+            ctx.set_dash(&[5.0 / config.zoom, 3.0 / config.zoom], 0.0);
+
+            for line in snap_lines.iter() {
+                if line.is_horizontal {
+                    // Horizontal line at Y position
+                    ctx.move_to(line.bounds.0 as f64, line.position as f64);
+                    ctx.line_to(line.bounds.1 as f64, line.position as f64);
+                } else {
+                    // Vertical line at X position
+                    ctx.move_to(line.position as f64, line.bounds.0 as f64);
+                    ctx.line_to(line.position as f64, line.bounds.1 as f64);
+                }
+                ctx.stroke()?;
+            }
+
+            // Reset dash pattern
+            ctx.set_dash(&[], 0.0);
+        }
+        drop(snap_lines);
 
         Ok(())
     }
@@ -230,6 +369,11 @@ impl CanvasView {
         app_state: &AppState,
     ) -> Result<(), Box<dyn std::error::Error>> {
         use testruct_core::document::{DocumentElement, ShapeKind};
+
+        // Skip invisible elements
+        if !element.is_visible() {
+            return Ok(());
+        }
 
         match element {
             DocumentElement::Group(group) => {
@@ -422,6 +566,10 @@ impl CanvasView {
 
     pub fn overlay(&self) -> Overlay {
         self.overlay.clone()
+    }
+
+    pub fn ime_entry(&self) -> Entry {
+        self.ime_entry.clone()
     }
 
     pub fn render_state(&self) -> &CanvasRenderState {

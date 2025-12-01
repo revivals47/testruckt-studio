@@ -1,5 +1,7 @@
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use crate::app::recent_files::RecentFiles;
 use crate::undo_redo::UndoRedoStack;
 use gtk4::glib::WeakRef;
 use gtk4::ApplicationWindow;
@@ -21,10 +23,12 @@ impl Default for AppState {
             inner: Arc::new(Mutex::new(AppShared {
                 project: Project::default(),
                 active_document: None,
+                active_page_index: 0,
                 undo_redo_stack: Arc::new(Mutex::new(crate::undo_redo::UndoRedoStack::default())),
                 item_bank: Arc::new(Mutex::new(item_bank)),
                 asset_catalog: Arc::new(Mutex::new(AssetCatalog::new())),
                 window: None,
+                recent_files: RecentFiles::load(),
             })),
         };
 
@@ -49,6 +53,15 @@ impl Default for AppState {
 impl AppState {
     pub fn project(&self) -> Project {
         self.inner.lock().expect("state").project.clone()
+    }
+
+    /// Execute a function on the project (mutable access)
+    pub fn with_project<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Project) -> R,
+    {
+        let mut inner = self.inner.lock().expect("state");
+        f(&mut inner.project)
     }
 
     pub fn active_document(&self) -> Option<Document> {
@@ -116,9 +129,10 @@ impl AppState {
     ) -> Result<(), String> {
         let mut inner = self.inner.lock().expect("state");
         if let Some(doc_id) = inner.active_document {
+            let page_index = inner.active_page_index;
             if let Some(doc) = inner.project.document_mut(doc_id) {
-                if !doc.pages.is_empty() {
-                    doc.pages[0].add_element(element);
+                if page_index < doc.pages.len() {
+                    doc.pages[page_index].add_element(element);
                     return Ok(());
                 }
             }
@@ -218,23 +232,75 @@ impl AppState {
         }
     }
 
-    /// Get all object IDs in the first page of the active document
-    pub fn get_all_object_ids(&self) -> Vec<uuid::Uuid> {
-        if let Some(doc) = self.active_document() {
-            if let Some(page) = doc.pages.first() {
-                page.elements
-                    .iter()
-                    .map(|element| match element {
-                        testruct_core::document::DocumentElement::Shape(shape) => shape.id,
-                        testruct_core::document::DocumentElement::Text(text) => text.id,
-                        testruct_core::document::DocumentElement::Image(image) => image.id,
-                        testruct_core::document::DocumentElement::Frame(frame) => frame.id,
-                        testruct_core::document::DocumentElement::Group(group) => group.id,
-                    })
-                    .collect()
-            } else {
-                Vec::new()
+    /// Get the active page index
+    pub fn active_page_index(&self) -> usize {
+        let inner = self.inner.lock().expect("state");
+        inner.active_page_index
+    }
+
+    /// Set the active page index (bounds checked)
+    pub fn set_active_page_index(&self, index: usize) -> Result<(), String> {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document(doc_id) {
+                if index < doc.pages.len() {
+                    inner.active_page_index = index;
+                    tracing::info!("📄 Active page set to {} (0-indexed)", index);
+                    return Ok(());
+                }
+                return Err(format!(
+                    "Page index {} out of bounds (0..{})",
+                    index,
+                    doc.pages.len()
+                ));
             }
+        }
+        Err("No active document".to_string())
+    }
+
+    /// Get a reference to the active page (read-only)
+    pub fn active_page(&self) -> Option<testruct_core::document::Page> {
+        let inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            if let Some(doc) = inner.project.document(doc_id) {
+                if inner.active_page_index < doc.pages.len() {
+                    return Some(doc.pages[inner.active_page_index].clone());
+                }
+            }
+        }
+        None
+    }
+
+    /// Execute a function on the active page (mutable access)
+    pub fn with_active_page<F, R>(&self, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut testruct_core::document::Page) -> R,
+    {
+        let mut inner = self.inner.lock().expect("state");
+        if let Some(doc_id) = inner.active_document {
+            let page_index = inner.active_page_index;
+            if let Some(doc) = inner.project.document_mut(doc_id) {
+                if page_index < doc.pages.len() {
+                    return Some(f(&mut doc.pages[page_index]));
+                }
+            }
+        }
+        None
+    }
+
+    /// Get all object IDs in the active page of the active document
+    pub fn get_all_object_ids(&self) -> Vec<uuid::Uuid> {
+        if let Some(page) = self.active_page() {
+            page.elements
+                .iter()
+                .map(|element| match element {
+                    testruct_core::document::DocumentElement::Shape(shape) => shape.id,
+                    testruct_core::document::DocumentElement::Text(text) => text.id,
+                    testruct_core::document::DocumentElement::Image(image) => image.id,
+                    testruct_core::document::DocumentElement::Frame(frame) => frame.id,
+                    testruct_core::document::DocumentElement::Group(group) => group.id,
+                })
+                .collect()
         } else {
             Vec::new()
         }
@@ -269,13 +335,56 @@ impl AppState {
         }
         None
     }
+
+    /// Add a document to the project and set it as active
+    pub fn add_and_activate_document(&self, document: Document) {
+        let mut inner = self.inner.lock().expect("state");
+        let doc_id = document.id;
+        inner.project.add_document(document);
+        inner.active_document = Some(doc_id);
+    }
+
+    /// Replace the active document with a new one (for loading documents)
+    pub fn set_active_document(&self, document: Document) {
+        let mut inner = self.inner.lock().expect("state");
+        let doc_id = document.id;
+
+        // Remove old document if exists
+        if let Some(old_id) = inner.active_document {
+            inner.project.remove_document(old_id);
+        }
+
+        // Add new document and set as active
+        inner.project.add_document(document);
+        inner.active_document = Some(doc_id);
+    }
+
+    /// Add a file to the recent files list
+    pub fn add_recent_file(&self, path: PathBuf) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.recent_files.add_file(path);
+    }
+
+    /// Get a copy of the recent files list
+    pub fn recent_files(&self) -> Vec<PathBuf> {
+        let inner = self.inner.lock().expect("state");
+        inner.recent_files.files.clone()
+    }
+
+    /// Clear the recent files list
+    pub fn clear_recent_files(&self) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.recent_files.clear();
+    }
 }
 
 struct AppShared {
     project: Project,
     active_document: Option<DocumentId>,
+    active_page_index: usize,
     undo_redo_stack: Arc<Mutex<UndoRedoStack>>,
     item_bank: Arc<Mutex<ItemBank>>,
     asset_catalog: Arc<Mutex<AssetCatalog>>,
     window: Option<WeakRef<ApplicationWindow>>,
+    recent_files: RecentFiles,
 }

@@ -82,7 +82,7 @@ pub use self::keyboard_shortcuts::move_selected_objects;
 use crate::app::AppState;
 use crate::canvas::CanvasRenderState;
 use gtk4::prelude::*;
-use gtk4::DrawingArea;
+use gtk4::{DrawingArea, Entry};
 use ime::ImeManager;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -96,6 +96,7 @@ use std::rc::Rc;
 /// - `drawing_area`: GTK DrawingArea ウィジェット
 /// - `render_state`: キャンバス描画状態
 /// - `app_state`: アプリケーション全体の状態
+/// - `ime_entry`: IME入力用のEntryウィジェット（日本語入力対応）
 ///
 /// # 初期化内容
 ///
@@ -108,6 +109,7 @@ pub fn wire_pointer_events(
     drawing_area: &DrawingArea,
     render_state: &CanvasRenderState,
     app_state: &AppState,
+    ime_entry: &Entry,
 ) {
     drawing_area.set_focusable(true);
 
@@ -116,5 +118,5 @@ pub fn wire_pointer_events(
 
     keyboard::setup_keyboard_events(drawing_area, render_state, app_state, ime_manager.clone());
     mouse::setup_mouse_tracking(drawing_area, render_state, app_state);
-    gesture::setup_gestures(drawing_area, render_state, app_state, ime_manager);
+    gesture::setup_gestures(drawing_area, render_state, app_state, ime_manager, ime_entry);
 }

@@ -148,6 +148,7 @@ mod tests {
             style: TextStyle::default(),
             bounds: Rect::new(Point::new(x, y), Size::new(100.0, 20.0)),
             auto_resize_height: false,
+            visible: true,
         }
     }
 

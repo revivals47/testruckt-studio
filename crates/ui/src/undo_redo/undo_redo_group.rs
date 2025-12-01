@@ -116,6 +116,8 @@ impl Command for GroupCommand {
             name: "Group".to_string(),
             bounds,
             children: self.grouped_elements.clone(),
+            visible: true,
+            locked: false,
         };
 
         // Add group to page

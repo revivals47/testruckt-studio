@@ -44,6 +44,8 @@ pub fn register(
                             height: 200.0,
                         },
                     },
+                    visible: true,
+                    locked: false,
                 };
 
                 match state_ref.add_element_to_active_page(

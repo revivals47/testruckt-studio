@@ -50,6 +50,8 @@ pub fn handle_insert_image(app_state: &AppState, drawing_area: &DrawingArea) {
                         height: 150.0,
                     },
                 },
+                visible: true,
+                locked: false,
             });
             page.elements.push(image);
         }
@@ -153,6 +155,38 @@ pub fn handle_cut(
         render_state.selected_ids.borrow_mut().clear();
 
         tracing::info!("✅ Cut {} objects", selected_count);
+        drawing_area.queue_draw();
+    }
+}
+
+/// 削除処理（Delete key）
+///
+/// 選択されたオブジェクトを削除します。
+///
+/// # 引数
+///
+/// - `render_state`: キャンバス描画状態
+/// - `app_state`: アプリケーション状態
+/// - `drawing_area`: 描画エリア（再描画用）
+pub fn handle_delete(
+    render_state: &CanvasRenderState,
+    app_state: &AppState,
+    drawing_area: &DrawingArea,
+) {
+    let selected = render_state.selected_ids.borrow().clone();
+    let selected_count = selected.len();
+
+    if !selected.is_empty() {
+        app_state.with_mutable_active_document(|doc| {
+            if let Some(page) = doc.pages.first_mut() {
+                page.elements.retain(|e| !selected.contains(&e.id()));
+            }
+        });
+
+        // Clear selection
+        render_state.selected_ids.borrow_mut().clear();
+
+        tracing::info!("✅ Deleted {} objects", selected_count);
         drawing_area.queue_draw();
     }
 }
@@ -334,14 +368,12 @@ pub fn handle_paste_text_in_editing(
             eprintln!("✅ pbpaste executed, status: {}", output.status);
             if let Ok(clipboard_text) = String::from_utf8(output.stdout) {
                 let pasted_text = clipboard_text.trim();
+                // Truncate safely for display (char-based, not byte-based)
+                let display_text: String = pasted_text.chars().take(50).collect();
                 eprintln!(
-                    "📋 Clipboard content (len={}): {:?}",
-                    pasted_text.len(),
-                    if pasted_text.len() > 50 {
-                        &pasted_text[..50]
-                    } else {
-                        pasted_text
-                    }
+                    "📋 Clipboard content (chars={}): {:?}",
+                    pasted_text.chars().count(),
+                    display_text
                 );
                 if !pasted_text.is_empty() {
                     eprintln!(

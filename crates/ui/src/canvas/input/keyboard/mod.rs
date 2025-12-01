@@ -201,6 +201,23 @@ pub fn setup_keyboard_events(
             return gtk4::glib::Propagation::Stop;
         }
 
+        // Handle Paste: Ctrl+V (must be before text editing keys to prevent 'v' insertion)
+        if ctrl_pressed && keyval == gtk4::gdk::Key::v {
+            if in_text_editing {
+                // Paste text (including Japanese) during text editing mode
+                keyboard_shortcuts::handle_paste_text_in_editing(
+                    &app_state_keyboard,
+                    &render_state_kbd,
+                    &drawing_area_keyboard,
+                );
+                eprintln!("📋 Text paste in editing mode");
+            } else {
+                // Paste elements when not in text editing
+                keyboard_shortcuts::handle_paste(&app_state_keyboard, &drawing_area_keyboard);
+            }
+            return gtk4::glib::Propagation::Stop;
+        }
+
         // Handle text alignment shortcuts (Ctrl+L, Ctrl+E, Ctrl+R, Ctrl+C)
         if ctrl_pressed && in_text_editing {
             if let Some(text_id) = editing_text_id {
@@ -255,23 +272,6 @@ pub fn setup_keyboard_events(
             return gtk4::glib::Propagation::Stop;
         }
 
-        // Handle Paste: Ctrl+V
-        if ctrl_pressed && keyval == gtk4::gdk::Key::v {
-            if in_text_editing {
-                // Paste text (including Japanese) during text editing mode
-                keyboard_shortcuts::handle_paste_text_in_editing(
-                    &app_state_keyboard,
-                    &render_state_kbd,
-                    &drawing_area_keyboard,
-                );
-                eprintln!("📋 Text paste in editing mode");
-            } else {
-                // Paste elements when not in text editing
-                keyboard_shortcuts::handle_paste(&app_state_keyboard, &drawing_area_keyboard);
-            }
-            return gtk4::glib::Propagation::Stop;
-        }
-
         // Handle Duplicate: Ctrl+D
         if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::d {
             keyboard_shortcuts::handle_duplicate(
@@ -284,6 +284,16 @@ pub fn setup_keyboard_events(
 
         // Handle object movement when NOT in text editing
         let movement_amount = if shift_pressed { 10.0 } else { 1.0 };
+
+        // Handle Delete key to delete selected objects
+        if !in_text_editing && (keyval == gtk4::gdk::Key::Delete || keyval == gtk4::gdk::Key::BackSpace) {
+            keyboard_shortcuts::handle_delete(
+                &render_state_kbd,
+                &app_state_keyboard,
+                &drawing_area_keyboard,
+            );
+            return gtk4::glib::Propagation::Stop;
+        }
 
         // Handle arrow keys for object movement
         let handled = match keyval {

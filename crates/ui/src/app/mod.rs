@@ -1,9 +1,11 @@
 mod actions;
+mod recent_files;
 mod state;
 
 use crate::window::MainWindow;
 use gtk4::{gio, glib, prelude::*, Application};
 
+pub use recent_files::RecentFiles;
 pub use state::AppState;
 
 #[derive(Clone, Debug)]

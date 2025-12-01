@@ -28,6 +28,7 @@ impl MenuBuilder {
         let file_menu = gio::Menu::new();
         file_menu.append(Some("_New"), Some("win.new"));
         file_menu.append(Some("_Open..."), Some("win.open"));
+        file_menu.append(Some("_Recent Files..."), Some("win.recent-files"));
         file_menu.append(Some("_Save"), Some("win.save"));
         file_menu.append(Some("Save _As..."), Some("win.save-as"));
 
@@ -47,8 +48,16 @@ impl MenuBuilder {
         edit_menu.append(Some("_Undo"), Some("win.undo"));
         edit_menu.append(Some("_Redo"), Some("win.redo"));
 
+        let clipboard_section = gio::Menu::new();
+        clipboard_section.append(Some("Cu_t"), Some("win.cut"));
+        clipboard_section.append(Some("_Copy"), Some("win.copy"));
+        clipboard_section.append(Some("_Paste"), Some("win.paste"));
+        edit_menu.append_section(None, &clipboard_section);
+
         let edit_section = gio::Menu::new();
         edit_section.append(Some("Select _All"), Some("win.select-all"));
+        edit_section.append(Some("_Duplicate"), Some("win.duplicate"));
+        edit_section.append(Some("_Delete"), Some("win.delete"));
         edit_menu.append_section(None, &edit_section);
 
         edit_menu

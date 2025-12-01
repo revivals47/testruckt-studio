@@ -63,6 +63,8 @@ pub fn register(
                     id: uuid::Uuid::new_v4(),
                     bounds: group_bounds,
                     children: Vec::new(),
+                    visible: true,
+                    locked: false,
                 };
 
                 // Second pass: move selected elements to group

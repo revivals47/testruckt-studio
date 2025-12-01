@@ -31,7 +31,7 @@ use crate::canvas::tools::ToolMode;
 use crate::canvas::CanvasRenderState;
 use gtk4::gdk;
 use gtk4::prelude::*;
-use gtk4::{DrawingArea, GestureClick, ScrolledWindow};
+use gtk4::{DrawingArea, Entry, GestureClick, ScrolledWindow};
 use std::cell::RefCell;
 use std::rc::Rc;
 use testruct_core::document::DocumentElement;
@@ -43,6 +43,7 @@ pub fn setup_click_gesture(
     render_state: &CanvasRenderState,
     app_state: &AppState,
     ime_manager: Rc<RefCell<ImeManager>>,
+    ime_entry: &Entry,
 ) {
     let click_gesture = GestureClick::new();
     click_gesture.set_button(gdk::BUTTON_PRIMARY);
@@ -52,6 +53,7 @@ pub fn setup_click_gesture(
     let app_state_click = app_state.clone();
     let drawing_area_click = drawing_area.clone();
     let ime_manager_click = ime_manager.clone();
+    let ime_entry_click = ime_entry.clone();
 
     click_gesture.connect_pressed(move |gesture, n_press, x, y| {
         let state = render_state_click.clone();
@@ -149,12 +151,13 @@ pub fn setup_click_gesture(
                                         tool_state.editing_cursor_pos = char_count;
                                         drop(tool_state);
 
-                                        // Give focus to drawing area to receive keyboard input
-                                        drawing_area_click.grab_focus();
-                                        eprintln!("  ✅ Called grab_focus()");
-
-                                        // NOTE: IME focus management is handled automatically by GTK4
-                                        // on macOS with EventControllerKey, so no explicit focus_in/out needed
+                                        // Show IME Entry for Japanese input support
+                                        ime_entry_click.set_text(&text.content);
+                                        ime_entry_click.set_visible(true);
+                                        ime_entry_click.grab_focus();
+                                        // Position cursor at end
+                                        ime_entry_click.set_position(text.content.chars().count() as i32);
+                                        eprintln!("  ✅ IME Entry shown and focused");
 
                                         drawing_area_click.queue_draw();
 
@@ -277,6 +280,11 @@ pub fn setup_click_gesture(
 
                         // Only check resize handles for selected objects
                         if !selected_ids.contains(&element_id) {
+                            continue;
+                        }
+
+                        // Skip resize handles for locked elements
+                        if element.is_locked() {
                             continue;
                         }
 

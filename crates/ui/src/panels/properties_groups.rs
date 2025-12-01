@@ -119,7 +119,7 @@ pub(super) fn build_typography_section(
     size_label.add_css_class("property-label");
     size_section.append(&size_label);
 
-    let size_adj = Adjustment::new(11.0, 6.0, 72.0, 1.0, 5.0, 0.0);
+    let size_adj = Adjustment::new(14.0, 6.0, 72.0, 1.0, 5.0, 0.0);
     let font_size_spin = SpinButton::new(Some(&size_adj), 1.0, 1);
     size_section.append(&font_size_spin);
     container.append(&size_section);

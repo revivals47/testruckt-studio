@@ -50,13 +50,22 @@ pub struct PropertyPanelComponents {
 /// Build the property panel as a GtkBox for compatibility
 pub fn build_property_panel() -> GtkBox {
     let components = build_property_panel_components();
-    components.container.upcast()
+    // Wrap scrolled_window in a GtkBox since scrolled_window can't be upcast to GtkBox
+    let wrapper = GtkBox::new(Orientation::Vertical, 0);
+    wrapper.set_vexpand(true);
+    wrapper.append(&components.scrolled_window);
+    wrapper
 }
 
 /// Build the property panel and return both the box and the button components
 pub fn build_property_panel_with_components() -> (GtkBox, PropertyPanelComponents) {
     let components = build_property_panel_components();
-    (components.container.clone().upcast(), components)
+    // Wrap scrolled_window in a GtkBox since scrolled_window can't be upcast to GtkBox
+    // The container is already a child of scrolled_window, so we must use scrolled_window
+    let wrapper = GtkBox::new(Orientation::Vertical, 0);
+    wrapper.set_vexpand(true);
+    wrapper.append(&components.scrolled_window);
+    (wrapper, components)
 }
 
 /// Build the complete property panel with all components

@@ -53,13 +53,16 @@ pub fn wire_font_size_signal(
     spin.connect_value_changed(move |spinner| {
         let font_size = spinner.value() as f32;
 
-        app_state.with_mutable_active_document(|doc| {
-            let selected = render_state.selected_ids.borrow();
-            if !selected.is_empty() {
+        let selected = render_state.selected_ids.borrow();
+        if !selected.is_empty() {
+            let selected_ids = selected.clone();
+            drop(selected);
+
+            app_state.with_mutable_active_document(|doc| {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
                         match element {
-                            DocumentElement::Text(text) if selected.contains(&text.id) => {
+                            DocumentElement::Text(text) if selected_ids.contains(&text.id) => {
                                 text.style.font_size = font_size;
                                 recompute_auto_height(text);
                                 tracing::debug!("✅ Font size changed to: {}px", font_size);
@@ -68,8 +71,8 @@ pub fn wire_font_size_signal(
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         drawing_area.queue_draw();
     });
