@@ -142,7 +142,7 @@ fn test_add_page_to_document() {
 
 #[test]
 fn test_page_metadata() {
-    let mut doc = DocumentBuilder::new()
+    let doc = DocumentBuilder::new()
         .with_title("Metadata Test")
         .add_page(Page::empty())
         .build()

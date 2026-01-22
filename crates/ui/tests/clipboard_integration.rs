@@ -4,9 +4,7 @@
 //! when accessing the shared clipboard state.
 
 use std::sync::Mutex;
-use testruct_core::document::{
-    Document, DocumentBuilder, DocumentElement, Page, ShapeElement, ShapeKind, TextElement,
-};
+use testruct_core::document::{DocumentElement, ShapeElement, ShapeKind, TextElement};
 use testruct_core::layout::{Point, Rect, Size};
 use testruct_core::typography::{Color, TextStyle};
 use testruct_ui::clipboard;

@@ -450,7 +450,7 @@ fn test_undo_stack_limit() {
     let mut stack = testruct_ui::undo_redo::UndoRedoStack::with_capacity(5);
 
     // Push 10 commands (exceeds limit of 5)
-    for i in 0..10 {
+    for _i in 0..10 {
         let shape = create_test_shape();
         let cmd = testruct_ui::undo_redo::CreateCommand::new(doc.clone(), shape, 0);
         stack.push(Box::new(cmd));

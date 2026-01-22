@@ -504,6 +504,7 @@ fn render_text_to_context(
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
