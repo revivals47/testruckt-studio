@@ -193,18 +193,13 @@ pub fn draw_rulers(
 }
 
 /// Grid display style
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum GridStyle {
     /// Solid lines
     Lines,
     /// Dotted pattern (points at intersections)
+    #[default]
     Dots,
-}
-
-impl Default for GridStyle {
-    fn default() -> Self {
-        GridStyle::Dots
-    }
 }
 
 /// Grid configuration

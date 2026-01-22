@@ -509,6 +509,6 @@ mod tests {
 
     #[test]
     fn test_svg_export_module_loads() {
-        assert!(true);
+        // Module loads successfully if this compiles and runs
     }
 }

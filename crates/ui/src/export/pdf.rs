@@ -372,6 +372,6 @@ mod tests {
 
     #[test]
     fn test_pdf_export_module_loads() {
-        assert!(true);
+        // Module loads successfully if this compiles and runs
     }
 }

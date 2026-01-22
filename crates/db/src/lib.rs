@@ -23,7 +23,6 @@ pub fn initialize_database(path: &Path) -> Result<ItemBank> {
 mod tests {
     #[test]
     fn test_module_loads() {
-        // Basic module loading test
-        assert!(true);
+        // Module loads successfully if this compiles and runs
     }
 }

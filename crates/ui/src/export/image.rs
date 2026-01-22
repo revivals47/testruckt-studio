@@ -669,7 +669,7 @@ mod tests {
 
     #[test]
     fn test_image_export_module_loads() {
-        assert!(true);
+        // Module loads successfully if this compiles and runs
     }
 
     #[test]
