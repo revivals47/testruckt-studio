@@ -625,9 +625,9 @@ fn color_to_rgba(color: &testruct_core::typography::Color) -> gdk::RGBA {
 
 fn rgba_to_color(rgba: &gdk::RGBA) -> testruct_core::typography::Color {
     testruct_core::typography::Color {
-        r: rgba.red() as f32,
-        g: rgba.green() as f32,
-        b: rgba.blue() as f32,
-        a: rgba.alpha() as f32,
+        r: rgba.red(),
+        g: rgba.green(),
+        b: rgba.blue(),
+        a: rgba.alpha(),
     }
 }

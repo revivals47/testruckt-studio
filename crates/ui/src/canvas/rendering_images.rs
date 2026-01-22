@@ -64,7 +64,7 @@ pub fn draw_image_placeholder(ctx: &Context, bounds: &Rect) -> Result<(), cairo:
     layout.set_text("Image Placeholder");
     let mut font_desc = pango::FontDescription::new();
     font_desc.set_family("Sans");
-    font_desc.set_size((11 * pango::SCALE as i32) as i32);
+    font_desc.set_size(11 * pango::SCALE);
     layout.set_font_description(Some(&font_desc));
     pangocairo::functions::show_layout(ctx, &layout);
 
@@ -79,7 +79,7 @@ pub fn draw_image_placeholder(ctx: &Context, bounds: &Rect) -> Result<(), cairo:
         hint_layout.set_text("(Actual image will display here)");
         let mut hint_font = pango::FontDescription::new();
         hint_font.set_family("Sans");
-        hint_font.set_size((9 * pango::SCALE as i32) as i32);
+        hint_font.set_size(9 * pango::SCALE);
         hint_layout.set_font_description(Some(&hint_font));
         pangocairo::functions::show_layout(ctx, &hint_layout);
     }
