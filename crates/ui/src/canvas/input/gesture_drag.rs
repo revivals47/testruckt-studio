@@ -275,7 +275,7 @@ pub fn setup_drag_gesture(
                                         x: bounds.origin.x + delta_x as f32,
                                         y: bounds.origin.y + delta_y as f32,
                                     },
-                                    size: bounds.size.clone(),
+                                    size: bounds.size,
                                 };
                                 dragging_bounds = Some(preview_bounds);
                             } else if !selected_ids.contains(&id) {
@@ -389,7 +389,7 @@ pub fn setup_drag_gesture(
                     tool_state.resizing_object_id,
                     tool_state.resize_handle,
                     tool_state.resize_original_bounds,
-                    tool_state.resize_element_bounds.clone(),
+                    tool_state.resize_element_bounds,
                     tool_state.marquee_selecting,
                 )
             } else {
@@ -428,7 +428,7 @@ pub fn setup_drag_gesture(
                             for element in page.elements.iter_mut() {
                                 match element {
                                     DocumentElement::Text(text) if text.id == object_id => {
-                                        let old_bounds = text.bounds.clone();
+                                        let old_bounds = text.bounds;
                                         let mut new_bounds = calculate_resize_bounds(&text.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
@@ -439,7 +439,7 @@ pub fn setup_drag_gesture(
                                         return true;
                                     }
                                     DocumentElement::Shape(shape) if shape.id == object_id => {
-                                        let old_bounds = shape.bounds.clone();
+                                        let old_bounds = shape.bounds;
                                         let mut new_bounds = calculate_resize_bounds(&shape.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
@@ -450,7 +450,7 @@ pub fn setup_drag_gesture(
                                         return true;
                                     }
                                     DocumentElement::Image(image) if image.id == object_id => {
-                                        let old_bounds = image.bounds.clone();
+                                        let old_bounds = image.bounds;
                                         let mut new_bounds = calculate_resize_bounds(&image.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
@@ -461,7 +461,7 @@ pub fn setup_drag_gesture(
                                         return true;
                                     }
                                     DocumentElement::Frame(frame) if frame.id == object_id => {
-                                        let old_bounds = frame.bounds.clone();
+                                        let old_bounds = frame.bounds;
                                         let mut new_bounds = calculate_resize_bounds(&frame.bounds, handle, delta_x, delta_y);
                                         if snap_enabled {
                                             new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
@@ -493,7 +493,7 @@ pub fn setup_drag_gesture(
                                             DocumentElement::Group(g) => (g.id, &g.bounds),
                                         };
                                         if id == object_id {
-                                            return Some(bounds.clone());
+                                            return Some(*bounds);
                                         }
                                     }
                                 }

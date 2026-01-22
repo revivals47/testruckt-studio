@@ -272,7 +272,7 @@ pub fn setup_click_gesture(
                             tool_state.resizing_object_id = Some(element_id);
                             tool_state.resize_handle = Some(handle);
                             tool_state.resize_original_bounds = Some(canvas_mouse_pos);
-                            tool_state.resize_element_bounds = Some(bounds.clone()); // Store original bounds for undo
+                            tool_state.resize_element_bounds = Some(*bounds); // Store original bounds for undo
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
@@ -320,31 +320,31 @@ pub fn setup_click_gesture(
                                 eprintln!("  Shape {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
                                     shape.id, shape.bounds.origin.x, shape.bounds.origin.y,
                                     shape.bounds.size.width, shape.bounds.size.height);
-                                objects.push((shape.id, shape.bounds.clone()));
+                                objects.push((shape.id, shape.bounds));
                             }
                             DocumentElement::Text(text) => {
                                 eprintln!("  Text  {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
                                     text.id, text.bounds.origin.x, text.bounds.origin.y,
                                     text.bounds.size.width, text.bounds.size.height);
-                                objects.push((text.id, text.bounds.clone()));
+                                objects.push((text.id, text.bounds));
                             }
                             DocumentElement::Image(image) => {
                                 eprintln!("  Image {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
                                     image.id, image.bounds.origin.x, image.bounds.origin.y,
                                     image.bounds.size.width, image.bounds.size.height);
-                                objects.push((image.id, image.bounds.clone()));
+                                objects.push((image.id, image.bounds));
                             }
                             DocumentElement::Frame(frame) => {
                                 eprintln!("  Frame {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
                                     frame.id, frame.bounds.origin.x, frame.bounds.origin.y,
                                     frame.bounds.size.width, frame.bounds.size.height);
-                                objects.push((frame.id, frame.bounds.clone()));
+                                objects.push((frame.id, frame.bounds));
                             }
                             DocumentElement::Group(group) => {
                                 eprintln!("  Group {}: bounds=({:.0}, {:.0}, {:.0}x{:.0})",
                                     group.id, group.bounds.origin.x, group.bounds.origin.y,
                                     group.bounds.size.width, group.bounds.size.height);
-                                objects.push((group.id, group.bounds.clone()));
+                                objects.push((group.id, group.bounds));
                             }
                         }
                     }
