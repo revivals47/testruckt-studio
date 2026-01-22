@@ -187,19 +187,19 @@ impl PagesPanel {
                 }
                 if text_count > 0 {
                     if !summary_str.is_empty() {
-                        summary_str.push_str(" ");
+                        summary_str.push(' ');
                     }
                     summary_str.push_str(&format!("📝 {}", text_count));
                 }
                 if image_count > 0 {
                     if !summary_str.is_empty() {
-                        summary_str.push_str(" ");
+                        summary_str.push(' ');
                     }
                     summary_str.push_str(&format!("🖼 {}", image_count));
                 }
                 if frame_count > 0 || group_count > 0 {
                     if !summary_str.is_empty() {
-                        summary_str.push_str(" ");
+                        summary_str.push(' ');
                     }
                     if frame_count > 0 {
                         summary_str.push_str(&format!("📦 {}", frame_count));
