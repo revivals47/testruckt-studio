@@ -24,6 +24,12 @@ impl DocumentId {
     }
 }
 
+impl Default for DocumentId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl fmt::Display for DocumentId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)

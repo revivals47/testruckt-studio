@@ -20,6 +20,12 @@ impl PageId {
     }
 }
 
+impl Default for PageId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Page {
     pub id: PageId,

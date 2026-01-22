@@ -12,6 +12,12 @@ impl TemplateId {
     }
 }
 
+impl Default for TemplateId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Template {
     pub id: TemplateId,

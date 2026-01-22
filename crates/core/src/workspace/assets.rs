@@ -46,6 +46,12 @@ impl AssetRef {
     }
 }
 
+impl Default for AssetRef {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AssetMetadata {
     pub id: AssetRef,

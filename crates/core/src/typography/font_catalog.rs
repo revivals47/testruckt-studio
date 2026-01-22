@@ -12,7 +12,15 @@ impl FontCatalog {
             fonts: HashMap::new(),
         }
     }
+}
 
+impl Default for FontCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FontCatalog {
     pub fn register(&mut self, descriptor: FontDescriptor) {
         self.fonts.insert(descriptor.family.clone(), descriptor);
     }

@@ -30,7 +30,15 @@ impl ToolButtons {
             text_btn: ToggleButton::with_label("Text"),
         }
     }
+}
 
+impl Default for ToolButtons {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ToolButtons {
     /// Get the currently selected tool based on button state
     pub fn get_selected_tool(&self) -> ToolMode {
         if self.rectangle_btn.is_active() {
