@@ -327,7 +327,7 @@ impl Command for AppGroupCommand {
                         DocumentElement::Group(g) => &g.bounds,
                     };
                     if first {
-                        bounds = elem_bounds.clone();
+                        bounds = *elem_bounds;
                         first = false;
                     } else {
                         let min_x = bounds.origin.x.min(elem_bounds.origin.x);
@@ -562,10 +562,10 @@ impl AppPropertyChangeCommand {
                 if element_ids.contains(&element.id()) {
                     let old_value = match (&new_value, element) {
                         (PropertyValue::StrokeColor(_), DocumentElement::Shape(shape)) => {
-                            Some(PropertyValue::StrokeColor(shape.stroke.clone()))
+                            Some(PropertyValue::StrokeColor(shape.stroke))
                         }
                         (PropertyValue::FillColor(_), DocumentElement::Shape(shape)) => {
-                            Some(PropertyValue::FillColor(shape.fill.clone()))
+                            Some(PropertyValue::FillColor(shape.fill))
                         }
                         (PropertyValue::StrokeWidth(_), DocumentElement::Shape(shape)) => {
                             Some(PropertyValue::StrokeWidth(shape.stroke_width))
@@ -601,11 +601,11 @@ impl AppPropertyChangeCommand {
                 if element_ids.contains(&element.id()) {
                     match (&value, element) {
                         (PropertyValue::StrokeColor(color), DocumentElement::Shape(shape)) => {
-                            shape.stroke = color.clone();
+                            shape.stroke = *color;
                             changed = true;
                         }
                         (PropertyValue::FillColor(color), DocumentElement::Shape(shape)) => {
-                            shape.fill = color.clone();
+                            shape.fill = *color;
                             changed = true;
                         }
                         (PropertyValue::StrokeWidth(width), DocumentElement::Shape(shape)) => {
@@ -798,7 +798,7 @@ impl AppResizeCommand {
     fn apply_bounds(&self, bounds: &testruct_core::layout::Rect) -> bool {
         let page_index = self.page_index;
         let element_id = self.element_id;
-        let bounds = bounds.clone();
+        let bounds = *bounds;
         let mut applied = false;
 
         self.app_state.with_mutable_active_document(|doc| {
@@ -809,27 +809,27 @@ impl AppResizeCommand {
             for element in &mut page.elements {
                 match element {
                     DocumentElement::Shape(shape) if shape.id == element_id => {
-                        shape.bounds = bounds.clone();
+                        shape.bounds = bounds;
                         applied = true;
                         return;
                     }
                     DocumentElement::Text(text) if text.id == element_id => {
-                        text.bounds = bounds.clone();
+                        text.bounds = bounds;
                         applied = true;
                         return;
                     }
                     DocumentElement::Image(image) if image.id == element_id => {
-                        image.bounds = bounds.clone();
+                        image.bounds = bounds;
                         applied = true;
                         return;
                     }
                     DocumentElement::Frame(frame) if frame.id == element_id => {
-                        frame.bounds = bounds.clone();
+                        frame.bounds = bounds;
                         applied = true;
                         return;
                     }
                     DocumentElement::Group(group) if group.id == element_id => {
-                        group.bounds = bounds.clone();
+                        group.bounds = bounds;
                         applied = true;
                         return;
                     }

@@ -33,7 +33,7 @@ pub fn register(
         } else {
             "グリッド: OFF"
         });
-        let _ = grid_drawing_area.queue_draw();
+        grid_drawing_area.queue_draw();
     });
 
     let guides_drawing_area = canvas_view.drawing_area();
@@ -51,7 +51,7 @@ pub fn register(
         } else {
             "ガイド: OFF"
         });
-        let _ = guides_drawing_area.queue_draw();
+        guides_drawing_area.queue_draw();
     });
 
     let rulers_drawing_area = canvas_view.drawing_area();
@@ -69,7 +69,7 @@ pub fn register(
         } else {
             "ルーラー: OFF"
         });
-        let _ = rulers_drawing_area.queue_draw();
+        rulers_drawing_area.queue_draw();
     });
 
     let tool_palette_toggle = tool_palette.clone();
@@ -100,7 +100,7 @@ pub fn register(
         drop(config);
         zoom_out_btn.set_label(&format_zoom_percent(new_zoom));
         tracing::info!("✅ Zoom set to {:.0}%", new_zoom * 100.0);
-        let _ = zoom_out_canvas.queue_draw();
+        zoom_out_canvas.queue_draw();
     });
 
     let zoom_reset_canvas = canvas_view.drawing_area();
@@ -113,7 +113,7 @@ pub fn register(
         drop(config);
         zoom_reset_btn.set_label("100%");
         tracing::info!("✅ Zoom reset to 100%");
-        let _ = zoom_reset_canvas.queue_draw();
+        zoom_reset_canvas.queue_draw();
     });
 
     let zoom_in_canvas = canvas_view.drawing_area();
@@ -127,7 +127,7 @@ pub fn register(
         drop(config);
         zoom_in_btn.set_label(&format_zoom_percent(new_zoom));
         tracing::info!("✅ Zoom set to {:.0}%", new_zoom * 100.0);
-        let _ = zoom_in_canvas.queue_draw();
+        zoom_in_canvas.queue_draw();
     });
 
     // Zoom to fit window (Ctrl+1)
@@ -245,7 +245,7 @@ pub fn register(
         let new_state = config.snap_to_guides;
         drop(config);
         tracing::info!("✅ Snap to guides toggled: {}", new_state);
-        let _ = snap_guides_canvas.queue_draw();
+        snap_guides_canvas.queue_draw();
     });
 
     // Snap to grid toggle
@@ -258,7 +258,7 @@ pub fn register(
         let new_state = config.snap_to_grid;
         drop(config);
         tracing::info!("✅ Snap to grid toggled: {}", new_state);
-        let _ = snap_grid_canvas.queue_draw();
+        snap_grid_canvas.queue_draw();
     });
 
     // Toggle layers panel

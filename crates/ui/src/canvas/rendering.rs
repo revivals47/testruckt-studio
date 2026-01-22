@@ -165,7 +165,7 @@ pub fn snap_rect_to_grid(
     rect: &testruct_core::layout::Rect,
     spacing: f32,
 ) -> testruct_core::layout::Rect {
-    testruct_core::layout::Rect::new(snap_point_to_grid(&rect.origin, spacing), rect.size.clone())
+    testruct_core::layout::Rect::new(snap_point_to_grid(&rect.origin, spacing), rect.size)
 }
 
 #[cfg(test)]

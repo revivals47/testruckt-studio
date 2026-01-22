@@ -239,7 +239,7 @@ pub fn update_property_panel_on_selection(
                             DocumentElement::Shape(shape) => {
                                 fill_applicable = true;
                                 match &fill_state {
-                                    None => fill_state = Some(shape.fill.clone()),
+                                    None => fill_state = Some(shape.fill),
                                     Some(prev) => {
                                         if *prev != shape.fill {
                                             fill_mixed = true;
@@ -249,7 +249,7 @@ pub fn update_property_panel_on_selection(
 
                                 stroke_applicable = true;
                                 match &stroke_state {
-                                    None => stroke_state = Some(shape.stroke.clone()),
+                                    None => stroke_state = Some(shape.stroke),
                                     Some(prev) => {
                                         if *prev != shape.stroke {
                                             stroke_mixed = true;

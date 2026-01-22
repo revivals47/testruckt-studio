@@ -53,7 +53,7 @@ pub fn register(
                 ) {
                     Ok(_) => {
                         tracing::info!("✅ Image inserted: {}", path.display());
-                        let _ = drawing_area.queue_draw();
+                        drawing_area.queue_draw();
                     }
                     Err(e) => {
                         tracing::error!("❌ Failed to insert image: {}", e);
@@ -127,7 +127,7 @@ fn register_zorder_actions(
                     if let Some(page) = doc.pages.get_mut(0) {
                         if page.bring_to_front(element_id) {
                             tracing::info!("✅ Element brought to front");
-                            let _ = bring_to_front_drawing_area.queue_draw();
+                            bring_to_front_drawing_area.queue_draw();
                         } else {
                             tracing::warn!("⚠️  Element not found");
                         }
@@ -153,7 +153,7 @@ fn register_zorder_actions(
                     if let Some(page) = doc.pages.get_mut(0) {
                         if page.bring_forward(element_id) {
                             tracing::info!("✅ Element brought forward");
-                            let _ = bring_forward_drawing_area.queue_draw();
+                            bring_forward_drawing_area.queue_draw();
                         } else {
                             tracing::warn!("⚠️  Element already at front or not found");
                         }
@@ -179,7 +179,7 @@ fn register_zorder_actions(
                     if let Some(page) = doc.pages.get_mut(0) {
                         if page.send_to_back(element_id) {
                             tracing::info!("✅ Element sent to back");
-                            let _ = send_to_back_drawing_area.queue_draw();
+                            send_to_back_drawing_area.queue_draw();
                         } else {
                             tracing::warn!("⚠️  Element not found");
                         }
@@ -205,7 +205,7 @@ fn register_zorder_actions(
                     if let Some(page) = doc.pages.get_mut(0) {
                         if page.send_backward(element_id) {
                             tracing::info!("✅ Element sent backward");
-                            let _ = send_backward_drawing_area.queue_draw();
+                            send_backward_drawing_area.queue_draw();
                         } else {
                             tracing::warn!("⚠️  Element already at back or not found");
                         }

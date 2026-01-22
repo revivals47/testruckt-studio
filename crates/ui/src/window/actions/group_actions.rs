@@ -42,7 +42,7 @@ pub fn register(
 
         // Clear selection and redraw
         group_render_state.borrow_mut().clear();
-        let _ = group_drawing_area.queue_draw();
+        group_drawing_area.queue_draw();
         tracing::info!("✅ Grouped objects (with undo support)");
     });
 
@@ -102,7 +102,7 @@ pub fn register(
 
         // Clear selection and redraw
         ungroup_render_state.borrow_mut().clear();
-        let _ = ungroup_drawing_area.queue_draw();
+        ungroup_drawing_area.queue_draw();
         tracing::info!("✅ Ungrouped {} groups (with undo support)", frame_ids_to_ungroup.len());
     });
 

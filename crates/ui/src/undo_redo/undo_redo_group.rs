@@ -71,7 +71,7 @@ impl Command for GroupCommand {
                 };
 
                 if first {
-                    bounds = elem_bounds.clone();
+                    bounds = *elem_bounds;
                     first = false;
                 } else {
                     // Expand bounds to encompass all elements

@@ -324,7 +324,7 @@ pub fn wire_text_background_color_signal(
                             for element in &mut page.elements {
                                 if selected_ids_for_cb.contains(&element.id()) {
                                     if let DocumentElement::Text(text) = element {
-                                        text.style.background_color = Some(bg_color.clone());
+                                        text.style.background_color = Some(bg_color);
                                         recompute_auto_height(text);
                                         changed = true;
                                     }
@@ -418,7 +418,7 @@ pub fn wire_text_color_signal(
                             for element in &mut page.elements {
                                 if selected_ids_for_cb.contains(&element.id()) {
                                     if let DocumentElement::Text(text) = element {
-                                        text.style.color = text_color.clone();
+                                        text.style.color = text_color;
                                         recompute_auto_height(text);
                                         changed = true;
                                     }

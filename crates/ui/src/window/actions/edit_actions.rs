@@ -15,7 +15,7 @@ pub fn register(
         tracing::info!("Action: undo");
         if undo_state.undo() {
             tracing::info!("✅ Undo successful");
-            let _ = undo_drawing_area.queue_draw();
+            undo_drawing_area.queue_draw();
         } else {
             tracing::info!("⚠️  Nothing to undo");
         }
@@ -27,7 +27,7 @@ pub fn register(
         tracing::info!("Action: redo");
         if redo_state.redo() {
             tracing::info!("✅ Redo successful");
-            let _ = redo_drawing_area.queue_draw();
+            redo_drawing_area.queue_draw();
         } else {
             tracing::info!("⚠️  Nothing to redo");
         }
@@ -50,7 +50,7 @@ pub fn register(
                 selected.push(*id);
             }
             drop(selected);
-            let _ = select_all_drawing_area.queue_draw();
+            select_all_drawing_area.queue_draw();
             tracing::info!("✅ Selected {} objects", all_ids.len());
         }
     });
