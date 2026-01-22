@@ -39,7 +39,7 @@ fn bind_toolbar_buttons(components: &WindowComponents) {
 
     // Workflow shortcuts
     bind_button(&toolbar.template_btn, window, "win.templates");
-    bind_button(&toolbar.json_editor_btn, window, "win.open-json-editor");
+    bind_button(&toolbar.json_editor_btn, window, "win.json-editor");
     bind_button(&toolbar.settings_btn, window, "win.settings");
 
     // View toggles

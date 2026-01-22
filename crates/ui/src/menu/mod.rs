@@ -73,7 +73,7 @@ impl MenuBuilder {
         let panels_section = gio::Menu::new();
         panels_section.append(Some("_Layers Panel"), Some("win.toggle-layers"));
         panels_section.append(Some("_Properties Panel"), Some("win.toggle-properties"));
-        panels_section.append(Some("_JSON Editor"), Some("win.open-json-editor"));
+        panels_section.append(Some("_JSON Editor"), Some("win.json-editor"));
         view_menu.append_section(None, &panels_section);
 
         view_menu
