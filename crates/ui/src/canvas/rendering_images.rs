@@ -101,7 +101,7 @@ pub fn draw_image_element(
 
     if let Some(metadata) = cat.get(*asset_ref) {
         // Try to load and render the actual image
-        if let Ok(_) = load_and_render_image(ctx, bounds, &metadata.path) {
+        if load_and_render_image(ctx, bounds, &metadata.path).is_ok() {
             return Ok(());
         }
     }

@@ -151,7 +151,7 @@ pub fn register(
         // Calculate zoom to fit
         let zoom_x = canvas_width / page_size.width as f64;
         let zoom_y = canvas_height / page_size.height as f64;
-        let new_zoom = zoom_x.min(zoom_y).min(4.0).max(0.1);
+        let new_zoom = zoom_x.min(zoom_y).clamp(0.1, 4.0);
 
         let mut config = zoom_fit_state.config.borrow_mut();
         config.zoom = new_zoom;
@@ -216,7 +216,7 @@ pub fn register(
         // Calculate zoom to fit selection
         let zoom_x = canvas_width / selection_width;
         let zoom_y = canvas_height / selection_height;
-        let new_zoom = zoom_x.min(zoom_y).min(4.0).max(0.1);
+        let new_zoom = zoom_x.min(zoom_y).clamp(0.1, 4.0);
 
         // Calculate pan to center selection
         let center_x = (min_x as f64 + max_x as f64) / 2.0;

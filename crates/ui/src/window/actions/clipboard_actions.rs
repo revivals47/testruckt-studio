@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 // Thread-local storage for internal clipboard data (JSON serialized elements)
 thread_local! {
-    static CLIPBOARD_CONTENT: RefCell<Option<String>> = RefCell::new(None);
+    static CLIPBOARD_CONTENT: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 /// Register copy/paste actions

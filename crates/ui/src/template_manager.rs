@@ -97,7 +97,7 @@ impl TemplateBrowser {
 
         // Add template rows
         for template in templates {
-            let row = self.create_template_row(&template);
+            let row = self.create_template_row(template);
             self.list_box.append(&row);
         }
     }

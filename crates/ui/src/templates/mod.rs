@@ -64,7 +64,7 @@ pub fn list_templates() -> std::io::Result<Vec<String>> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.extension().map_or(false, |ext| ext == "json") {
+        if path.extension().is_some_and(|ext| ext == "json") {
             if let Some(name) = path.file_stem() {
                 if let Some(name_str) = name.to_str() {
                     templates.push(name_str.to_string());

@@ -146,7 +146,7 @@ pub fn draw_arrow(
     let angle = (y2 - y1).atan2(x2 - x1);
 
     // Arrowhead size proportional to stroke width (minimum 8, scales with stroke)
-    let arrow_length = (stroke_width as f64 * 4.0).max(8.0).min(24.0);
+    let arrow_length = (stroke_width as f64 * 4.0).clamp(8.0, 24.0);
     let arrow_width = arrow_length * 0.6; // Width is 60% of length
 
     // Calculate arrowhead vertices

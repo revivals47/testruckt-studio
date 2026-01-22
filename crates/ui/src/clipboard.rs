@@ -139,8 +139,8 @@ pub fn create_text_element_from_clipboard(text: &str, position: Option<(f32, f32
     // Estimate text bounds based on content length
     let line_count = text.lines().count().max(1);
     let max_line_len = text.lines().map(|l| l.len()).max().unwrap_or(10);
-    let estimated_width = (max_line_len as f32 * 8.0).min(400.0).max(100.0);
-    let estimated_height = (line_count as f32 * 20.0).min(300.0).max(24.0);
+    let estimated_width = (max_line_len as f32 * 8.0).clamp(100.0, 400.0);
+    let estimated_height = (line_count as f32 * 20.0).clamp(24.0, 300.0);
 
     let text_element = TextElement {
         id: uuid::Uuid::new_v4(),
@@ -208,7 +208,7 @@ fn parse_png_dimensions(data: &[u8]) -> Option<(f32, f32)> {
 
     // Check PNG signature
     let png_signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    if &data[0..8] != &png_signature {
+    if data[0..8] != png_signature {
         return None;
     }
 
