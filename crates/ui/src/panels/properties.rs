@@ -23,6 +23,7 @@ pub struct PropertyPanelComponents {
     pub text_align_combo: DropDown,
     pub border_style_combo: DropDown,
     pub auto_resize_switch: Switch,
+    pub vertical_switch: Switch,
     pub bold_button: gtk4::ToggleButton,
     pub italic_button: gtk4::ToggleButton,
     pub underline_button: gtk4::ToggleButton,
@@ -92,8 +93,8 @@ fn build_property_panel_components() -> PropertyPanelComponents {
     let (font_family_combo, font_size_spin, line_height_scale, text_align_combo) =
         build_typography_section(&container);
 
-    // Text options section
-    let auto_resize_switch = build_text_options_section(&container);
+    // Text options section (auto-resize, vertical writing)
+    let (auto_resize_switch, vertical_switch) = build_text_options_section(&container);
 
     // Border section
     let border_style_combo = build_border_section(&container);
@@ -143,6 +144,7 @@ fn build_property_panel_components() -> PropertyPanelComponents {
         text_align_combo,
         border_style_combo,
         auto_resize_switch,
+        vertical_switch,
         bold_button,
         italic_button,
         underline_button,

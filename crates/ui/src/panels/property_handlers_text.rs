@@ -585,6 +585,49 @@ pub fn wire_text_content_signal(
     });
 }
 
+/// Wire vertical writing switch (縦書き)
+pub fn wire_vertical_signal(
+    components: &PropertyPanelComponents,
+    app_state: AppState,
+    drawing_area: gtk4::DrawingArea,
+    render_state: crate::canvas::CanvasRenderState,
+) {
+    let switch = components.vertical_switch.clone();
+
+    switch.connect_state_set(move |_switch, is_vertical| {
+        let selected = render_state.selected_ids.borrow();
+        if !selected.is_empty() {
+            let selected_ids = selected.clone();
+            drop(selected);
+
+            let changed = app_state.with_mutable_active_document(|doc| {
+                let mut modified = false;
+                if let Some(page) = doc.pages.first_mut() {
+                    for element in &mut page.elements {
+                        match element {
+                            DocumentElement::Text(text) if selected_ids.contains(&text.id) => {
+                                text.style.vertical = is_vertical;
+                                recompute_auto_height(text);
+                                modified = true;
+                                tracing::debug!("✅ Vertical writing mode: {}", is_vertical);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                modified
+            });
+
+            if changed.unwrap_or(false) {
+                app_state.mark_as_modified();
+            }
+        }
+
+        drawing_area.queue_draw();
+        gtk4::glib::Propagation::Proceed
+    });
+}
+
 fn recompute_auto_height(text: &mut testruct_core::document::TextElement) {
     if !text.auto_resize_height {
         return;

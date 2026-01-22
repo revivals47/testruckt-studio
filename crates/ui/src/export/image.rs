@@ -630,7 +630,20 @@ fn render_text_to_context(
         testruct_core::typography::TextAlignment::Justified => pango::Alignment::Center,
     };
     layout.set_alignment(pango_alignment);
-    layout.set_width((bounds.size.width as f64 * pango::SCALE as f64) as i32);
+
+    // Configure for vertical or horizontal text
+    if style.vertical {
+        // Vertical text mode (縦書き)
+        let pango_context = layout.context();
+        pango_context.set_base_gravity(pango::Gravity::East);
+        pango_context.set_gravity_hint(pango::GravityHint::Strong);
+        layout.context_changed();
+        // For vertical text, use height as the constraint
+        layout.set_width((bounds.size.height as f64 * pango::SCALE as f64) as i32);
+    } else {
+        // Horizontal text mode (横書き)
+        layout.set_width((bounds.size.width as f64 * pango::SCALE as f64) as i32);
+    }
 
     // Apply underline and strikethrough decorations
     if style.underline || style.strikethrough {
@@ -653,13 +666,20 @@ fn render_text_to_context(
         style.color.b as f64,
     );
 
+    // Position for vertical text rendering
+    if style.vertical {
+        // Vertical text: rotate 90 degrees clockwise from top-right corner
+        ctx.translate(bounds.size.width as f64, 0.0);
+        ctx.rotate(std::f64::consts::FRAC_PI_2);
+    }
+
     // Render the text using pangocairo
     pangocairo::functions::show_layout(ctx, &layout);
 
     ctx.restore()
         .map_err(|e| anyhow!("Failed to restore context: {}", e))?;
 
-    debug!("Text rendered: '{}' in PNG", text.content);
+    debug!("Text rendered: '{}' in PNG (vertical: {})", text.content, style.vertical);
     Ok(())
 }
 

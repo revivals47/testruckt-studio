@@ -17,7 +17,7 @@ pub use text_handlers::{
     find_string_index, wire_alignment_dropdown, wire_bold_signal, wire_font_family_signal,
     wire_font_size_signal, wire_italic_signal, wire_line_height_signal, wire_strikethrough_signal,
     wire_text_background_color_signal, wire_text_color_signal, wire_text_content_signal,
-    wire_underline_signal,
+    wire_underline_signal, wire_vertical_signal,
 };
 
 use gtk4::prelude::*;
@@ -99,6 +99,12 @@ pub fn wire_property_signals(
         render_state.clone(),
     );
     wire_text_content_signal(
+        components,
+        app_state.clone(),
+        drawing_area.clone(),
+        render_state.clone(),
+    );
+    wire_vertical_signal(
         components,
         app_state.clone(),
         drawing_area.clone(),

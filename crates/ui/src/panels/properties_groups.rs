@@ -256,8 +256,8 @@ pub(super) fn build_text_background_color_section(container: &GtkBox) -> Button 
     bg_color_button
 }
 
-/// Build text options section (auto-resize)
-pub(super) fn build_text_options_section(container: &GtkBox) -> Switch {
+/// Build text options section (auto-resize, vertical writing)
+pub(super) fn build_text_options_section(container: &GtkBox) -> (Switch, Switch) {
     let text_options_header = GtkBox::new(Orientation::Horizontal, 8);
     text_options_header.set_margin_start(12);
     text_options_header.set_margin_top(12);
@@ -273,10 +273,11 @@ pub(super) fn build_text_options_section(container: &GtkBox) -> Switch {
     text_options_header.append(&text_options_label);
     container.append(&text_options_header);
 
-    let auto_resize_section = GtkBox::new(Orientation::Vertical, 5);
-    auto_resize_section.set_margin_start(12);
-    auto_resize_section.set_margin_end(12);
+    let text_options_section = GtkBox::new(Orientation::Vertical, 5);
+    text_options_section.set_margin_start(12);
+    text_options_section.set_margin_end(12);
 
+    // Auto-resize switch
     let auto_resize_box = GtkBox::new(Orientation::Horizontal, 8);
     let auto_resize_label = Label::new(Some("高さを自動調整"));
     auto_resize_label.set_xalign(0.0);
@@ -288,10 +289,24 @@ pub(super) fn build_text_options_section(container: &GtkBox) -> Switch {
     auto_resize_switch.set_halign(gtk4::Align::End);
     auto_resize_box.append(&auto_resize_switch);
 
-    auto_resize_section.append(&auto_resize_box);
-    container.append(&auto_resize_section);
+    text_options_section.append(&auto_resize_box);
 
-    auto_resize_switch
+    // Vertical writing switch (縦書き)
+    let vertical_box = GtkBox::new(Orientation::Horizontal, 8);
+    let vertical_label = Label::new(Some("縦書き"));
+    vertical_label.set_xalign(0.0);
+    vertical_label.set_hexpand(true);
+    vertical_box.append(&vertical_label);
+
+    let vertical_switch = Switch::new();
+    vertical_switch.set_active(false);
+    vertical_switch.set_halign(gtk4::Align::End);
+    vertical_box.append(&vertical_switch);
+
+    text_options_section.append(&vertical_box);
+    container.append(&text_options_section);
+
+    (auto_resize_switch, vertical_switch)
 }
 
 /// Build border section
