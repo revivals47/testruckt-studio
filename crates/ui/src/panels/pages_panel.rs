@@ -222,7 +222,7 @@ impl PagesPanel {
             }
             Err(e) => {
                 tracing::warn!("Failed to generate thumbnail for page {}: {}", index, e);
-                let error_label = Label::new(Some(&format!("Thumbnail unavailable")));
+                let error_label = Label::new(Some("Thumbnail unavailable"));
                 error_label.add_css_class("dim-label");
                 error_label.set_wrap(true);
                 error_label.set_margin_top(20);

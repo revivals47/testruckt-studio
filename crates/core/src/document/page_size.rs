@@ -4,9 +4,10 @@ use crate::layout::Size;
 use serde::{Deserialize, Serialize};
 
 /// Common page size presets
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub enum PageSize {
     /// A4 size (210mm x 297mm = 595 x 842 points at 72 DPI)
+    #[default]
     A4,
     /// Letter size (8.5" x 11" = 612 x 792 points at 72 DPI)
     Letter,
@@ -20,12 +21,6 @@ pub enum PageSize {
     Square,
     /// Custom size (width x height in points)
     Custom(f32, f32),
-}
-
-impl Default for PageSize {
-    fn default() -> Self {
-        PageSize::A4
-    }
 }
 
 impl PageSize {

@@ -232,10 +232,8 @@ impl RichText {
             let run_start = char_index;
             let run_end = char_index + run.text.len();
 
-            if run_end > start && run_start < end {
-                if !checker(&run.style) {
-                    return false;
-                }
+            if run_end > start && run_start < end && !checker(&run.style) {
+                return false;
             }
 
             char_index = run_end;
