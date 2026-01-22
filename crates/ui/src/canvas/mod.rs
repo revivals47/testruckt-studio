@@ -281,11 +281,8 @@ impl CanvasView {
         // Draw page border
         rendering::draw_page_border(ctx, &page_size)?;
 
-        // Apply zoom and pan
-        ctx.translate(
-            ruler_config.size + config.pan_x,
-            ruler_config.size + config.pan_y,
-        );
+        // Apply zoom and pan (ruler offset already applied by draw_rulers)
+        ctx.translate(config.pan_x, config.pan_y);
         ctx.scale(config.zoom, config.zoom);
 
         // Draw grid if enabled
