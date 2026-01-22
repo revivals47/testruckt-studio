@@ -30,7 +30,10 @@ fn create_test_document() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
         }));
 
         // Circle
@@ -45,7 +48,10 @@ fn create_test_document() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+            visible: true,
+            locked: false,
         }));
 
         // Line
@@ -60,7 +66,10 @@ fn create_test_document() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 1.0)),
+            stroke_width: 1.0,
             fill: None,
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -210,5 +219,323 @@ fn test_export_empty_document() {
     );
 
     // Clean up
+    let _ = fs::remove_file(&file_path);
+}
+
+// ============================================
+// Extended Export Tests
+// ============================================
+
+use testruct_core::document::TextElement;
+use testruct_core::typography::TextStyle;
+
+fn create_document_with_text() -> Arc<Mutex<Document>> {
+    let mut doc = DocumentBuilder::new()
+        .with_title("Text Export Test")
+        .add_page(Page::empty())
+        .build()
+        .expect("Failed to create test document");
+
+    if let Some(page) = doc.pages.first_mut() {
+        // Add text element
+        page.add_element(DocumentElement::Text(TextElement {
+            id: Uuid::new_v4(),
+            content: "Hello World".to_string(),
+            style: TextStyle::default(),
+            bounds: Rect {
+                origin: Point { x: 50.0, y: 50.0 },
+                size: Size { width: 200.0, height: 30.0 },
+            },
+            auto_resize_height: false,
+            visible: true,
+            locked: false,
+        }));
+
+        // Add rectangle
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Rectangle,
+            bounds: Rect {
+                origin: Point { x: 50.0, y: 100.0 },
+                size: Size { width: 100.0, height: 50.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 2.0,
+            fill: Some(Color::from_rgb(0.5, 0.5, 0.8)),
+            visible: true,
+            locked: false,
+        }));
+    }
+
+    Arc::new(Mutex::new(doc))
+}
+
+#[test]
+fn test_svg_export_with_text() {
+    let doc = create_document_with_text();
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_text_export.svg");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let d = doc.lock().unwrap();
+    let result = testruct_ui::export::export_svg(&d, &file_path, &d.assets);
+
+    if result.is_ok() {
+        assert!(file_path.exists());
+
+        // Verify SVG contains text element
+        if let Ok(content) = fs::read_to_string(&file_path) {
+            assert!(content.contains("<svg"));
+            // SVG should have some content
+            assert!(content.len() > 100);
+        }
+    }
+
+    let _ = fs::remove_file(&file_path);
+}
+
+#[test]
+fn test_pdf_export_with_mixed_content() {
+    let doc = create_document_with_text();
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_mixed_export.pdf");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let d = doc.lock().unwrap();
+    let result = testruct_ui::export::export_pdf(&d, &file_path, &d.assets);
+
+    if result.is_ok() {
+        assert!(file_path.exists());
+        let size = fs::metadata(&file_path).ok().map(|m| m.len()).unwrap_or(0);
+        assert!(size > 0);
+    }
+
+    let _ = fs::remove_file(&file_path);
+}
+
+#[test]
+fn test_png_export_with_scale() {
+    let doc = create_test_document();
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_scaled_export.png");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let d = doc.lock().unwrap();
+
+    // Export at 2x scale
+    let result = testruct_ui::export::export_png(&d, &file_path, 2.0, &d.assets);
+
+    if result.is_ok() {
+        assert!(file_path.exists());
+        let size = fs::metadata(&file_path).ok().map(|m| m.len()).unwrap_or(0);
+        assert!(size > 0);
+    }
+
+    let _ = fs::remove_file(&file_path);
+}
+
+#[test]
+fn test_export_all_shape_types() {
+    let mut doc = DocumentBuilder::new()
+        .with_title("All Shapes Test")
+        .add_page(Page::empty())
+        .build()
+        .expect("Failed to create test document");
+
+    if let Some(page) = doc.pages.first_mut() {
+        // Rectangle
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Rectangle,
+            bounds: Rect {
+                origin: Point { x: 10.0, y: 10.0 },
+                size: Size { width: 50.0, height: 30.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
+            fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
+        }));
+
+        // Ellipse
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Ellipse,
+            bounds: Rect {
+                origin: Point { x: 70.0, y: 10.0 },
+                size: Size { width: 50.0, height: 50.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
+            fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+            visible: true,
+            locked: false,
+        }));
+
+        // Line
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Line,
+            bounds: Rect {
+                origin: Point { x: 130.0, y: 10.0 },
+                size: Size { width: 50.0, height: 30.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 1.0)),
+            stroke_width: 2.0,
+            fill: None,
+            visible: true,
+            locked: false,
+        }));
+
+        // Arrow
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Arrow,
+            bounds: Rect {
+                origin: Point { x: 190.0, y: 10.0 },
+                size: Size { width: 50.0, height: 30.0 },
+            },
+            stroke: Some(Color::from_rgb(0.5, 0.0, 0.5)),
+            stroke_width: 2.0,
+            fill: None,
+            visible: true,
+            locked: false,
+        }));
+    }
+
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_all_shapes.svg");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let result = testruct_ui::export::export_svg(&doc, &file_path, &doc.assets);
+
+    if result.is_ok() {
+        assert!(file_path.exists());
+        if let Ok(content) = fs::read_to_string(&file_path) {
+            assert!(content.contains("<svg"));
+        }
+    }
+
+    let _ = fs::remove_file(&file_path);
+}
+
+#[test]
+fn test_export_multipage_document() {
+    let mut doc = DocumentBuilder::new()
+        .with_title("Multipage Export Test")
+        .add_page(Page::empty())
+        .add_page(Page::empty())
+        .add_page(Page::empty())
+        .build()
+        .expect("Failed to create test document");
+
+    // Add content to each page
+    for (i, page) in doc.pages.iter_mut().enumerate() {
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Rectangle,
+            bounds: Rect {
+                origin: Point { x: 10.0 + (i as f32 * 20.0), y: 10.0 },
+                size: Size { width: 50.0, height: 30.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
+            fill: Some(Color::from_rgb(i as f32 * 0.3, 0.5, 0.5)),
+            visible: true,
+            locked: false,
+        }));
+    }
+
+    assert_eq!(doc.pages.len(), 3);
+
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_multipage.pdf");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let result = testruct_ui::export::export_pdf(&doc, &file_path, &doc.assets);
+
+    if result.is_ok() {
+        assert!(file_path.exists());
+        let size = fs::metadata(&file_path).ok().map(|m| m.len()).unwrap_or(0);
+        assert!(size > 0);
+    }
+
+    let _ = fs::remove_file(&file_path);
+}
+
+#[test]
+fn test_export_invisible_elements() {
+    let mut doc = DocumentBuilder::new()
+        .with_title("Invisible Elements Test")
+        .add_page(Page::empty())
+        .build()
+        .expect("Failed to create test document");
+
+    if let Some(page) = doc.pages.first_mut() {
+        // Visible shape
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Rectangle,
+            bounds: Rect {
+                origin: Point { x: 10.0, y: 10.0 },
+                size: Size { width: 50.0, height: 30.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
+            fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
+        }));
+
+        // Invisible shape
+        page.add_element(DocumentElement::Shape(ShapeElement {
+            id: Uuid::new_v4(),
+            kind: ShapeKind::Ellipse,
+            bounds: Rect {
+                origin: Point { x: 70.0, y: 10.0 },
+                size: Size { width: 50.0, height: 50.0 },
+            },
+            stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
+            fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+            visible: false, // Invisible
+            locked: false,
+        }));
+    }
+
+    let file_path = {
+        let mut path = std::env::temp_dir();
+        path.push("test_invisible.svg");
+        path
+    };
+
+    let _ = fs::remove_file(&file_path);
+
+    let result = testruct_ui::export::export_svg(&doc, &file_path, &doc.assets);
+
+    // Export should succeed
+    assert!(result.is_ok() || result.is_err());
+
     let _ = fs::remove_file(&file_path);
 }

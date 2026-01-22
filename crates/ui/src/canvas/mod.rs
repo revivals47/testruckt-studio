@@ -290,7 +290,7 @@ impl CanvasView {
 
         // Draw grid if enabled
         if config.show_grid {
-            grid_rendering::draw_grid(ctx, &page_size)?;
+            grid_rendering::draw_grid_with_config(ctx, &page_size, &config.grid_config)?;
         }
 
         // Draw guides if enabled

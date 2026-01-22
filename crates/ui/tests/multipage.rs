@@ -31,7 +31,10 @@ fn create_multipage_document() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -55,7 +58,10 @@ fn create_multipage_document() -> Arc<Mutex<Document>> {
                     },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+                stroke_width: 1.0,
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+                visible: true,
+                locked: false,
             }));
         }
 
@@ -192,7 +198,10 @@ fn test_page_element_independence() {
             },
         },
         stroke: None,
+        stroke_width: 1.0,
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+        visible: true,
+        locked: false,
     });
 
     doc.pages[0].add_element(shape1);
@@ -210,7 +219,10 @@ fn test_page_element_independence() {
             },
         },
         stroke: None,
+        stroke_width: 1.0,
         fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+        visible: true,
+        locked: false,
     });
 
     page2.add_element(shape2);

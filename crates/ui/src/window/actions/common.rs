@@ -38,6 +38,21 @@ pub fn set_accelerators(window: &gtk4::ApplicationWindow) {
         ("win.toggle-grid", "F8"),
         ("win.toggle-guides", "F7"),
         ("win.toggle-rulers", "F6"),
+        // Zoom shortcuts
+        ("win.zoom-in", "<Primary>equal"),
+        ("win.zoom-out", "<Primary>minus"),
+        ("win.zoom-100", "<Primary>0"),
+        ("win.zoom-fit-window", "<Primary>1"),
+        ("win.zoom-fit-selection", "<Primary>2"),
+        // Alignment shortcuts
+        ("win.align-left", "<Primary><Shift>l"),
+        ("win.align-center-h", "<Primary><Shift>c"),
+        ("win.align-right", "<Primary><Shift>r"),
+        ("win.align-top", "<Primary><Shift>t"),
+        ("win.align-center-v", "<Primary><Shift>m"),
+        ("win.align-bottom", "<Primary><Shift>b"),
+        ("win.distribute-h", "<Primary><Shift>h"),
+        ("win.distribute-v", "<Primary><Shift>v"),
     ];
 
     for (action, accel) in &shortcuts {

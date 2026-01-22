@@ -6,13 +6,21 @@
 use std::collections::VecDeque;
 
 // Re-export command implementations from submodules
+mod app_commands;
 mod undo_redo_group;
 mod undo_redo_shape;
 mod undo_redo_text;
 
 pub use undo_redo_group::GroupCommand;
-pub use undo_redo_shape::{CreateCommand, DeleteCommand};
+pub use undo_redo_shape::{CreateCommand, DeleteCommand, MoveCommand};
 pub use undo_redo_text::{DuplicateCommand, PasteCommand};
+
+// AppState-compatible commands (recommended for new code)
+pub use app_commands::{
+    AppCreateCommand, AppDeleteCommand, AppGroupCommand, AppMoveCommand,
+    AppPropertyChangeCommand, AppResizeCommand, AppStrokeWidthCommand, AppUngroupCommand,
+    PropertyValue,
+};
 
 /// Command trait for undo/redo operations
 pub trait Command: std::fmt::Debug {

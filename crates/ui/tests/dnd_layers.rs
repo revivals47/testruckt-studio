@@ -32,7 +32,10 @@ fn create_test_document_with_layers() -> Arc<Mutex<Document>> {
                     },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+                stroke_width: 1.0,
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+                visible: true,
+                locked: false,
             }));
         }
     }

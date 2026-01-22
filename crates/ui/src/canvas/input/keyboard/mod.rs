@@ -282,6 +282,32 @@ pub fn setup_keyboard_events(
             return gtk4::glib::Propagation::Stop;
         }
 
+        // Handle Undo: Ctrl+Z (without Shift)
+        if ctrl_pressed && !in_text_editing && keyval == gtk4::gdk::Key::z && !shift_pressed {
+            if app_state_keyboard.undo() {
+                drawing_area_keyboard.queue_draw();
+                tracing::info!("✅ Undo performed");
+            } else {
+                tracing::debug!("⚠️ Nothing to undo");
+            }
+            return gtk4::glib::Propagation::Stop;
+        }
+
+        // Handle Redo: Ctrl+Y or Ctrl+Shift+Z
+        if ctrl_pressed && !in_text_editing {
+            let is_redo = keyval == gtk4::gdk::Key::y
+                || (keyval == gtk4::gdk::Key::z && shift_pressed);
+            if is_redo {
+                if app_state_keyboard.redo() {
+                    drawing_area_keyboard.queue_draw();
+                    tracing::info!("✅ Redo performed");
+                } else {
+                    tracing::debug!("⚠️ Nothing to redo");
+                }
+                return gtk4::glib::Propagation::Stop;
+            }
+        }
+
         // Handle object movement when NOT in text editing
         let movement_amount = if shift_pressed { 10.0 } else { 1.0 };
 

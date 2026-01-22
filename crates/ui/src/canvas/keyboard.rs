@@ -29,6 +29,10 @@ pub enum KeyboardCommand {
     ZoomOut,
     /// Reset zoom to 100%
     ZoomReset,
+    /// Zoom to fit window
+    ZoomFitWindow,
+    /// Zoom to fit selection
+    ZoomFitSelection,
     /// Move selected objects left
     MoveLeft,
     /// Move selected objects right
@@ -61,6 +65,8 @@ pub fn detect_keyboard_command(
     const KEY_X: u32 = 0x0078;
     const KEY_G: u32 = 0x0067;
     const KEY_0: u32 = 0x0030;
+    const KEY_1: u32 = 0x0031;
+    const KEY_2: u32 = 0x0032;
     const KEY_PLUS: u32 = 0x002b;
     const KEY_EQUAL: u32 = 0x003d;
     const KEY_MINUS: u32 = 0x002d;
@@ -121,6 +127,16 @@ pub fn detect_keyboard_command(
         // Ctrl+0: Reset Zoom
         KEY_0 if state.contains(gdk::ModifierType::CONTROL_MASK) => {
             Some(KeyboardCommand::ZoomReset)
+        }
+
+        // Ctrl+1: Zoom to fit window
+        KEY_1 if state.contains(gdk::ModifierType::CONTROL_MASK) => {
+            Some(KeyboardCommand::ZoomFitWindow)
+        }
+
+        // Ctrl+2: Zoom to fit selection
+        KEY_2 if state.contains(gdk::ModifierType::CONTROL_MASK) => {
+            Some(KeyboardCommand::ZoomFitSelection)
         }
 
         // Arrow keys for moving objects

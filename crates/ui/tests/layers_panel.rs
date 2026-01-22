@@ -32,7 +32,10 @@ fn create_test_document_with_shapes() -> Arc<Mutex<Document>> {
                     },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+                stroke_width: 1.0,
                 fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+                visible: true,
+                locked: false,
             }));
         }
     }
@@ -186,7 +189,10 @@ fn test_layer_children_in_group() {
             },
         },
         stroke: None,
+        stroke_width: 1.0,
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+        visible: true,
+        locked: false,
     });
 
     let child2 = DocumentElement::Shape(ShapeElement {
@@ -200,7 +206,10 @@ fn test_layer_children_in_group() {
             },
         },
         stroke: None,
+        stroke_width: 1.0,
         fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+        visible: true,
+        locked: false,
     });
 
     // Create group
@@ -215,6 +224,8 @@ fn test_layer_children_in_group() {
             },
         },
         children: vec![child1, child2],
+        visible: true,
+        locked: false,
     });
 
     if let Some(page) = doc.pages.first_mut() {

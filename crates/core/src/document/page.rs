@@ -160,6 +160,28 @@ impl DocumentElement {
             DocumentElement::Group(g) => g.locked = locked,
         }
     }
+
+    /// Get the bounds of any document element
+    pub fn bounds(&self) -> &super::super::layout::Rect {
+        match self {
+            DocumentElement::Frame(f) => &f.bounds,
+            DocumentElement::Text(t) => &t.bounds,
+            DocumentElement::Image(i) => &i.bounds,
+            DocumentElement::Shape(s) => &s.bounds,
+            DocumentElement::Group(g) => &g.bounds,
+        }
+    }
+
+    /// Get mutable bounds of any document element
+    pub fn bounds_mut(&mut self) -> &mut super::super::layout::Rect {
+        match self {
+            DocumentElement::Frame(f) => &mut f.bounds,
+            DocumentElement::Text(t) => &mut t.bounds,
+            DocumentElement::Image(i) => &mut i.bounds,
+            DocumentElement::Shape(s) => &mut s.bounds,
+            DocumentElement::Group(g) => &mut g.bounds,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

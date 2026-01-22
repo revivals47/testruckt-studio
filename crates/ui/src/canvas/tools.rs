@@ -222,8 +222,10 @@ pub struct ToolState {
     pub resizing_object_id: Option<uuid::Uuid>,
     /// Resize handle being used
     pub resize_handle: Option<crate::canvas::mouse::ResizeHandle>,
-    /// Original bounds before resize started
+    /// Original mouse position when resize started
     pub resize_original_bounds: Option<crate::canvas::mouse::CanvasMousePos>,
+    /// Original element bounds before resize started (for undo)
+    pub resize_element_bounds: Option<testruct_core::layout::Rect>,
     /// Previous drag offset (for computing delta in real-time resize)
     pub last_drag_offset: Option<(f64, f64)>,
     /// ID of text element currently being edited
@@ -232,6 +234,8 @@ pub struct ToolState {
     pub editing_cursor_pos: usize,
     /// Text selection start position (for future multi-click selection)
     pub editing_selection_start: Option<usize>,
+    /// Whether marquee selection is in progress
+    pub marquee_selecting: bool,
 }
 
 impl Default for ToolState {
@@ -245,10 +249,12 @@ impl Default for ToolState {
             resizing_object_id: None,
             resize_handle: None,
             resize_original_bounds: None,
+            resize_element_bounds: None,
             last_drag_offset: None,
             editing_text_id: None,
             editing_cursor_pos: 0,
             editing_selection_start: None,
+            marquee_selecting: false,
         }
     }
 }

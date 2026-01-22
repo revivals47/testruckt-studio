@@ -31,7 +31,10 @@ fn create_test_shape(x: f32, y: f32) -> DocumentElement {
             },
         },
         stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+        stroke_width: 1.0,
         fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+        visible: true,
+        locked: false,
     })
 }
 

@@ -209,6 +209,40 @@ pub fn register(
             );
         });
     }
+
+    // Distribute horizontally (equal spacing)
+    {
+        let state_c = state.clone();
+        let selection = render_state.selected_ids.clone();
+        let drawing_c = drawing_area.clone();
+
+        add_window_action(window, "distribute-h", move |_| {
+            execute_alignment(
+                &state_c,
+                &selection,
+                &drawing_c,
+                AlignmentType::DistributeH,
+                "✅ Objects distributed horizontally",
+            );
+        });
+    }
+
+    // Distribute vertically (equal spacing)
+    {
+        let state_c = state.clone();
+        let selection = render_state.selected_ids.clone();
+        let drawing_c = drawing_area.clone();
+
+        add_window_action(window, "distribute-v", move |_| {
+            execute_alignment(
+                &state_c,
+                &selection,
+                &drawing_c,
+                AlignmentType::DistributeV,
+                "✅ Objects distributed vertically",
+            );
+        });
+    }
 }
 
 fn execute_alignment(
@@ -219,11 +253,18 @@ fn execute_alignment(
     success_log: &str,
 ) {
     let selected = selected_ids.borrow();
-    if selected.len() < 2 {
+
+    // Distribute requires at least 3 objects
+    let min_count = match alignment_type {
+        AlignmentType::DistributeH | AlignmentType::DistributeV => 3,
+        _ => 2,
+    };
+
+    if selected.len() < min_count {
         if selected.is_empty() {
             tracing::warn!("⚠️  No objects selected for alignment");
         } else {
-            tracing::warn!("⚠️  Need at least 2 objects for alignment");
+            tracing::warn!("⚠️  Need at least {} objects for this operation", min_count);
         }
         return;
     }
@@ -245,6 +286,8 @@ pub enum AlignmentType {
     AlignTop,
     AlignCenterV,
     AlignBottom,
+    DistributeH,
+    DistributeV,
 }
 
 /// Helper function to get bounds from a DocumentElement
@@ -267,7 +310,7 @@ fn apply_alignment(
     state.with_active_document(|doc| {
         if let Some(page) = doc.pages.first_mut() {
             // Collect bounds for all selected elements
-            let mut selected_bounds = Vec::new();
+            let mut selected_bounds: Vec<(uuid::Uuid, Rect)> = Vec::new();
             for element in &page.elements {
                 if selected_ids.contains(&element.id()) {
                     selected_bounds.push((element.id(), get_element_bounds(element)));
@@ -276,6 +319,75 @@ fn apply_alignment(
 
             if selected_bounds.len() < 2 {
                 return;
+            }
+
+            // Handle distribute operations separately
+            match alignment_type {
+                AlignmentType::DistributeH => {
+                    if selected_bounds.len() < 3 {
+                        return;
+                    }
+                    // Sort by x position
+                    selected_bounds.sort_by(|a, b| a.1.origin.x.partial_cmp(&b.1.origin.x).unwrap());
+
+                    let leftmost_x = selected_bounds.first().unwrap().1.origin.x;
+                    let rightmost_right = {
+                        let last = selected_bounds.last().unwrap();
+                        last.1.origin.x + last.1.size.width
+                    };
+                    let total_span = rightmost_right - leftmost_x;
+                    let total_width: f32 = selected_bounds.iter().map(|(_, b)| b.size.width).sum();
+                    let gap = (total_span - total_width) / (selected_bounds.len() - 1) as f32;
+
+                    let mut current_x = leftmost_x;
+                    for (id, bounds) in &selected_bounds {
+                        let new_x = current_x;
+                        current_x += bounds.size.width + gap;
+
+                        // Apply new position
+                        for element in &mut page.elements {
+                            if element.id() == *id {
+                                let elem_bounds = element.bounds_mut();
+                                elem_bounds.origin.x = new_x;
+                                break;
+                            }
+                        }
+                    }
+                    return;
+                }
+                AlignmentType::DistributeV => {
+                    if selected_bounds.len() < 3 {
+                        return;
+                    }
+                    // Sort by y position
+                    selected_bounds.sort_by(|a, b| a.1.origin.y.partial_cmp(&b.1.origin.y).unwrap());
+
+                    let topmost_y = selected_bounds.first().unwrap().1.origin.y;
+                    let bottommost_bottom = {
+                        let last = selected_bounds.last().unwrap();
+                        last.1.origin.y + last.1.size.height
+                    };
+                    let total_span = bottommost_bottom - topmost_y;
+                    let total_height: f32 = selected_bounds.iter().map(|(_, b)| b.size.height).sum();
+                    let gap = (total_span - total_height) / (selected_bounds.len() - 1) as f32;
+
+                    let mut current_y = topmost_y;
+                    for (id, bounds) in &selected_bounds {
+                        let new_y = current_y;
+                        current_y += bounds.size.height + gap;
+
+                        // Apply new position
+                        for element in &mut page.elements {
+                            if element.id() == *id {
+                                let elem_bounds = element.bounds_mut();
+                                elem_bounds.origin.y = new_y;
+                                break;
+                            }
+                        }
+                    }
+                    return;
+                }
+                _ => {}
             }
 
             // Calculate reference value based on alignment type
@@ -318,6 +430,7 @@ fn apply_alignment(
                         .fold(f32::NEG_INFINITY, f32::max);
                     (min_y + max_y) / 2.0
                 }
+                AlignmentType::DistributeH | AlignmentType::DistributeV => 0.0, // Already handled
             };
 
             // Apply alignment to each selected element
@@ -384,6 +497,10 @@ fn apply_alignment(
                                     },
                                     size: elem_bounds.size,
                                 }
+                            }
+                            // Distribute cases are handled above and return early
+                            AlignmentType::DistributeH | AlignmentType::DistributeV => {
+                                continue;
                             }
                         };
 

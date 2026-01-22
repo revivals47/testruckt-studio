@@ -30,7 +30,10 @@ fn create_test_document_with_shapes() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
         }));
 
         // Add ellipse shape
@@ -45,7 +48,10 @@ fn create_test_document_with_shapes() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(0.0, 1.0, 0.0)),
+            visible: true,
+            locked: false,
         }));
 
         // Add line shape
@@ -60,7 +66,10 @@ fn create_test_document_with_shapes() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 1.0)),
+            stroke_width: 1.0,
             fill: None,
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -87,6 +96,8 @@ fn create_test_document_with_text() -> Arc<Mutex<Document>> {
             },
             style: TextStyle::default(),
             auto_resize_height: false,
+            visible: true,
+            locked: false,
         }));
 
         page.add_element(DocumentElement::Text(TextElement {
@@ -101,6 +112,8 @@ fn create_test_document_with_text() -> Arc<Mutex<Document>> {
             },
             style: TextStyle::default(),
             auto_resize_height: false,
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -125,6 +138,8 @@ fn create_test_document_with_images() -> Arc<Mutex<Document>> {
                 },
             },
             source: AssetRef::new(),
+            visible: true,
+            locked: false,
         }));
 
         page.add_element(DocumentElement::Image(ImageElement {
@@ -137,6 +152,8 @@ fn create_test_document_with_images() -> Arc<Mutex<Document>> {
                 },
             },
             source: AssetRef::new(),
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -163,7 +180,10 @@ fn create_test_document_with_mixed_elements() -> Arc<Mutex<Document>> {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(1.0, 0.5, 0.0)),
+            visible: true,
+            locked: false,
         }));
 
         // Text
@@ -179,6 +199,8 @@ fn create_test_document_with_mixed_elements() -> Arc<Mutex<Document>> {
             },
             style: TextStyle::default(),
             auto_resize_height: false,
+            visible: true,
+            locked: false,
         }));
 
         // Image
@@ -192,6 +214,8 @@ fn create_test_document_with_mixed_elements() -> Arc<Mutex<Document>> {
                 },
             },
             source: AssetRef::new(),
+            visible: true,
+            locked: false,
         }));
 
         // Frame
@@ -205,6 +229,8 @@ fn create_test_document_with_mixed_elements() -> Arc<Mutex<Document>> {
                 },
             },
             children: vec![],
+            visible: true,
+            locked: false,
         }));
     }
 
@@ -391,7 +417,10 @@ fn test_page_change_detection() {
             },
         },
         stroke: None,
+        stroke_width: 1.0,
         fill: None,
+        visible: true,
+        locked: false,
     }));
 
     // Page with 1 element, old hash of 0 - should detect as changed
@@ -443,7 +472,10 @@ fn test_thumbnail_multiple_shapes() {
                     },
                 },
                 stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+                stroke_width: 1.0,
                 fill: Some(Color::from_rgb(0.5, 0.5, 0.5)),
+                visible: true,
+                locked: false,
             }));
         }
     }
@@ -485,6 +517,8 @@ fn test_thumbnail_with_frames_and_groups() {
                 },
             },
             children: vec![],
+            visible: true,
+            locked: false,
         }));
 
         // Add group
@@ -499,6 +533,8 @@ fn test_thumbnail_with_frames_and_groups() {
             },
             name: "Group 1".to_string(),
             children: vec![],
+            visible: true,
+            locked: false,
         }));
     }
 

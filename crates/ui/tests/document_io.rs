@@ -29,7 +29,10 @@ fn create_test_document() -> Document {
                 },
             },
             stroke: Some(Color::from_rgb(0.0, 0.0, 0.0)),
+            stroke_width: 1.0,
             fill: Some(Color::from_rgb(1.0, 0.0, 0.0)),
+            visible: true,
+            locked: false,
         });
         page.add_element(shape);
     }

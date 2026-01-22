@@ -3,7 +3,7 @@ mod bindings;
 mod layout;
 mod layout_v2;
 
-use crate::app::AppState;
+use crate::app::{start_auto_save_timer, AppState, DEFAULT_AUTO_SAVE_DELAY_SECS};
 use crate::canvas::CanvasView;
 use crate::toolbar::ToolbarWidgets;
 use crate::window::layout_v2::ToolPaletteButtons;
@@ -34,7 +34,11 @@ impl MainWindow {
             state.clone(),
             &components.canvas_view,
         );
-        bindings::bind_events(&components, state);
+        bindings::bind_events(&components, state.clone());
+
+        // Start auto-save timer
+        let _auto_save_source = start_auto_save_timer(state, DEFAULT_AUTO_SAVE_DELAY_SECS);
+
         components.window
     }
 }

@@ -1,15 +1,17 @@
-//! Layers Panel with drag-and-drop support
+//! Layers Panel with interactive controls
 //!
 //! Provides an interactive layers panel with:
-//! - Layer reordering via context menu
-//! - Visibility toggling
+//! - Layer reordering via Up/Down buttons
+//! - Visibility toggling (eye icon)
+//! - Lock toggling (lock icon)
 //! - Layer selection sync with canvas
-//! - Keyboard shortcuts (Up/Down arrows for z-order)
+//! - Visual feedback for selected layers
 
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Button, GestureClick, Label, Orientation, ScrolledWindow};
+use std::cell::RefCell;
+use std::rc::Rc;
 use testruct_core::document::DocumentElement;
-use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::canvas::CanvasView;
@@ -80,43 +82,63 @@ impl LayersPanel {
     fn create_layer_item(
         element: &DocumentElement,
         visual_index: usize,
-        actual_index: usize,
+        _actual_index: usize,
         app_state: &AppState,
         canvas_view: &CanvasView,
     ) -> GtkBox {
         let element_id = element.id();
-        let item_box = GtkBox::new(Orientation::Horizontal, 8);
+        let item_box = GtkBox::new(Orientation::Horizontal, 4);
         item_box.add_css_class("layer-item");
-        item_box.set_margin_start(8);
-        item_box.set_margin_end(8);
-        item_box.set_margin_top(4);
-        item_box.set_margin_bottom(4);
+        item_box.set_margin_start(4);
+        item_box.set_margin_end(4);
+        item_box.set_margin_top(2);
+        item_box.set_margin_bottom(2);
         item_box.set_halign(gtk4::Align::Fill);
         item_box.set_hexpand(true);
 
-        // Visibility toggle checkbox
-        let visibility_btn = gtk4::CheckButton::new();
-        visibility_btn.set_active(element.is_visible());
-        visibility_btn.set_width_request(24);
+        // Check if this element is currently selected
+        let is_selected = canvas_view
+            .render_state()
+            .selected_ids
+            .borrow()
+            .contains(&element_id);
+
+        // Apply selected styling
+        if is_selected {
+            item_box.add_css_class("layer-item-selected");
+        }
+
+        // Visibility toggle button (eye icon)
+        let vis_icon = if element.is_visible() { "👁" } else { "👁‍🗨" };
+        let visibility_btn = Button::with_label(vis_icon);
+        visibility_btn.set_width_request(28);
+        visibility_btn.set_height_request(24);
+        visibility_btn.add_css_class("flat");
         visibility_btn.set_tooltip_text(Some("Toggle visibility"));
+
+        // Track visibility state
+        let is_visible = Rc::new(RefCell::new(element.is_visible()));
 
         // Connect visibility toggle signal
         {
             let state_c = app_state.clone();
             let canvas_c = canvas_view.drawing_area();
             let id_c = element_id;
+            let is_visible_c = is_visible.clone();
 
-            visibility_btn.connect_toggled(move |btn| {
-                let visible = btn.is_active();
+            visibility_btn.connect_clicked(move |btn| {
+                let mut visible = is_visible_c.borrow_mut();
+                *visible = !*visible;
+                let new_visible = *visible;
+                drop(visible);
+
+                btn.set_label(if new_visible { "👁" } else { "👁‍🗨" });
+
                 state_c.with_mutable_active_document(|doc| {
                     if let Some(page) = doc.pages.first_mut() {
                         if let Some(element) = page.elements.iter_mut().find(|e| e.id() == id_c) {
-                            element.set_visible(visible);
-                            tracing::info!(
-                                "✅ Layer visibility set to {} for element {:?}",
-                                visible,
-                                id_c
-                            );
+                            element.set_visible(new_visible);
+                            tracing::info!("Layer visibility: {} for {:?}", new_visible, id_c);
                         }
                     }
                 });
@@ -126,36 +148,37 @@ impl LayersPanel {
 
         item_box.append(&visibility_btn);
 
-        // Lock toggle checkbox
-        let lock_btn = gtk4::CheckButton::new();
-        lock_btn.set_active(element.is_locked());
-        lock_btn.set_width_request(24);
+        // Lock toggle button (lock icon)
+        let lock_icon = if element.is_locked() { "🔒" } else { "🔓" };
+        let lock_btn = Button::with_label(lock_icon);
+        lock_btn.set_width_request(28);
+        lock_btn.set_height_request(24);
+        lock_btn.add_css_class("flat");
         lock_btn.set_tooltip_text(Some("Toggle lock"));
 
-        // Add lock icon indicator
-        let lock_icon = if element.is_locked() { "🔒" } else { "🔓" };
-        let lock_label = Label::new(Some(lock_icon));
-        lock_label.set_width_request(20);
+        // Track lock state
+        let is_locked = Rc::new(RefCell::new(element.is_locked()));
 
         // Connect lock toggle signal
         {
             let state_c = app_state.clone();
             let canvas_c = canvas_view.drawing_area();
             let id_c = element_id;
-            let label_c = lock_label.clone();
+            let is_locked_c = is_locked.clone();
 
-            lock_btn.connect_toggled(move |btn| {
-                let locked = btn.is_active();
-                label_c.set_text(if locked { "🔒" } else { "🔓" });
+            lock_btn.connect_clicked(move |btn| {
+                let mut locked = is_locked_c.borrow_mut();
+                *locked = !*locked;
+                let new_locked = *locked;
+                drop(locked);
+
+                btn.set_label(if new_locked { "🔒" } else { "🔓" });
+
                 state_c.with_mutable_active_document(|doc| {
                     if let Some(page) = doc.pages.first_mut() {
                         if let Some(element) = page.elements.iter_mut().find(|e| e.id() == id_c) {
-                            element.set_locked(locked);
-                            tracing::info!(
-                                "✅ Layer lock set to {} for element {:?}",
-                                locked,
-                                id_c
-                            );
+                            element.set_locked(new_locked);
+                            tracing::info!("Layer lock: {} for {:?}", new_locked, id_c);
                         }
                     }
                 });
@@ -163,7 +186,6 @@ impl LayersPanel {
             });
         }
 
-        item_box.append(&lock_label);
         item_box.append(&lock_btn);
 
         // Get element type and name
@@ -278,11 +300,60 @@ impl LayersPanel {
 
         item_box.append(&button_box);
 
-        // Note: GestureClick ownership requires storing it with the widget
-        // For now, we defer context menu implementation
-        // TODO: Implement right-click context menu with proper gesture handling
+        // Add click gesture for selection sync
+        let click_gesture = GestureClick::new();
+        click_gesture.set_button(gtk4::gdk::BUTTON_PRIMARY);
+
+        {
+            let selected_ids = canvas_view.render_state().selected_ids.clone();
+            let drawing_area = canvas_view.drawing_area();
+            let id_c = element_id;
+
+            click_gesture.connect_pressed(move |gesture, _n_press, _x, _y| {
+                // Get modifier state for multi-selection
+                let modifier_state = match gesture.last_event(None) {
+                    Some(event) => event.modifier_state(),
+                    None => gtk4::gdk::ModifierType::empty(),
+                };
+                let shift_pressed =
+                    modifier_state.contains(gtk4::gdk::ModifierType::SHIFT_MASK);
+                let ctrl_pressed =
+                    modifier_state.contains(gtk4::gdk::ModifierType::CONTROL_MASK);
+
+                // Update canvas selection
+                let mut selected = selected_ids.borrow_mut();
+                if shift_pressed {
+                    // Add to selection
+                    if !selected.contains(&id_c) {
+                        selected.push(id_c);
+                    }
+                } else if ctrl_pressed {
+                    // Toggle selection
+                    if let Some(pos) = selected.iter().position(|&id| id == id_c) {
+                        selected.remove(pos);
+                    } else {
+                        selected.push(id_c);
+                    }
+                } else {
+                    // Single select
+                    selected.clear();
+                    selected.push(id_c);
+                }
+                drop(selected);
+
+                drawing_area.queue_draw();
+                tracing::info!("Layer selected: {:?}", id_c);
+            });
+        }
+
+        item_box.add_controller(click_gesture);
 
         item_box
+    }
+
+    /// Get the container widget
+    pub fn widget(&self) -> &ScrolledWindow {
+        &self.container
     }
 }
 

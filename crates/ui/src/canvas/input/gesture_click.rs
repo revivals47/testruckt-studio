@@ -23,6 +23,7 @@
 //! 選択オブジェクトのリサイズハンドル（8方向）を検出し、クリック時に
 //! リサイズ操作の開始位置として設定します。
 
+use super::coordinates::widget_to_document;
 use super::ime::ImeManager;
 use crate::app::AppState;
 use crate::canvas::mouse::{test_resize_handle, CanvasMousePos};
@@ -31,7 +32,7 @@ use crate::canvas::tools::ToolMode;
 use crate::canvas::CanvasRenderState;
 use gtk4::gdk;
 use gtk4::prelude::*;
-use gtk4::{DrawingArea, Entry, GestureClick, ScrolledWindow};
+use gtk4::{DrawingArea, Entry, GestureClick};
 use std::cell::RefCell;
 use std::rc::Rc;
 use testruct_core::document::DocumentElement;
@@ -52,7 +53,7 @@ pub fn setup_click_gesture(
     let render_state_click = render_state.clone();
     let app_state_click = app_state.clone();
     let drawing_area_click = drawing_area.clone();
-    let ime_manager_click = ime_manager.clone();
+    let _ime_manager_click = ime_manager.clone();
     let ime_entry_click = ime_entry.clone();
 
     click_gesture.connect_pressed(move |gesture, n_press, x, y| {
@@ -74,41 +75,18 @@ pub fn setup_click_gesture(
             eprintln!("\n=== Click Event ===");
             eprintln!("n_press: {}, x: {:.1}, y: {:.1}", n_press, x, y);
 
-            // CRITICAL FIX: GTK4 on macOS reports event coordinates as window-relative,
-            // but DrawingArea is offset from window top due to menu bar and toolbars.
-            // Measured offset: ~21px horizontally and vertically
-            const WINDOW_OFFSET_X: f64 = 21.0;  // UI elements horizontal offset
-            const WINDOW_OFFSET_Y: f64 = 21.0;  // Menu bar + toolbar vertical offset
-
-            // Adjust event coordinates to DrawingArea-relative
-            let adjusted_x = x - WINDOW_OFFSET_X;
-            let adjusted_y = y - WINDOW_OFFSET_Y;
+            // Convert widget coordinates to document coordinates using unified helper
+            // Note: GTK4 GestureClick provides widget-relative coordinates (DrawingArea origin = 0,0)
+            let doc_coords = widget_to_document(x, y, &state);
+            let canvas_x = doc_coords.x;
+            let canvas_y = doc_coords.y;
 
             let config = state.config.borrow();
             let ruler_config = state.ruler_config.borrow();
-            let ruler_size = ruler_config.size;
-            let zoom = config.zoom;
-            let pan_x = config.pan_x;
-            let pan_y = config.pan_y;
-            eprintln!("Config - Ruler: {:.0}, Zoom: {:.2}, Pan: ({:.1}, {:.1})", ruler_size, zoom, pan_x, pan_y);
-
-            // Detailed coordinate transformation steps
-            eprintln!("Step 0 (window offset): ({:.1}, {:.1}) - ({:.0}, {:.0}) = ({:.1}, {:.1})",
-                x, y, WINDOW_OFFSET_X, WINDOW_OFFSET_Y, adjusted_x, adjusted_y);
-
-            let step1_x = adjusted_x - ruler_size;
-            let step1_y = adjusted_y - ruler_size;
-            eprintln!("Step 1 (subtract ruler): ({:.1}, {:.1})", step1_x, step1_y);
-
-            let step2_x = step1_x - pan_x;
-            let step2_y = step1_y - pan_y;
-            eprintln!("Step 2 (subtract pan): ({:.2}, {:.2})", step2_x, step2_y);
-
-            let canvas_x = step2_x / zoom;
-            let canvas_y = step2_y / zoom;
-            eprintln!("Step 3 (divide zoom): ({:.2}, {:.2})", canvas_x, canvas_y);
+            eprintln!("Config - Ruler: {:.0}, Zoom: {:.2}, Pan: ({:.1}, {:.1})",
+                      ruler_config.size, config.zoom, config.pan_x, config.pan_y);
+            eprintln!("Document coords: ({:.2}, {:.2})", canvas_x, canvas_y);
             eprintln!("=== End Click ===\n");
-
             drop(config);
             drop(ruler_config);
 
@@ -117,13 +95,9 @@ pub fn setup_click_gesture(
                 // Try to find a text or image element at this position
                 if let Some(document) = app_state_click.active_document() {
                     if let Some(page) = document.pages.first() {
-                        let config = state.config.borrow();
-                        let ruler_config = state.ruler_config.borrow();
-                        // Use adjusted coordinates (window offset corrected)
-                        let doc_x = (adjusted_x - ruler_config.size - config.pan_x) / config.zoom;
-                        let doc_y = (adjusted_y - ruler_config.size - config.pan_y) / config.zoom;
-                        drop(config);
-                        drop(ruler_config);
+                        // Use document coordinates from unified conversion
+                        let doc_x = canvas_x;
+                        let doc_y = canvas_y;
 
                         // Check if double-click is on a text or image element
                         for element in &page.elements {
@@ -251,16 +225,10 @@ pub fn setup_click_gesture(
 
             // Get the active document
             if let Some(document) = app_state_click.active_document() {
-                // Transform screen coordinates to document coordinates using adjusted coordinates
-                let config = state.config.borrow();
-                let ruler_config = state.ruler_config.borrow();
-                let screen_x = adjusted_x - (ruler_config.size + config.pan_x);
-                let screen_y = adjusted_y - (ruler_config.size + config.pan_y);
-                let doc_x = screen_x / config.zoom;
-                let doc_y = screen_y / config.zoom;
+                // Use document coordinates from unified conversion (already calculated above)
+                let doc_x = canvas_x;
+                let doc_y = canvas_y;
                 let canvas_mouse_pos = CanvasMousePos::new(doc_x, doc_y);
-                drop(config);
-                drop(ruler_config);
 
                 // IMPORTANT: Check if clicking on a resize handle FIRST
                 // This must happen BEFORE double-click text editing check
@@ -304,6 +272,7 @@ pub fn setup_click_gesture(
                             tool_state.resizing_object_id = Some(element_id);
                             tool_state.resize_handle = Some(handle);
                             tool_state.resize_original_bounds = Some(canvas_mouse_pos);
+                            tool_state.resize_element_bounds = Some(bounds.clone()); // Store original bounds for undo
                             tool_state.drag_start = Some((x, y));
                             drop(tool_state);
 
@@ -385,18 +354,7 @@ pub fn setup_click_gesture(
                     let object_refs: Vec<(uuid::Uuid, &Rect)> =
                         objects.iter().map(|(id, bounds)| (*id, bounds)).collect();
 
-                    // Transform screen coordinates to document coordinates
-                    let config = state.config.borrow();
-                    let ruler_config = state.ruler_config.borrow();
-
-                    let screen_x = x - (ruler_config.size + config.pan_x);
-                    let screen_y = y - (ruler_config.size + config.pan_y);
-                    let doc_x = screen_x / config.zoom;
-                    let doc_y = screen_y / config.zoom;
-
-                    drop(config);
-                    drop(ruler_config);
-
+                    // Use document coordinates from unified conversion (already calculated above)
                     // Perform hit test
                     if let Some(clicked_id) = HitTest::hit_test(&object_refs, doc_x, doc_y) {
                         tracing::info!("Hit test: selected object {}", clicked_id);

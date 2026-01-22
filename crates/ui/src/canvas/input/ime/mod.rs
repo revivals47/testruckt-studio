@@ -9,7 +9,7 @@
 pub mod macos;
 
 use gtk4::prelude::*;
-use gtk4::{gdk, glib, IMMulticontext};
+use gtk4::IMMulticontext;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -41,9 +41,11 @@
 //!   └─ ドラッグ状態をクリア
 //! ```
 
+use super::coordinates::widget_to_document;
 use crate::app::AppState;
 use crate::canvas::mouse::calculate_resize_bounds;
 use crate::canvas::rendering::snap_rect_to_grid;
+use crate::canvas::selection::HitTest;
 use crate::canvas::snapping::{ObjectAlignmentPoints, SmartGuideEngine};
 use crate::canvas::tools::{ShapeFactory, ToolMode};
 use crate::canvas::CanvasRenderState;
@@ -65,11 +67,13 @@ pub fn setup_drag_gesture(
 
     let render_state_drag = render_state.clone();
     let drawing_area_drag = drawing_area.clone();
+    let app_state_drag_begin = app_state.clone();
 
     drag_gesture.connect_drag_begin(move |_gesture, x, y| {
         let state = render_state_drag.clone();
         let tool_state = state.tool_state.borrow();
-        let _current_tool = tool_state.current_tool;
+        let current_tool = tool_state.current_tool;
+        let is_resizing = tool_state.resizing_object_id.is_some();
         drop(tool_state);
 
         // Store drag start position as RAW window coordinates
@@ -79,6 +83,39 @@ pub fn setup_drag_gesture(
         let mut tool_state = state.tool_state.borrow_mut();
         tool_state.drag_start = Some((x, y));
         tool_state.last_drag_offset = Some((0.0, 0.0)); // Reset offset tracking
+        tool_state.marquee_selecting = false; // Reset marquee state
+
+        // Check if we should start marquee selection
+        // Condition: Select mode + not resizing + no object under cursor
+        if current_tool == ToolMode::Select && !is_resizing {
+            // Convert to document coordinates
+            let doc_coords = widget_to_document(x, y, &state);
+
+            // Check if clicking on an object
+            let clicked_on_object = app_state_drag_begin.with_active_document(|doc| {
+                if let Some(page) = doc.pages.first() {
+                    let objects: Vec<(uuid::Uuid, &Rect)> = page.elements.iter()
+                        .map(|e| match e {
+                            DocumentElement::Shape(s) => (s.id, &s.bounds),
+                            DocumentElement::Text(t) => (t.id, &t.bounds),
+                            DocumentElement::Image(i) => (i.id, &i.bounds),
+                            DocumentElement::Frame(f) => (f.id, &f.bounds),
+                            DocumentElement::Group(g) => (g.id, &g.bounds),
+                        })
+                        .collect();
+                    HitTest::hit_test(&objects, doc_coords.x, doc_coords.y).is_some()
+                } else {
+                    false
+                }
+            }).unwrap_or(false);
+
+            if !clicked_on_object {
+                // Start marquee selection
+                tool_state.marquee_selecting = true;
+                eprintln!("📦 Starting marquee selection at ({:.1}, {:.1})", x, y);
+            }
+        }
+        drop(tool_state);
     });
 
     let render_state_update = render_state.clone();
@@ -87,7 +124,7 @@ pub fn setup_drag_gesture(
         let state = render_state_update.clone();
 
         // Extract all values we need from tool_state first, then drop the borrow
-        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle) = {
+        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle, marquee_selecting) = {
             let tool_state = state.tool_state.borrow();
             if let Some((start_x, start_y)) = tool_state.drag_start {
                 (
@@ -97,6 +134,7 @@ pub fn setup_drag_gesture(
                     tool_state.resizing_object_id.is_some(),
                     tool_state.resizing_object_id,
                     tool_state.resize_handle,
+                    tool_state.marquee_selecting,
                 )
             } else {
                 return;
@@ -139,7 +177,7 @@ pub fn setup_drag_gesture(
                 let delta_x = delta_x_pixels / config.zoom;
                 let delta_y = delta_y_pixels / config.zoom;
                 let snap_enabled = config.snap_to_grid;
-                let grid_spacing = config.grid_spacing;
+                let grid_spacing = config.grid_spacing();
                 drop(config);
 
                 // Update document with delta
@@ -267,30 +305,44 @@ pub fn setup_drag_gesture(
                 // Clear snap lines if not dragging
                 state.snap_lines.borrow_mut().clear();
             }
-            *state.drag_box.borrow_mut() = None;
+
+            // Show marquee selection rectangle if marquee_selecting is active
+            if marquee_selecting {
+                // Convert widget coordinates to document coordinates
+                let start_doc = widget_to_document(start_x, start_y, &state);
+                let current_doc = widget_to_document(current_x, current_y, &state);
+
+                let min_x = start_doc.x.min(current_doc.x);
+                let min_y = start_doc.y.min(current_doc.y);
+                let max_x = start_doc.x.max(current_doc.x);
+                let max_y = start_doc.y.max(current_doc.y);
+
+                let marquee_rect = Rect {
+                    origin: Point {
+                        x: min_x as f32,
+                        y: min_y as f32,
+                    },
+                    size: Size {
+                        width: (max_x - min_x) as f32,
+                        height: (max_y - min_y) as f32,
+                    },
+                };
+
+                *state.drag_box.borrow_mut() = Some(marquee_rect);
+            } else {
+                *state.drag_box.borrow_mut() = None;
+            }
         } else {
             // SHAPE CREATION: Show drag_box preview for new shapes
-            // Apply window offset correction for drag_box preview
-            const WINDOW_OFFSET_X: f64 = 21.0;
-            const WINDOW_OFFSET_Y: f64 = 21.0;
-            let adjusted_start_x = start_x - WINDOW_OFFSET_X;
-            let adjusted_start_y = start_y - WINDOW_OFFSET_Y;
-            let adjusted_current_x = current_x - WINDOW_OFFSET_X;
-            let adjusted_current_y = current_y - WINDOW_OFFSET_Y;
+            // Convert widget coordinates to document coordinates using unified helper
+            // Note: GTK4 GestureDrag provides widget-relative coordinates
+            let start_doc = widget_to_document(start_x, start_y, &state);
+            let current_doc = widget_to_document(current_x, current_y, &state);
 
-            // Get ruler size and apply document coordinate conversion
-            let config = state.config.borrow();
-            let ruler_size = 20.0; // From RulerConfig::default()
-            let pan_x = config.pan_x;
-            let pan_y = config.pan_y;
-            let zoom = config.zoom;
-            drop(config);
-
-            // Convert to document coordinates (same formula as drag_end)
-            let doc_x1 = (adjusted_start_x - ruler_size - pan_x) / zoom;
-            let doc_y1 = (adjusted_start_y - ruler_size - pan_y) / zoom;
-            let doc_x2 = (adjusted_current_x - ruler_size - pan_x) / zoom;
-            let doc_y2 = (adjusted_current_y - ruler_size - pan_y) / zoom;
+            let doc_x1 = start_doc.x;
+            let doc_y1 = start_doc.y;
+            let doc_x2 = current_doc.x;
+            let doc_y2 = current_doc.y;
 
             // Update drag box for preview rendering
             let (x1, y1, x2, y2) = (doc_x1, doc_y1, doc_x2, doc_y2);
@@ -326,7 +378,7 @@ pub fn setup_drag_gesture(
         let state = render_state_end.clone();
 
         // Extract all values we need from tool_state, then drop the borrow immediately
-        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle, resize_original_bounds) = {
+        let (start_x, start_y, current_tool, is_resizing, resizing_object_id, resize_handle, resize_original_bounds, resize_element_bounds, marquee_selecting) = {
             let tool_state = state.tool_state.borrow();
             if let Some((start_x, start_y)) = tool_state.drag_start {
                 (
@@ -337,6 +389,8 @@ pub fn setup_drag_gesture(
                     tool_state.resizing_object_id,
                     tool_state.resize_handle,
                     tool_state.resize_original_bounds,
+                    tool_state.resize_element_bounds.clone(),
+                    tool_state.marquee_selecting,
                 )
             } else {
                 return;
@@ -363,7 +417,7 @@ pub fn setup_drag_gesture(
                     let delta_x = offset_x / config.zoom;
                     let delta_y = offset_y / config.zoom;
                     let snap_enabled = config.snap_to_grid;
-                    let grid_spacing = config.grid_spacing;
+                    let grid_spacing = config.grid_spacing();
                     drop(config);
 
                     eprintln!("✏️ Applying resize: delta=({:.2}, {:.2}), handle={:?}", delta_x, delta_y, handle);
@@ -424,120 +478,132 @@ pub fn setup_drag_gesture(
                         false
                     });
 
-                    if !resize_applied.unwrap_or(false) {
+                    if resize_applied.unwrap_or(false) {
+                        // Create undo command for resize operation
+                        if let Some(old_bounds) = resize_element_bounds {
+                            // Get the new bounds from the document
+                            let new_bounds: Option<Rect> = app_state_drag_end.with_active_document(|doc| {
+                                if let Some(page) = doc.pages.first() {
+                                    for element in &page.elements {
+                                        let (id, bounds) = match element {
+                                            DocumentElement::Shape(s) => (s.id, &s.bounds),
+                                            DocumentElement::Text(t) => (t.id, &t.bounds),
+                                            DocumentElement::Image(i) => (i.id, &i.bounds),
+                                            DocumentElement::Frame(f) => (f.id, &f.bounds),
+                                            DocumentElement::Group(g) => (g.id, &g.bounds),
+                                        };
+                                        if id == object_id {
+                                            return Some(bounds.clone());
+                                        }
+                                    }
+                                }
+                                None
+                            }).flatten();
+
+                            if let Some(new_bounds) = new_bounds {
+                                let page_index = app_state_drag_end.active_page_index();
+                                let command = crate::undo_redo::AppResizeCommand::new(
+                                    app_state_drag_end.clone(),
+                                    object_id,
+                                    page_index,
+                                    old_bounds,
+                                    new_bounds,
+                                );
+                                app_state_drag_end.push_command(Box::new(command));
+                                tracing::info!("✅ Resize undo command created for object {}", object_id);
+                            }
+                        }
+
+                        // Mark document as modified after resize
+                        app_state_drag_end.mark_as_modified();
+                    } else {
                         eprintln!("❌ WARNING: Resize was not applied to document!");
                     }
                 } else {
                     eprintln!("❌ ERROR: Missing resize state - object_id={:?}, handle={:?}, bounds={:?}",
                         resizing_object_id, resize_handle, resize_original_bounds);
                 }
-            } else if current_tool == ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
-                // Move selected objects
+            } else if current_tool == ToolMode::Select && marquee_selecting && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
+                // MARQUEE SELECTION: Select all objects within the marquee rectangle
+                let start_doc = widget_to_document(start_x, start_y, &state);
+                let current_doc = widget_to_document(current_x, current_y, &state);
+
+                // Find all objects in the marquee selection area
+                let selected_by_marquee: Vec<uuid::Uuid> = app_state_drag_end.with_active_document(|doc| {
+                    if let Some(page) = doc.pages.first() {
+                        let objects: Vec<(uuid::Uuid, &Rect)> = page.elements.iter()
+                            .map(|e| match e {
+                                DocumentElement::Shape(s) => (s.id, &s.bounds),
+                                DocumentElement::Text(t) => (t.id, &t.bounds),
+                                DocumentElement::Image(i) => (i.id, &i.bounds),
+                                DocumentElement::Frame(f) => (f.id, &f.bounds),
+                                DocumentElement::Group(g) => (g.id, &g.bounds),
+                            })
+                            .collect();
+                        HitTest::hit_test_rect(&objects, start_doc.x, start_doc.y, current_doc.x, current_doc.y)
+                    } else {
+                        Vec::new()
+                    }
+                }).unwrap_or_default();
+
+                // Update selection with marquee-selected objects
+                if !selected_by_marquee.is_empty() {
+                    let mut selected = state.selected_ids.borrow_mut();
+                    selected.clear();
+                    selected.extend(selected_by_marquee.iter().copied());
+                    drop(selected);
+                    eprintln!("📦 Marquee selection complete: {} object(s) selected", selected_by_marquee.len());
+                    tracing::info!("Marquee selected {} object(s)", selected_by_marquee.len());
+                } else {
+                    // Clear selection if nothing was selected
+                    let mut selected = state.selected_ids.borrow_mut();
+                    selected.clear();
+                    drop(selected);
+                    eprintln!("📦 Marquee selection complete: no objects in selection area");
+                }
+            } else if current_tool == ToolMode::Select && !marquee_selecting && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
+                // Move selected objects with Undo support
                 let selected = state.selected_ids.borrow();
                 if !selected.is_empty() {
                     // Transform screen offset to document offset
                     let config = state.config.borrow();
-                    let delta_x = offset_x / config.zoom;
-                    let delta_y = offset_y / config.zoom;
-                    let snap_enabled = config.snap_to_grid;
-                    let grid_spacing = config.grid_spacing;
+                    let delta_x = (offset_x / config.zoom) as f32;
+                    let delta_y = (offset_y / config.zoom) as f32;
                     drop(config);
 
                     let selected_ids: Vec<uuid::Uuid> = selected.clone();
                     drop(selected);
 
-                    // Move each selected object directly to the document
-                    app_state_drag_end.with_mutable_active_document(|document| {
-                        if let Some(page) = document.pages.first_mut() {
-                            for element in page.elements.iter_mut() {
-                                match element {
-                                    DocumentElement::Shape(shape) if selected_ids.contains(&shape.id) => {
-                                        // Skip locked elements
-                                        if shape.locked {
-                                            continue;
-                                        }
-                                        let mut new_bounds = shape.bounds.clone();
-                                        new_bounds.origin.x += delta_x as f32;
-                                        new_bounds.origin.y += delta_y as f32;
-                                        if snap_enabled {
-                                            new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
-                                        }
-                                        shape.bounds = new_bounds;
-                                    }
-                                    DocumentElement::Text(text) if selected_ids.contains(&text.id) => {
-                                        // Skip locked elements
-                                        if text.locked {
-                                            continue;
-                                        }
-                                        let mut new_bounds = text.bounds.clone();
-                                        new_bounds.origin.x += delta_x as f32;
-                                        new_bounds.origin.y += delta_y as f32;
-                                        if snap_enabled {
-                                            new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
-                                        }
-                                        text.bounds = new_bounds;
-                                    }
-                                    DocumentElement::Image(image) if selected_ids.contains(&image.id) => {
-                                        // Skip locked elements
-                                        if image.locked {
-                                            continue;
-                                        }
-                                        let mut new_bounds = image.bounds.clone();
-                                        new_bounds.origin.x += delta_x as f32;
-                                        new_bounds.origin.y += delta_y as f32;
-                                        if snap_enabled {
-                                            new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
-                                        }
-                                        image.bounds = new_bounds;
-                                    }
-                                    DocumentElement::Frame(frame) if selected_ids.contains(&frame.id) => {
-                                        // Skip locked elements
-                                        if frame.locked {
-                                            continue;
-                                        }
-                                        let mut new_bounds = frame.bounds.clone();
-                                        new_bounds.origin.x += delta_x as f32;
-                                        new_bounds.origin.y += delta_y as f32;
-                                        if snap_enabled {
-                                            new_bounds = snap_rect_to_grid(&new_bounds, grid_spacing);
-                                        }
-                                        frame.bounds = new_bounds;
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            tracing::info!("Moved {} selected object(s)", selected_ids.len());
-                        }
-                    });
+                    // Create and execute move command with undo support
+                    let page_index = app_state_drag_end.active_page_index();
+                    let command = crate::undo_redo::AppMoveCommand::new(
+                        app_state_drag_end.clone(),
+                        selected_ids.clone(),
+                        page_index,
+                        delta_x,
+                        delta_y,
+                    );
+
+                    // Push command (this executes the move and adds to undo stack)
+                    app_state_drag_end.push_command(Box::new(command));
+                    app_state_drag_end.mark_as_modified();
+
+                    tracing::info!("Moved {} selected object(s) (with undo support)", selected_ids.len());
                 }
             } else if current_tool != ToolMode::Select && (offset_x.abs() > 5.0 || offset_y.abs() > 5.0) {
                 // Shape/Text creation based on tool
-                // CRITICAL FIX: Apply window offset correction
-                // start_x and current_x are in window coordinates
-                const WINDOW_OFFSET_X: f64 = 21.0;
-                const WINDOW_OFFSET_Y: f64 = 21.0;
-                let adjusted_start_x = start_x - WINDOW_OFFSET_X;
-                let adjusted_start_y = start_y - WINDOW_OFFSET_Y;
-                let adjusted_current_x = current_x - WINDOW_OFFSET_X;
-                let adjusted_current_y = current_y - WINDOW_OFFSET_Y;
+                // Convert widget coordinates to document coordinates using unified helper
+                // Note: GTK4 GestureDrag provides widget-relative coordinates
+                let start_doc = widget_to_document(start_x, start_y, &state);
+                let current_doc = widget_to_document(current_x, current_y, &state);
 
-                // Convert screen coordinates to document coordinates
-                let config = state.config.borrow();
-                let ruler_size = 20.0;  // From RulerConfig::default()
-                let pan_x = config.pan_x;
-                let pan_y = config.pan_y;
-                let zoom = config.zoom;
-                drop(config);
-
-                // Convert to document coordinates (accounting for ruler, pan, and zoom)
-                let doc_start_x = (adjusted_start_x - ruler_size - pan_x) / zoom;
-                let doc_start_y = (adjusted_start_y - ruler_size - pan_y) / zoom;
-                let doc_current_x = (adjusted_current_x - ruler_size - pan_x) / zoom;
-                let doc_current_y = (adjusted_current_y - ruler_size - pan_y) / zoom;
+                let doc_start_x = start_doc.x;
+                let doc_start_y = start_doc.y;
+                let doc_current_x = current_doc.x;
+                let doc_current_y = current_doc.y;
 
                 eprintln!("📐 Shape creation coordinate transformation:");
-                eprintln!("  Window: start=({:.1}, {:.1}), current=({:.1}, {:.1})", start_x, start_y, current_x, current_y);
-                eprintln!("  Adjusted: start=({:.1}, {:.1}), current=({:.1}, {:.1})", adjusted_start_x, adjusted_start_y, adjusted_current_x, adjusted_current_y);
+                eprintln!("  Widget: start=({:.1}, {:.1}), current=({:.1}, {:.1})", start_x, start_y, current_x, current_y);
                 eprintln!("  Document: start=({:.2}, {:.2}), current=({:.2}, {:.2})", doc_start_x, doc_start_y, doc_current_x, doc_current_y);
 
                 tracing::info!("Creating {} element with drag offset ({:.1}, {:.1})", current_tool.name(), offset_x, offset_y);
@@ -596,6 +662,9 @@ pub fn setup_drag_gesture(
                 } else {
                     tracing::info!("{} element added to document", current_tool.name());
 
+                    // Mark document as modified after element creation
+                    app_state_drag_end.mark_as_modified();
+
                     // Auto-switch back to Select tool after creating an element
                     let mut tool_state_auto = state.tool_state.borrow_mut();
                     tool_state_auto.current_tool = ToolMode::Select;
@@ -617,6 +686,8 @@ pub fn setup_drag_gesture(
         tool_state.resizing_object_id = None;
         tool_state.resize_handle = None;
         tool_state.resize_original_bounds = None;
+        tool_state.resize_element_bounds = None;
+        tool_state.marquee_selecting = false;
         drop(tool_state);
 
         *state.drag_box.borrow_mut() = None;

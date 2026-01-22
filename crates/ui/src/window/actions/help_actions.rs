@@ -1,4 +1,4 @@
-//! Help action handlers (manual, about, settings)
+//! Help action handlers (manual, about, settings, keyboard shortcuts)
 
 use super::common::add_window_action;
 use gtk4::prelude::*;
@@ -25,6 +25,22 @@ pub fn register(window: &gtk4::ApplicationWindow, state: crate::app::AppState) {
             tracing::info!("✅ User manual dialog displayed");
         }
     });
+
+    // Keyboard shortcuts dialog (F1)
+    let window_weak_shortcuts = window.downgrade();
+    add_window_action(window, "keyboard-shortcuts", move |_| {
+        tracing::info!("Action: show keyboard shortcuts");
+        if let Some(window) = window_weak_shortcuts.upgrade() {
+            let window_base = window.clone().upcast::<gtk4::Window>();
+            crate::dialogs::show_shortcuts_dialog(&window_base);
+            tracing::info!("✅ Keyboard shortcuts dialog displayed");
+        }
+    });
+
+    // Register F1 shortcut for keyboard shortcuts
+    if let Some(app) = window.application() {
+        app.set_accels_for_action("win.keyboard-shortcuts", &["F1"]);
+    }
 
     let window_weak_about = window.downgrade();
     add_window_action(window, "about", move |_| {

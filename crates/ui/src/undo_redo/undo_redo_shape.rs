@@ -91,6 +91,89 @@ impl std::fmt::Debug for DeleteCommand {
     }
 }
 
+/// Move command for moving document elements
+#[derive(Debug)]
+pub struct MoveCommand {
+    document: Arc<Mutex<Document>>,
+    element_id: Uuid,
+    page_index: usize,
+    delta_x: f32,
+    delta_y: f32,
+}
+
+impl MoveCommand {
+    /// Create a new move command
+    pub fn new(
+        document: Arc<Mutex<Document>>,
+        element_id: Uuid,
+        page_index: usize,
+        delta_x: f32,
+        delta_y: f32,
+    ) -> Self {
+        Self {
+            document,
+            element_id,
+            page_index,
+            delta_x,
+            delta_y,
+        }
+    }
+
+    fn apply_delta(&self, dx: f32, dy: f32) -> Result<String, String> {
+        let mut doc = self.document.lock().expect("document lock");
+
+        if self.page_index >= doc.pages.len() {
+            return Err("Page index out of bounds".to_string());
+        }
+
+        let page = &mut doc.pages[self.page_index];
+
+        for element in &mut page.elements {
+            if elem_id(element) == self.element_id {
+                match element {
+                    DocumentElement::Shape(shape) => {
+                        shape.bounds.origin.x += dx;
+                        shape.bounds.origin.y += dy;
+                    }
+                    DocumentElement::Text(text) => {
+                        text.bounds.origin.x += dx;
+                        text.bounds.origin.y += dy;
+                    }
+                    DocumentElement::Image(image) => {
+                        image.bounds.origin.x += dx;
+                        image.bounds.origin.y += dy;
+                    }
+                    DocumentElement::Frame(frame) => {
+                        frame.bounds.origin.x += dx;
+                        frame.bounds.origin.y += dy;
+                    }
+                    DocumentElement::Group(group) => {
+                        group.bounds.origin.x += dx;
+                        group.bounds.origin.y += dy;
+                    }
+                }
+                return Ok(format!("Moved element {} by ({}, {})", self.element_id, dx, dy));
+            }
+        }
+
+        Err(format!("Element {} not found", self.element_id))
+    }
+}
+
+impl Command for MoveCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        self.apply_delta(self.delta_x, self.delta_y)
+    }
+
+    fn undo(&mut self) -> Result<String, String> {
+        self.apply_delta(-self.delta_x, -self.delta_y)
+    }
+
+    fn description(&self) -> &str {
+        "Move object"
+    }
+}
+
 /// Create command for adding new document elements
 #[derive(Debug)]
 pub struct CreateCommand {

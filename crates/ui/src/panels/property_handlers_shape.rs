@@ -71,30 +71,29 @@ pub fn wire_stroke_color_signal(
             move |result| {
                 if let Ok(rgba) = result {
                     let stroke_color = rgba_to_color(&rgba);
-                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
-                        let mut changed = false;
-                        if let Some(page) = doc.pages.first_mut() {
-                            for element in &mut page.elements {
-                                if selected_ids_for_cb.contains(&element.id()) {
-                                    if let DocumentElement::Shape(shape) = element {
-                                        shape.stroke = Some(stroke_color.clone());
-                                        changed = true;
-                                    }
-                                }
-                            }
-                        }
-                        changed
-                    });
+                    let page_index = app_state_for_cb.active_page_index();
 
-                    if updated.unwrap_or(false) {
-                        drawing_area_for_cb.queue_draw();
-                        crate::panels::property_handlers::update_property_panel_on_selection(
-                            &panel_for_cb,
-                            &app_state_for_cb,
-                            &selected_ids_for_cb,
-                        );
-                        tracing::debug!("✅ Stroke color updated via dialog");
-                    }
+                    // Create undo command for stroke color change
+                    let command = crate::undo_redo::AppPropertyChangeCommand::new(
+                        app_state_for_cb.clone(),
+                        selected_ids_for_cb.clone(),
+                        page_index,
+                        crate::undo_redo::PropertyValue::StrokeColor(Some(stroke_color)),
+                    );
+
+                    // Push command (this executes the change and adds to undo stack)
+                    app_state_for_cb.push_command(Box::new(command));
+
+                    // Mark document as modified
+                    app_state_for_cb.mark_as_modified();
+
+                    drawing_area_for_cb.queue_draw();
+                    crate::panels::property_handlers::update_property_panel_on_selection(
+                        &panel_for_cb,
+                        &app_state_for_cb,
+                        &selected_ids_for_cb,
+                    );
+                    tracing::debug!("✅ Stroke color updated via dialog (with undo support)");
                 }
             },
         );
@@ -163,30 +162,29 @@ pub fn wire_fill_color_signal(
             move |result| {
                 if let Ok(rgba) = result {
                     let fill_color = rgba_to_color(&rgba);
-                    let updated = app_state_for_cb.with_mutable_active_document(|doc| {
-                        let mut changed = false;
-                        if let Some(page) = doc.pages.first_mut() {
-                            for element in &mut page.elements {
-                                if selected_ids_for_cb.contains(&element.id()) {
-                                    if let DocumentElement::Shape(shape) = element {
-                                        shape.fill = Some(fill_color.clone());
-                                        changed = true;
-                                    }
-                                }
-                            }
-                        }
-                        changed
-                    });
+                    let page_index = app_state_for_cb.active_page_index();
 
-                    if updated.unwrap_or(false) {
-                        drawing_area_for_cb.queue_draw();
-                        crate::panels::property_handlers::update_property_panel_on_selection(
-                            &panel_for_cb,
-                            &app_state_for_cb,
-                            &selected_ids_for_cb,
-                        );
-                        tracing::debug!("✅ Fill color updated via dialog");
-                    }
+                    // Create undo command for fill color change
+                    let command = crate::undo_redo::AppPropertyChangeCommand::new(
+                        app_state_for_cb.clone(),
+                        selected_ids_for_cb.clone(),
+                        page_index,
+                        crate::undo_redo::PropertyValue::FillColor(Some(fill_color)),
+                    );
+
+                    // Push command (this executes the change and adds to undo stack)
+                    app_state_for_cb.push_command(Box::new(command));
+
+                    // Mark document as modified
+                    app_state_for_cb.mark_as_modified();
+
+                    drawing_area_for_cb.queue_draw();
+                    crate::panels::property_handlers::update_property_panel_on_selection(
+                        &panel_for_cb,
+                        &app_state_for_cb,
+                        &selected_ids_for_cb,
+                    );
+                    tracing::debug!("✅ Fill color updated via dialog (with undo support)");
                 }
             },
         );
@@ -231,6 +229,9 @@ pub fn wire_auto_resize_signal(
         });
 
         if state_changed.unwrap_or(false) {
+            // Mark document as modified
+            app_state.mark_as_modified();
+
             drawing_area.queue_draw();
         }
 
@@ -272,35 +273,148 @@ pub fn color_to_hex(color: &testruct_core::typography::Color) -> String {
     )
 }
 
-/// Wire stroke width spinner to update shape stroke width
+/// State for debounced stroke width undo
+struct StrokeWidthUndoState {
+    /// Original stroke widths when user started changing
+    original_widths: Vec<(uuid::Uuid, f32)>,
+    /// Selected element IDs when change started
+    selected_ids: Vec<uuid::Uuid>,
+    /// Pending timeout source ID
+    timeout_source: Option<gtk4::glib::SourceId>,
+    /// Whether we're in the middle of a change sequence
+    is_changing: bool,
+}
+
+/// Wire stroke width spinner to update shape stroke width with debounced undo
 pub fn wire_stroke_width_signal(
     components: &PropertyPanelComponents,
     app_state: AppState,
     drawing_area: gtk4::DrawingArea,
     render_state: crate::canvas::CanvasRenderState,
 ) {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
     let spinner = components.stroke_width_spin.clone();
+
+    // Shared state for debounce tracking
+    let undo_state = Rc::new(RefCell::new(StrokeWidthUndoState {
+        original_widths: Vec::new(),
+        selected_ids: Vec::new(),
+        timeout_source: None,
+        is_changing: false,
+    }));
+
+    let undo_state_clone = undo_state.clone();
+    let app_state_clone = app_state.clone();
+    let render_state_clone = render_state.clone();
 
     spinner.connect_value_changed(move |spin| {
         let stroke_width = spin.value() as f32;
+        let mut state = undo_state_clone.borrow_mut();
 
-        app_state.with_mutable_active_document(|doc| {
-            let selected = render_state.selected_ids.borrow();
-            if !selected.is_empty() {
-                if let Some(page) = doc.pages.first_mut() {
-                    for element in &mut page.elements {
-                        match element {
-                            DocumentElement::Shape(shape) if selected.contains(&shape.id) => {
-                                shape.stroke_width = stroke_width;
-                                tracing::debug!("✅ Stroke width changed to: {}pt", stroke_width);
+        // Get current selection
+        let selected: Vec<uuid::Uuid> = render_state_clone.selected_ids.borrow().clone();
+        if selected.is_empty() {
+            return;
+        }
+
+        // If this is the first change in a sequence, capture original values
+        if !state.is_changing {
+            state.is_changing = true;
+            state.selected_ids = selected.clone();
+            state.original_widths.clear();
+
+            // Capture original stroke widths
+            app_state_clone.with_active_document(|doc| {
+                if let Some(page) = doc.pages.first() {
+                    for element in &page.elements {
+                        if let DocumentElement::Shape(shape) = element {
+                            if selected.contains(&shape.id) {
+                                state.original_widths.push((shape.id, shape.stroke_width));
                             }
-                            _ => {}
+                        }
+                    }
+                }
+            });
+        }
+
+        // Cancel any existing timeout
+        if let Some(source_id) = state.timeout_source.take() {
+            source_id.remove();
+        }
+
+        drop(state); // Release borrow before document mutation
+
+        // Apply the change immediately for visual feedback
+        let changed = app_state_clone.with_mutable_active_document(|doc| {
+            let mut modified = false;
+            if let Some(page) = doc.pages.first_mut() {
+                for element in &mut page.elements {
+                    if let DocumentElement::Shape(shape) = element {
+                        if selected.contains(&shape.id) {
+                            shape.stroke_width = stroke_width;
+                            modified = true;
                         }
                     }
                 }
             }
+            modified
         });
 
+        if changed.unwrap_or(false) {
+            app_state_clone.mark_as_modified();
+        }
+
         drawing_area.queue_draw();
+
+        // Set up debounce timeout (500ms)
+        let undo_state_timeout = undo_state_clone.clone();
+        let app_state_timeout = app_state_clone.clone();
+        let final_stroke_width = stroke_width;
+
+        let source_id = gtk4::glib::timeout_add_local_once(
+            std::time::Duration::from_millis(500),
+            move || {
+                let mut state = undo_state_timeout.borrow_mut();
+
+                if !state.is_changing || state.original_widths.is_empty() {
+                    state.is_changing = false;
+                    return;
+                }
+
+                // Create undo command with original values and final value
+                let page_index = app_state_timeout.active_page_index();
+
+                // Only create undo if value actually changed
+                let value_changed = state.original_widths.iter().any(|(_, orig)| {
+                    (*orig - final_stroke_width).abs() > 0.001
+                });
+
+                if value_changed {
+                    // Create command with pre-captured original values
+                    let command = crate::undo_redo::AppStrokeWidthCommand::new(
+                        app_state_timeout.clone(),
+                        page_index,
+                        state.original_widths.clone(),
+                        final_stroke_width,
+                    );
+
+                    // Push command to undo stack (execute() is a no-op since value is already applied)
+                    app_state_timeout.push_command(Box::new(command));
+
+                    tracing::debug!("✅ Stroke width undo command created (debounced)");
+                }
+
+                // Reset state
+                state.is_changing = false;
+                state.original_widths.clear();
+                state.selected_ids.clear();
+                state.timeout_source = None;
+            },
+        );
+
+        // Store the source ID
+        undo_state_clone.borrow_mut().timeout_source = Some(source_id);
     });
 }

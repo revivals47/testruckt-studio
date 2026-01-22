@@ -1,6 +1,6 @@
 //! Image export functionality (PNG, JPEG) using Cairo
 //!
-//! Renders a document to raster image formats with configurable DPI.
+//! Renders a document to raster image formats with configurable DPI and background options.
 
 use anyhow::{anyhow, Result};
 use cairo::{Context, Format, ImageSurface};
@@ -8,6 +8,8 @@ use std::path::Path;
 use testruct_core::workspace::assets::AssetCatalog;
 use testruct_core::Document;
 use tracing::{debug, info};
+
+use crate::export::{BackgroundOption, ExportConfig};
 
 /// Default DPI for image export
 const DEFAULT_DPI: f64 = 96.0;
@@ -63,6 +65,195 @@ pub fn render_to_jpeg(
     // For now, we'll just export as PNG (JPEG would require additional dependencies)
     info!("JPEG export currently uses PNG format. Full JPEG support requires additional setup.");
     render_to_png(document, output_path, dpi, catalog)
+}
+
+/// Render a document to PNG format with ExportConfig
+pub fn render_to_png_with_config(
+    document: &Document,
+    output_path: &Path,
+    config: &ExportConfig,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    info!("Exporting to PNG with config: {}", output_path.display());
+
+    if document.pages.is_empty() {
+        return Err(anyhow!("Document has no pages to export"));
+    }
+
+    let dpi = config.dpi();
+    debug!(
+        "PNG export: DPI={}, Background={:?}, Resolution={:?}",
+        dpi, config.background, config.resolution
+    );
+
+    // Determine which pages to export
+    let pages_to_export: Vec<(usize, &testruct_core::document::Page)> = if config.export_all_pages {
+        document.pages.iter().enumerate().collect()
+    } else if let Some(page_idx) = config.page_index {
+        if page_idx < document.pages.len() {
+            vec![(page_idx, &document.pages[page_idx])]
+        } else {
+            return Err(anyhow!("Page index {} out of bounds", page_idx));
+        }
+    } else {
+        document.pages.iter().enumerate().collect()
+    };
+
+    // Export pages
+    let page_count = pages_to_export.len();
+    if page_count == 1 {
+        let (_, page) = pages_to_export[0];
+        render_page_to_png_with_background(page, output_path, dpi, &config.background, catalog)
+    } else {
+        for (index, page) in &pages_to_export {
+            let page_num = index + 1;
+            let output_filename = if let Some(extension) = output_path.extension() {
+                let stem = output_path.file_stem().unwrap();
+                let stem_str = stem.to_string_lossy();
+                let ext_str = extension.to_string_lossy();
+                format!("{}_page_{}.{}", stem_str, page_num, ext_str)
+            } else {
+                format!("{}_page_{}.png", output_path.display(), page_num)
+            };
+
+            let page_path = output_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(&output_filename);
+
+            debug!("Rendering page {} to: {}", page_num, page_path.display());
+            render_page_to_png_with_background(page, &page_path, dpi, &config.background, catalog)?;
+        }
+
+        info!(
+            "PNG export completed: {} pages exported",
+            page_count
+        );
+        Ok(())
+    }
+}
+
+/// Render a document to JPEG format with ExportConfig
+pub fn render_to_jpeg_with_config(
+    document: &Document,
+    output_path: &Path,
+    config: &ExportConfig,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    info!("Exporting to JPEG with config: {}", output_path.display());
+
+    // JPEG doesn't support transparency, force white background if transparent is selected
+    let mut adjusted_config = config.clone();
+    if config.background.is_transparent() {
+        adjusted_config.background = BackgroundOption::White;
+        debug!("JPEG doesn't support transparency, using white background");
+    }
+
+    // For now, use PNG export (JPEG requires additional conversion)
+    info!("JPEG export currently uses PNG format. Full JPEG support requires additional setup.");
+    render_to_png_with_config(document, output_path, &adjusted_config, catalog)
+}
+
+/// Render a single page to PNG file with background option
+fn render_page_to_png_with_background(
+    page: &testruct_core::document::Page,
+    output_path: &Path,
+    dpi: f64,
+    background: &BackgroundOption,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    // Use default page dimensions (A4: 595.28 x 841.89 points)
+    let width_points = 595.28;
+    let height_points = 841.89;
+    let width_inches = width_points / 72.0;
+    let height_inches = height_points / 72.0;
+
+    let pixel_width = (width_inches * dpi) as i32;
+    let pixel_height = (height_inches * dpi) as i32;
+
+    debug!(
+        "PNG size: {}x{} pixels at {} DPI",
+        pixel_width, pixel_height, dpi
+    );
+
+    let pixel_width = pixel_width.max(100);
+    let pixel_height = pixel_height.max(100);
+
+    // Create image surface
+    let surface = ImageSurface::create(Format::ARgb32, pixel_width, pixel_height)
+        .map_err(|e| anyhow!("Failed to create image surface: {}", e))?;
+
+    let ctx =
+        Context::new(&surface).map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
+
+    // Scale context for DPI
+    let scale = dpi / 72.0;
+    ctx.scale(scale, scale);
+
+    // Render page with background option
+    render_page_to_context_with_background(&ctx, page, background, catalog)?;
+
+    // Write to file
+    let mut file = std::fs::File::create(output_path)
+        .map_err(|e| anyhow!("Failed to create output file: {}", e))?;
+
+    surface
+        .write_to_png(&mut file)
+        .map_err(|e| anyhow!("Failed to write PNG: {}", e))?;
+
+    info!("PNG exported: {}", output_path.display());
+    Ok(())
+}
+
+/// Render a single page to Cairo context with configurable background
+fn render_page_to_context_with_background(
+    ctx: &Context,
+    page: &testruct_core::document::Page,
+    background: &BackgroundOption,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    // Use default page dimensions (A4)
+    let width = 595.28;
+    let height = 841.89;
+
+    // Draw background based on option
+    match background.to_color() {
+        Some(color) => {
+            // Solid color background
+            ctx.set_source_rgba(
+                color.r as f64,
+                color.g as f64,
+                color.b as f64,
+                color.a as f64,
+            );
+            ctx.paint()
+                .map_err(|e| anyhow!("Failed to paint background: {}", e))?;
+        }
+        None => {
+            // Transparent background - clear with transparent
+            ctx.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+            ctx.set_operator(cairo::Operator::Clear);
+            ctx.paint()
+                .map_err(|e| anyhow!("Failed to clear background: {}", e))?;
+            ctx.set_operator(cairo::Operator::Over);
+        }
+    }
+
+    // Draw page border only for non-transparent backgrounds
+    if !background.is_transparent() {
+        ctx.set_source_rgb(0.0, 0.0, 0.0);
+        ctx.set_line_width(0.5);
+        ctx.rectangle(0.0, 0.0, width, height);
+        ctx.stroke()
+            .map_err(|e| anyhow!("Failed to draw page border: {}", e))?;
+    }
+
+    // Render all elements
+    for element in &page.elements {
+        render_element_to_context(ctx, element, catalog)?;
+    }
+
+    Ok(())
 }
 
 /// Export single-page document to PNG

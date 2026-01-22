@@ -4,7 +4,6 @@
 
 use cairo::{Context, Format, ImageSurface};
 use testruct_core::document::Page;
-use testruct_core::layout::Rect;
 
 /// Page thumbnail dimensions
 pub const THUMBNAIL_WIDTH: i32 = 180;

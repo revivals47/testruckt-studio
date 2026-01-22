@@ -1,19 +1,32 @@
 //! Clipboard management for copy/paste/duplicate operations
 //!
 //! Provides a global clipboard for storing document elements that can be
-//! pasted into the document.
+//! pasted into the document. Supports:
+//! - Internal element copy/paste
+//! - External text paste (creates TextElement)
+//! - External image paste (creates ImageElement)
+//! - Cumulative paste offset to avoid overlapping
 
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
-use testruct_core::document::DocumentElement;
+use testruct_core::document::{DocumentElement, ImageElement, TextElement};
+use testruct_core::layout::{Point, Rect, Size};
+use testruct_core::typography::TextStyle;
+use testruct_core::workspace::assets::AssetRef;
+
+/// Base offset for paste operations
+const BASE_PASTE_OFFSET: f32 = 20.0;
+
+/// Maximum cumulative offset before reset
+const MAX_PASTE_OFFSET: f32 = 200.0;
 
 /// Clipboard data structure holding copied elements and metadata
 #[derive(Clone, Debug)]
 pub struct ClipboardData {
     /// The elements that were copied
     pub elements: Vec<DocumentElement>,
-    /// Default offset for pasting (to avoid exact overlap)
-    pub offset: (f32, f32),
+    /// Current paste count (for cumulative offset)
+    pub paste_count: u32,
 }
 
 impl ClipboardData {
@@ -21,7 +34,7 @@ impl ClipboardData {
     pub fn new(elements: Vec<DocumentElement>) -> Self {
         Self {
             elements,
-            offset: (20.0, 20.0),
+            paste_count: 0,
         }
     }
 
@@ -34,34 +47,176 @@ impl ClipboardData {
     pub fn is_empty(&self) -> bool {
         self.elements.is_empty()
     }
+
+    /// Calculate current paste offset based on paste count
+    pub fn current_offset(&self) -> (f32, f32) {
+        let offset = BASE_PASTE_OFFSET * (self.paste_count as f32 + 1.0);
+        let clamped = offset % MAX_PASTE_OFFSET;
+        (clamped, clamped)
+    }
+
+    /// Increment paste count
+    pub fn increment_paste_count(&mut self) {
+        self.paste_count += 1;
+    }
+
+    /// Reset paste count (called when new copy is made)
+    pub fn reset_paste_count(&mut self) {
+        self.paste_count = 0;
+    }
+}
+
+/// External clipboard content types
+#[derive(Clone, Debug)]
+pub enum ExternalClipboardContent {
+    /// Plain text content
+    Text(String),
+    /// Image data (PNG bytes)
+    Image(Vec<u8>),
+    /// No supported content
+    None,
 }
 
 /// Global clipboard storage
 static CLIPBOARD: Lazy<Mutex<Option<ClipboardData>>> = Lazy::new(|| Mutex::new(None));
 
-/// Copy elements to clipboard
+/// Paste count tracker for cumulative offset
+static PASTE_COUNT: Lazy<Mutex<u32>> = Lazy::new(|| Mutex::new(0));
+
+/// Copy elements to clipboard (resets paste count)
 pub fn copy_to_clipboard(elements: Vec<DocumentElement>) {
     let len = elements.len();
     let mut clipboard = CLIPBOARD.lock().expect("clipboard lock");
     *clipboard = Some(ClipboardData::new(elements));
+
+    // Reset paste count on new copy
+    let mut count = PASTE_COUNT.lock().expect("paste count lock");
+    *count = 0;
+
     tracing::info!("📋 Copied {} elements to clipboard", len);
 }
 
-/// Get elements from clipboard (deep cloned with new IDs)
+/// Get elements from clipboard (deep cloned with new IDs and cumulative offset)
 pub fn paste_from_clipboard() -> Option<Vec<DocumentElement>> {
-    let clipboard = CLIPBOARD.lock().expect("clipboard lock");
+    let mut clipboard = CLIPBOARD.lock().expect("clipboard lock");
 
-    clipboard.as_ref().map(|data| {
+    clipboard.as_mut().map(|data| {
+        let offset = data.current_offset();
+        data.increment_paste_count();
+
         data.elements
             .iter()
             .map(|elem| {
                 let mut new_elem = elem.clone();
                 regenerate_element_id(&mut new_elem);
-                offset_element_bounds(&mut new_elem, data.offset);
+                offset_element_bounds(&mut new_elem, offset);
                 new_elem
             })
             .collect()
     })
+}
+
+/// Get current paste offset (for external paste operations)
+pub fn get_paste_offset() -> (f32, f32) {
+    let mut count = PASTE_COUNT.lock().expect("paste count lock");
+    let offset = BASE_PASTE_OFFSET * (*count as f32 + 1.0);
+    let clamped = offset % MAX_PASTE_OFFSET;
+    *count += 1;
+    (clamped, clamped)
+}
+
+/// Reset paste offset counter (called when pasting different content)
+pub fn reset_paste_offset() {
+    let mut count = PASTE_COUNT.lock().expect("paste count lock");
+    *count = 0;
+}
+
+/// Create a TextElement from external clipboard text
+pub fn create_text_element_from_clipboard(text: &str, position: Option<(f32, f32)>) -> DocumentElement {
+    let offset = get_paste_offset();
+    let (x, y) = position.unwrap_or((100.0, 100.0));
+
+    // Estimate text bounds based on content length
+    let line_count = text.lines().count().max(1);
+    let max_line_len = text.lines().map(|l| l.len()).max().unwrap_or(10);
+    let estimated_width = (max_line_len as f32 * 8.0).min(400.0).max(100.0);
+    let estimated_height = (line_count as f32 * 20.0).min(300.0).max(24.0);
+
+    let text_element = TextElement {
+        id: uuid::Uuid::new_v4(),
+        content: text.to_string(),
+        style: TextStyle::default(),
+        bounds: Rect::new(
+            Point::new(x + offset.0, y + offset.1),
+            Size::new(estimated_width, estimated_height),
+        ),
+        auto_resize_height: true,
+        visible: true,
+        locked: false,
+    };
+
+    tracing::info!("📝 Created TextElement from clipboard text ({} chars)", text.len());
+    DocumentElement::Text(text_element)
+}
+
+/// Create an ImageElement from external clipboard image data
+/// Returns None if image data is invalid or can't be processed
+pub fn create_image_element_from_clipboard(
+    image_data: &[u8],
+    position: Option<(f32, f32)>,
+    asset_ref: AssetRef,
+) -> Option<DocumentElement> {
+    let offset = get_paste_offset();
+    let (x, y) = position.unwrap_or((100.0, 100.0));
+
+    // Try to determine image dimensions from PNG header
+    let (width, height) = parse_png_dimensions(image_data).unwrap_or((200.0, 200.0));
+
+    // Scale down if too large
+    let max_size = 400.0;
+    let scale = if width > max_size || height > max_size {
+        max_size / width.max(height)
+    } else {
+        1.0
+    };
+
+    let scaled_width = width * scale;
+    let scaled_height = height * scale;
+
+    let image_element = ImageElement {
+        id: uuid::Uuid::new_v4(),
+        source: asset_ref,
+        bounds: Rect::new(
+            Point::new(x + offset.0, y + offset.1),
+            Size::new(scaled_width, scaled_height),
+        ),
+        visible: true,
+        locked: false,
+    };
+
+    tracing::info!("🖼️ Created ImageElement from clipboard ({:.0}x{:.0})", scaled_width, scaled_height);
+    Some(DocumentElement::Image(image_element))
+}
+
+/// Parse PNG dimensions from header
+fn parse_png_dimensions(data: &[u8]) -> Option<(f32, f32)> {
+    // PNG header: 8 bytes signature, then IHDR chunk
+    // IHDR starts at byte 8, width at offset 16 (4 bytes), height at offset 20 (4 bytes)
+    if data.len() < 24 {
+        return None;
+    }
+
+    // Check PNG signature
+    let png_signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    if &data[0..8] != &png_signature {
+        return None;
+    }
+
+    // Read width and height from IHDR (big-endian)
+    let width = u32::from_be_bytes([data[16], data[17], data[18], data[19]]) as f32;
+    let height = u32::from_be_bytes([data[20], data[21], data[22], data[23]]) as f32;
+
+    Some((width, height))
 }
 
 /// Check if clipboard has content
@@ -149,6 +304,7 @@ mod tests {
             bounds: Rect::new(Point::new(x, y), Size::new(100.0, 20.0)),
             auto_resize_height: false,
             visible: true,
+            locked: false,
         }
     }
 

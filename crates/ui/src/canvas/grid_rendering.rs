@@ -192,32 +192,121 @@ pub fn draw_rulers(
     Ok(())
 }
 
+/// Grid display style
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GridStyle {
+    /// Solid lines
+    Lines,
+    /// Dotted pattern (points at intersections)
+    Dots,
+}
+
+impl Default for GridStyle {
+    fn default() -> Self {
+        GridStyle::Dots
+    }
+}
+
+/// Grid configuration
+#[derive(Clone, Debug)]
+pub struct GridConfig {
+    /// Grid spacing in pixels
+    pub spacing: f32,
+    /// Grid display style
+    pub style: GridStyle,
+    /// Grid color (RGBA)
+    pub color: Color,
+    /// Dot size for dotted grid
+    pub dot_size: f32,
+}
+
+impl Default for GridConfig {
+    fn default() -> Self {
+        Self {
+            spacing: 20.0,
+            style: GridStyle::Dots,
+            color: Color {
+                r: 0.7,
+                g: 0.7,
+                b: 0.7,
+                a: 0.6,
+            },
+            dot_size: 1.5,
+        }
+    }
+}
+
+impl GridConfig {
+    /// Create grid config with specific spacing
+    pub fn with_spacing(spacing: f32) -> Self {
+        Self {
+            spacing,
+            ..Default::default()
+        }
+    }
+}
+
 /// Draw the grid pattern
 ///
-/// Renders a regular grid of lines across the page.
+/// Renders a regular grid of lines or dots across the page.
 pub fn draw_grid(ctx: &Context, page_size: &Size) -> Result<(), cairo::Error> {
-    ctx.set_source_rgba(0.9, 0.9, 0.9, 0.5);
-    ctx.set_line_width(0.5);
+    draw_grid_with_config(ctx, page_size, &GridConfig::default())
+}
 
-    let grid_spacing = 10.0;
+/// Draw the grid pattern with custom configuration
+pub fn draw_grid_with_config(
+    ctx: &Context,
+    page_size: &Size,
+    config: &GridConfig,
+) -> Result<(), cairo::Error> {
+    ctx.set_source_rgba(
+        config.color.r as f64,
+        config.color.g as f64,
+        config.color.b as f64,
+        config.color.a as f64,
+    );
 
-    // Vertical grid lines
-    let mut x = grid_spacing;
-    while x < page_size.width as f64 {
-        ctx.move_to(x, 0.0);
-        ctx.line_to(x, page_size.height as f64);
-        x += grid_spacing;
+    let grid_spacing = config.spacing as f64;
+
+    match config.style {
+        GridStyle::Lines => {
+            ctx.set_line_width(0.5);
+
+            // Vertical grid lines
+            let mut x = grid_spacing;
+            while x < page_size.width as f64 {
+                ctx.move_to(x, 0.0);
+                ctx.line_to(x, page_size.height as f64);
+                x += grid_spacing;
+            }
+
+            // Horizontal grid lines
+            let mut y = grid_spacing;
+            while y < page_size.height as f64 {
+                ctx.move_to(0.0, y);
+                ctx.line_to(page_size.width as f64, y);
+                y += grid_spacing;
+            }
+
+            ctx.stroke()?;
+        }
+        GridStyle::Dots => {
+            // Draw dots at grid intersections for better performance
+            let dot_size = config.dot_size as f64;
+
+            let mut y = grid_spacing;
+            while y < page_size.height as f64 {
+                let mut x = grid_spacing;
+                while x < page_size.width as f64 {
+                    ctx.arc(x, y, dot_size, 0.0, std::f64::consts::PI * 2.0);
+                    ctx.fill()?;
+                    x += grid_spacing;
+                }
+                y += grid_spacing;
+            }
+        }
     }
 
-    // Horizontal grid lines
-    let mut y = grid_spacing;
-    while y < page_size.height as f64 {
-        ctx.move_to(0.0, y);
-        ctx.line_to(page_size.width as f64, y);
-        y += grid_spacing;
-    }
-
-    ctx.stroke()?;
     Ok(())
 }
 

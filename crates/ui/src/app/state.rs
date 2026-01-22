@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use crate::app::recent_files::RecentFiles;
 use crate::undo_redo::UndoRedoStack;
 use gtk4::glib::WeakRef;
+use gtk4::prelude::GtkWindowExt;
 use gtk4::ApplicationWindow;
 use testruct_core::workspace::assets::AssetCatalog;
 use testruct_core::{Document, DocumentId, Project};
@@ -29,6 +31,10 @@ impl Default for AppState {
                 asset_catalog: Arc::new(Mutex::new(AssetCatalog::new())),
                 window: None,
                 recent_files: RecentFiles::load(),
+                current_file_path: None,
+                is_modified: false,
+                auto_save_enabled: true,
+                last_modified_time: None,
             })),
         };
 
@@ -376,6 +382,142 @@ impl AppState {
         let mut inner = self.inner.lock().expect("state");
         inner.recent_files.clear();
     }
+
+    // ========== File path and modification tracking ==========
+
+    /// Get the current file path for the active document
+    pub fn current_file_path(&self) -> Option<PathBuf> {
+        let inner = self.inner.lock().expect("state");
+        inner.current_file_path.clone()
+    }
+
+    /// Set the current file path for the active document
+    pub fn set_current_file_path(&self, path: Option<PathBuf>) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.current_file_path = path;
+    }
+
+    /// Check if the document has been modified since last save
+    pub fn is_modified(&self) -> bool {
+        let inner = self.inner.lock().expect("state");
+        inner.is_modified
+    }
+
+    /// Set the modified flag for the document
+    pub fn set_modified(&self, modified: bool) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.is_modified = modified;
+    }
+
+    /// Mark the document as saved (sets modified to false and optionally updates the file path)
+    pub fn mark_as_saved(&self, path: PathBuf) {
+        {
+            let mut inner = self.inner.lock().expect("state");
+            inner.is_modified = false;
+            inner.current_file_path = Some(path);
+        }
+        self.update_window_title();
+        tracing::info!("📁 Document marked as saved");
+    }
+
+    /// Clear document state (for new document)
+    pub fn clear_document_state(&self) {
+        {
+            let mut inner = self.inner.lock().expect("state");
+            inner.current_file_path = None;
+            inner.is_modified = false;
+        }
+        self.update_window_title();
+    }
+
+    /// Mark document as modified and update window title
+    pub fn mark_as_modified(&self) {
+        {
+            let mut inner = self.inner.lock().expect("state");
+            inner.is_modified = true;
+            inner.last_modified_time = Some(Instant::now());
+        }
+        self.update_window_title();
+    }
+
+    // ========== Auto-save management ==========
+
+    /// Check if auto-save is enabled
+    pub fn is_auto_save_enabled(&self) -> bool {
+        let inner = self.inner.lock().expect("state");
+        inner.auto_save_enabled
+    }
+
+    /// Enable or disable auto-save
+    pub fn set_auto_save_enabled(&self, enabled: bool) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.auto_save_enabled = enabled;
+        tracing::info!("💾 Auto-save {}", if enabled { "enabled" } else { "disabled" });
+    }
+
+    /// Get the time of last modification
+    pub fn last_modified_time(&self) -> Option<Instant> {
+        let inner = self.inner.lock().expect("state");
+        inner.last_modified_time
+    }
+
+    /// Clear last modified time (after auto-save)
+    pub fn clear_last_modified_time(&self) {
+        let mut inner = self.inner.lock().expect("state");
+        inner.last_modified_time = None;
+    }
+
+    /// Check if auto-save should be triggered
+    /// Returns true if: auto-save enabled, file has path, is modified, and enough time has passed
+    pub fn should_auto_save(&self, delay_secs: u64) -> bool {
+        let inner = self.inner.lock().expect("state");
+
+        // Must have auto-save enabled
+        if !inner.auto_save_enabled {
+            return false;
+        }
+
+        // Must have a file path (not a new unsaved document)
+        if inner.current_file_path.is_none() {
+            return false;
+        }
+
+        // Must be modified
+        if !inner.is_modified {
+            return false;
+        }
+
+        // Check if enough time has passed since last modification
+        if let Some(last_modified) = inner.last_modified_time {
+            last_modified.elapsed().as_secs() >= delay_secs
+        } else {
+            false
+        }
+    }
+
+    /// Update the window title to reflect current state
+    /// Format: "filename* - Testruct Studio" or "Untitled* - Testruct Studio"
+    pub fn update_window_title(&self) {
+        let inner = self.inner.lock().expect("state");
+
+        let filename = if let Some(ref path) = inner.current_file_path {
+            path.file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Untitled".to_string())
+        } else {
+            "Untitled".to_string()
+        };
+
+        let modified_marker = if inner.is_modified { "*" } else { "" };
+        let title = format!("{}{} - Testruct Studio", filename, modified_marker);
+
+        if let Some(ref weak_window) = inner.window {
+            if let Some(window) = weak_window.upgrade() {
+                window.set_title(Some(&title));
+                tracing::debug!("🏷️ Window title updated: {}", title);
+            }
+        }
+    }
 }
 
 struct AppShared {
@@ -387,4 +529,12 @@ struct AppShared {
     asset_catalog: Arc<Mutex<AssetCatalog>>,
     window: Option<WeakRef<ApplicationWindow>>,
     recent_files: RecentFiles,
+    /// Current file path for the active document (None if unsaved)
+    current_file_path: Option<PathBuf>,
+    /// Whether the document has been modified since last save
+    is_modified: bool,
+    /// Whether auto-save is enabled
+    auto_save_enabled: bool,
+    /// Time of last modification (for auto-save timer)
+    last_modified_time: Option<Instant>,
 }

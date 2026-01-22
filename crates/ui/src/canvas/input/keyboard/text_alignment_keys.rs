@@ -36,7 +36,7 @@ use uuid::Uuid;
 /// アライメントが変更された場合は `true`、それ以外は `false`
 pub fn handle_text_alignment(
     app_state: &AppState,
-    render_state: &CanvasRenderState,
+    _render_state: &CanvasRenderState,
     drawing_area: &DrawingArea,
     text_id: Uuid,
     keyval: gtk4::gdk::Key,

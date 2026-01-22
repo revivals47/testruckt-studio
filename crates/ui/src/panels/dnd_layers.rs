@@ -5,7 +5,6 @@
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Button, Label, Orientation, ScrolledWindow};
 use testruct_core::document::DocumentElement;
-use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::canvas::CanvasView;

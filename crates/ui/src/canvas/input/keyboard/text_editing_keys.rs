@@ -50,7 +50,7 @@ pub fn handle_text_editing_key(
     text_id: Uuid,
     keyval: gtk4::gdk::Key,
     cursor_pos: &mut usize,
-    ime_manager: &Rc<RefCell<ImeManager>>,
+    _ime_manager: &Rc<RefCell<ImeManager>>,
 ) -> Option<bool> {
     match keyval {
         gtk4::gdk::Key::Escape => {

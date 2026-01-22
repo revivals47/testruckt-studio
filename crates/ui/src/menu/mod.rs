@@ -101,6 +101,7 @@ impl MenuBuilder {
     fn build_help_menu() -> gio::Menu {
         let help_menu = gio::Menu::new();
         help_menu.append(Some("_User Manual"), Some("win.user-manual"));
+        help_menu.append(Some("_Keyboard Shortcuts"), Some("win.keyboard-shortcuts"));
         help_menu.append(Some("_About"), Some("win.about"));
 
         help_menu

@@ -154,6 +154,9 @@ pub fn handle_cut(
         // Clear selection
         render_state.selected_ids.borrow_mut().clear();
 
+        // Mark document as modified (updates title and triggers auto-save timer)
+        app_state.mark_as_modified();
+
         tracing::info!("✅ Cut {} objects", selected_count);
         drawing_area.queue_draw();
     }
@@ -161,7 +164,7 @@ pub fn handle_cut(
 
 /// 削除処理（Delete key）
 ///
-/// 選択されたオブジェクトを削除します。
+/// 選択されたオブジェクトを削除します。Undo対応。
 ///
 /// # 引数
 ///
@@ -173,20 +176,28 @@ pub fn handle_delete(
     app_state: &AppState,
     drawing_area: &DrawingArea,
 ) {
-    let selected = render_state.selected_ids.borrow().clone();
+    let selected: Vec<Uuid> = render_state.selected_ids.borrow().clone();
     let selected_count = selected.len();
 
     if !selected.is_empty() {
-        app_state.with_mutable_active_document(|doc| {
-            if let Some(page) = doc.pages.first_mut() {
-                page.elements.retain(|e| !selected.contains(&e.id()));
-            }
-        });
+        // Get current page index
+        let page_index = app_state.active_page_index();
+
+        // Create and push delete command (this executes the deletion)
+        let command = crate::undo_redo::AppDeleteCommand::new(
+            app_state.clone(),
+            selected,
+            page_index,
+        );
+        app_state.push_command(Box::new(command));
 
         // Clear selection
         render_state.selected_ids.borrow_mut().clear();
 
-        tracing::info!("✅ Deleted {} objects", selected_count);
+        // Mark document as modified (updates title and triggers auto-save timer)
+        app_state.mark_as_modified();
+
+        tracing::info!("✅ Deleted {} objects (Undo available)", selected_count);
         drawing_area.queue_draw();
     }
 }
@@ -211,6 +222,9 @@ pub fn handle_paste(app_state: &AppState, drawing_area: &DrawingArea) {
                         }
                     }
                 });
+
+                // Mark document as modified (updates title and triggers auto-save timer)
+                app_state.mark_as_modified();
 
                 tracing::info!("✅ Pasted {} elements", paste_count);
                 drawing_area.queue_draw();
@@ -281,6 +295,9 @@ pub fn handle_duplicate(
             }
         });
 
+        // Mark document as modified (updates title and triggers auto-save timer)
+        app_state.mark_as_modified();
+
         tracing::info!("✅ Duplicated {} objects", selected.len());
         drawing_area.queue_draw();
     }
@@ -335,6 +352,9 @@ pub fn move_selected_objects(
                 }
             }
         });
+
+        // Mark document as modified (updates title and triggers auto-save timer)
+        app_state.mark_as_modified();
     }
 }
 

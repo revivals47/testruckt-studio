@@ -65,7 +65,7 @@ pub fn build_item_library_panel(item_bank: Arc<Mutex<ItemBank>>) -> ItemLibraryC
     refresh_item_list(&item_list, &item_bank);
 
     // Set up row selection handler - prevent event propagation
-    let item_list_clone = item_list.clone();
+    let _item_list_clone = item_list.clone();
     item_list.connect_row_selected(move |_listbox, row| {
         if let Some(row) = row {
             eprintln!("📦 Item selected: {:?}", row);
@@ -86,8 +86,8 @@ pub fn build_item_library_panel(item_bank: Arc<Mutex<ItemBank>>) -> ItemLibraryC
     });
 
     // Add button handler
-    let item_list_clone = item_list.clone();
-    let item_bank_clone = item_bank.clone();
+    let _item_list_clone = item_list.clone();
+    let _item_bank_clone = item_bank.clone();
     add_button.connect_clicked(move |_| {
         tracing::info!("✅ Add button clicked - opening item creation dialog");
         eprintln!("📝 Opening item creation dialog...");

@@ -19,8 +19,9 @@ pub fn wire_font_family_signal(
 
     combo.connect_notify_local(Some("selected"), move |combo_box, _pspec| {
         if let Some(font_name) = dropdown_string(combo_box, combo_box.selected()) {
-            app_state.with_mutable_active_document(|doc| {
+            let changed = app_state.with_mutable_active_document(|doc| {
                 let selected = render_state.selected_ids.borrow();
+                let mut modified = false;
                 if !selected.is_empty() {
                     if let Some(page) = doc.pages.first_mut() {
                         for element in &mut page.elements {
@@ -28,13 +29,19 @@ pub fn wire_font_family_signal(
                                 if selected.contains(&text.id) {
                                     text.style.font_family = font_name.clone();
                                     recompute_auto_height(text);
+                                    modified = true;
                                     tracing::debug!("✅ Font family changed to {}", font_name);
                                 }
                             }
                         }
                     }
                 }
+                modified
             });
+
+            if changed.unwrap_or(false) {
+                app_state.mark_as_modified();
+            }
         }
 
         drawing_area.queue_draw();
@@ -58,20 +65,27 @@ pub fn wire_font_size_signal(
             let selected_ids = selected.clone();
             drop(selected);
 
-            app_state.with_mutable_active_document(|doc| {
+            let changed = app_state.with_mutable_active_document(|doc| {
+                let mut modified = false;
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
                         match element {
                             DocumentElement::Text(text) if selected_ids.contains(&text.id) => {
                                 text.style.font_size = font_size;
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Font size changed to: {}px", font_size);
                             }
                             _ => {}
                         }
                     }
                 }
+                modified
             });
+
+            if changed.unwrap_or(false) {
+                app_state.mark_as_modified();
+            }
         }
 
         drawing_area.queue_draw();
@@ -90,8 +104,9 @@ pub fn wire_bold_signal(
     button.connect_toggled(move |btn| {
         let is_bold = btn.is_active();
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
@@ -103,13 +118,19 @@ pub fn wire_bold_signal(
                                     testruct_core::typography::FontWeight::Regular
                                 };
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Bold: {}", is_bold);
                             }
                         }
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -127,8 +148,9 @@ pub fn wire_italic_signal(
     button.connect_toggled(move |btn| {
         let is_italic = btn.is_active();
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
@@ -136,13 +158,19 @@ pub fn wire_italic_signal(
                             if selected.contains(&text.id) {
                                 text.style.italic = is_italic;
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Italic: {}", is_italic);
                             }
                         }
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -160,8 +188,9 @@ pub fn wire_underline_signal(
     button.connect_toggled(move |btn| {
         let is_underline = btn.is_active();
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
@@ -169,13 +198,19 @@ pub fn wire_underline_signal(
                             if selected.contains(&text.id) {
                                 text.style.underline = is_underline;
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Underline: {}", is_underline);
                             }
                         }
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -193,8 +228,9 @@ pub fn wire_strikethrough_signal(
     button.connect_toggled(move |btn| {
         let is_strikethrough = btn.is_active();
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
@@ -202,13 +238,19 @@ pub fn wire_strikethrough_signal(
                             if selected.contains(&text.id) {
                                 text.style.strikethrough = is_strikethrough;
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Strikethrough: {}", is_strikethrough);
                             }
                         }
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -293,6 +335,9 @@ pub fn wire_text_background_color_signal(
                     });
 
                     if updated.unwrap_or(false) {
+                        // Mark document as modified
+                        app_state_for_cb.mark_as_modified();
+
                         drawing_area_for_cb.queue_draw();
                         crate::panels::property_handlers::update_property_panel_on_selection(
                             &panel_for_cb,
@@ -384,6 +429,9 @@ pub fn wire_text_color_signal(
                     });
 
                     if updated.unwrap_or(false) {
+                        // Mark document as modified
+                        app_state_for_cb.mark_as_modified();
+
                         drawing_area_for_cb.queue_draw();
                         crate::panels::property_handlers::update_property_panel_on_selection(
                             &panel_for_cb,
@@ -419,14 +467,16 @@ pub fn wire_alignment_dropdown(
             _ => TextAlignment::Start,
         };
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
                         match element {
                             DocumentElement::Text(text) if selected.contains(&text.id) => {
                                 text.style.alignment = alignment;
+                                modified = true;
                                 tracing::debug!("✅ Text alignment changed to: {:?}", alignment);
                             }
                             _ => {}
@@ -434,7 +484,12 @@ pub fn wire_alignment_dropdown(
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -452,8 +507,9 @@ pub fn wire_line_height_signal(
     scale.connect_value_changed(move |scale_widget| {
         let line_height = scale_widget.value() as f32;
 
-        app_state.with_mutable_active_document(|doc| {
+        let changed = app_state.with_mutable_active_document(|doc| {
             let selected = render_state.selected_ids.borrow();
+            let mut modified = false;
             if !selected.is_empty() {
                 if let Some(page) = doc.pages.first_mut() {
                     for element in &mut page.elements {
@@ -461,6 +517,7 @@ pub fn wire_line_height_signal(
                             DocumentElement::Text(text) if selected.contains(&text.id) => {
                                 text.style.line_height = line_height;
                                 recompute_auto_height(text);
+                                modified = true;
                                 tracing::debug!("✅ Line height changed to: {}", line_height);
                             }
                             _ => {}
@@ -468,7 +525,12 @@ pub fn wire_line_height_signal(
                     }
                 }
             }
+            modified
         });
+
+        if changed.unwrap_or(false) {
+            app_state.mark_as_modified();
+        }
 
         drawing_area.queue_draw();
     });
@@ -496,19 +558,26 @@ pub fn wire_text_content_signal(
                 let end = buf.end_iter();
                 let text_content = buf.slice(&start, &end, true).to_string();
 
-                app_state_buf.with_mutable_active_document(|doc| {
+                let changed = app_state_buf.with_mutable_active_document(|doc| {
+                    let mut modified = false;
                     if let Some(page) = doc.pages.first_mut() {
                         for element in &mut page.elements {
                             if let DocumentElement::Text(text) = element {
                                 if text.id == *id {
                                     text.content = text_content.clone();
                                     recompute_auto_height(text);
+                                    modified = true;
                                     tracing::debug!("✅ Text content updated from property panel");
                                 }
                             }
                         }
                     }
+                    modified
                 });
+
+                if changed.unwrap_or(false) {
+                    app_state_buf.mark_as_modified();
+                }
             }
         }
 

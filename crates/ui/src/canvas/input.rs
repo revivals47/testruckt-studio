@@ -69,6 +69,7 @@
 //!
 //! 詳細は各モジュールドキュメントを参照してください。
 
+pub mod coordinates;
 mod gesture;
 mod gesture_click;
 mod gesture_drag;

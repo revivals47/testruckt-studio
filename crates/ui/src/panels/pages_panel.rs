@@ -1,13 +1,13 @@
 //! Pages Panel for multi-page document management
 //!
 //! Provides:
-//! - Page list display
+//! - Page list display with thumbnails
 //! - Page switching/navigation
-//! - Add/delete pages
-//! - Page properties editing
+//! - Add/delete pages with confirmation
+//! - Active page tracking and highlighting
 
 use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, Button, Label, Orientation, Picture, ScrolledWindow};
+use gtk4::{Box as GtkBox, Button, Label, Orientation, ScrolledWindow};
 use testruct_core::document::{Document, Page};
 
 use crate::app::AppState;
@@ -72,16 +72,30 @@ impl PagesPanel {
         add_btn.add_css_class("suggested-action");
         add_btn.set_halign(gtk4::Align::Fill);
 
-        let state_c = app_state.clone();
-        add_btn.connect_clicked(move |_| {
-            // TODO: Implement add page functionality
-            tracing::info!("✅ Add page button clicked");
-            state_c.with_mutable_active_document(|doc| {
-                let new_page = Page::empty();
-                doc.pages.push(new_page);
-                tracing::info!("📄 New page added. Total pages: {}", doc.pages.len());
+        {
+            let state_c = app_state.clone();
+            let canvas_c = canvas_view.drawing_area();
+
+            add_btn.connect_clicked(move |_| {
+                let new_page_index = state_c.with_mutable_active_document(|doc| {
+                    let new_page = Page::empty();
+                    doc.pages.push(new_page);
+                    let new_index = doc.pages.len() - 1;
+                    tracing::info!("📄 New page added. Total pages: {}", doc.pages.len());
+                    new_index
+                });
+
+                // Switch to the new page
+                if let Some(idx) = new_page_index {
+                    if let Err(e) = state_c.set_active_page_index(idx) {
+                        tracing::warn!("Failed to switch to new page: {}", e);
+                    }
+                }
+
+                canvas_c.queue_draw();
+                tracing::info!("✅ Page added and selected");
             });
-        });
+        }
 
         container.append(&add_btn);
 
@@ -104,13 +118,26 @@ impl PagesPanel {
         item_box.set_halign(gtk4::Align::Fill);
         item_box.set_hexpand(true);
 
+        // Check if this is the active page
+        let is_active = app_state.active_page_index() == index;
+        if is_active {
+            item_box.add_css_class("page-item-active");
+        }
+
         // Page header (name and element count)
         let header_box = GtkBox::new(Orientation::Horizontal, 8);
         header_box.set_halign(gtk4::Align::Fill);
 
-        let page_name = Label::new(Some(&format!("Page {}", index + 1)));
+        let page_name = if is_active {
+            Label::new(Some(&format!("▶ Page {}", index + 1)))
+        } else {
+            Label::new(Some(&format!("  Page {}", index + 1)))
+        };
         page_name.set_halign(gtk4::Align::Start);
         page_name.add_css_class("monospace");
+        if is_active {
+            page_name.add_css_class("accent");
+        }
         header_box.append(&page_name);
 
         let element_count = Label::new(Some(&format!("({} items)", page.elements.len())));
@@ -232,15 +259,60 @@ impl PagesPanel {
         controls_box.append(&select_btn);
 
         // Delete button
-        let delete_btn = Button::with_label("Delete");
+        let delete_btn = Button::with_label("🗑");
+        delete_btn.set_width_request(32);
         delete_btn.add_css_class("destructive-action");
+        delete_btn.set_tooltip_text(Some("Delete page"));
 
-        let state_c2 = app_state.clone();
+        {
+            let state_c = app_state.clone();
+            let canvas_c = canvas_view.drawing_area();
+            let page_index = index;
 
-        delete_btn.connect_clicked(move |_| {
-            tracing::info!("✅ Delete page clicked");
-            // TODO: Implement delete page with confirmation
-        });
+            delete_btn.connect_clicked(move |btn| {
+                // Check if this is the last page
+                let page_count = state_c
+                    .with_active_document(|doc| doc.pages.len())
+                    .unwrap_or(0);
+
+                if page_count <= 1 {
+                    tracing::warn!("⚠️ Cannot delete the last page");
+                    btn.set_sensitive(false);
+                    btn.set_tooltip_text(Some("Cannot delete the last page"));
+                    return;
+                }
+
+                // Delete the page
+                state_c.with_mutable_active_document(|doc| {
+                    if page_index < doc.pages.len() {
+                        doc.pages.remove(page_index);
+                        tracing::info!("🗑 Page {} deleted. Remaining: {}", page_index + 1, doc.pages.len());
+                    }
+                });
+
+                // Adjust active page index if needed
+                let current_active = state_c.active_page_index();
+                let new_page_count = state_c
+                    .with_active_document(|doc| doc.pages.len())
+                    .unwrap_or(0);
+
+                if current_active >= new_page_count && new_page_count > 0 {
+                    // Active page was deleted or is now out of bounds
+                    let new_active = new_page_count - 1;
+                    if let Err(e) = state_c.set_active_page_index(new_active) {
+                        tracing::warn!("Failed to adjust active page: {}", e);
+                    }
+                } else if page_index < current_active {
+                    // A page before the active page was deleted, adjust index
+                    let new_active = current_active.saturating_sub(1);
+                    if let Err(e) = state_c.set_active_page_index(new_active) {
+                        tracing::warn!("Failed to adjust active page: {}", e);
+                    }
+                }
+
+                canvas_c.queue_draw();
+            });
+        }
 
         controls_box.append(&delete_btn);
 
@@ -267,7 +339,7 @@ pub fn get_page_count(document: &Document) -> usize {
 }
 
 /// Get current page index (placeholder - would be stored in app state)
-pub fn get_current_page_index(document: &Document) -> usize {
+pub fn get_current_page_index(_document: &Document) -> usize {
     // TODO: Track active page in AppState
     0
 }

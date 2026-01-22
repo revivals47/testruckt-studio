@@ -1,6 +1,6 @@
 //! SVG export functionality using Cairo
 //!
-//! Renders a document to SVG format with support for multi-page output.
+//! Renders a document to SVG format with support for multi-page output and background options.
 
 use anyhow::{anyhow, Result};
 use cairo::{Context, SvgSurface};
@@ -8,6 +8,8 @@ use std::path::Path;
 use testruct_core::workspace::assets::AssetCatalog;
 use testruct_core::Document;
 use tracing::{debug, info};
+
+use crate::export::{BackgroundOption, ExportConfig};
 
 /// Default page size (A4: 595.28 x 841.89 points)
 const DEFAULT_PAGE_WIDTH: f64 = 595.28;
@@ -57,7 +59,142 @@ pub fn render_to_svg(
     Ok(())
 }
 
-/// Render a single page to Cairo context
+/// Render a document to SVG with ExportConfig
+pub fn render_to_svg_with_config(
+    document: &Document,
+    output_path: &Path,
+    config: &ExportConfig,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    info!("Exporting to SVG with config: {}", output_path.display());
+
+    if document.pages.is_empty() {
+        return Err(anyhow!("Document has no pages to export"));
+    }
+
+    debug!(
+        "SVG export: Background={:?}",
+        config.background
+    );
+
+    let width = DEFAULT_PAGE_WIDTH;
+    let height = DEFAULT_PAGE_HEIGHT;
+
+    // Determine which pages to export
+    let pages_to_export: Vec<(usize, &testruct_core::document::Page)> = if config.export_all_pages {
+        document.pages.iter().enumerate().collect()
+    } else if let Some(page_idx) = config.page_index {
+        if page_idx < document.pages.len() {
+            vec![(page_idx, &document.pages[page_idx])]
+        } else {
+            return Err(anyhow!("Page index {} out of bounds", page_idx));
+        }
+    } else {
+        document.pages.iter().enumerate().collect()
+    };
+
+    // For multi-page SVG export with single page, output directly
+    // For multi-page, create separate files
+    let page_count = pages_to_export.len();
+    if page_count == 1 {
+        let (_, page) = pages_to_export[0];
+        let surface = SvgSurface::new(width, height, Some(output_path))
+            .map_err(|e| anyhow!("Failed to create SVG surface: {}", e))?;
+
+        let ctx = Context::new(&surface)
+            .map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
+
+        render_page_to_context_with_background(&ctx, page, &config.background, catalog)?;
+
+        surface.finish();
+        info!("SVG exported: {}", output_path.display());
+    } else {
+        for (index, page) in &pages_to_export {
+            let page_num = index + 1;
+            let output_filename = if let Some(extension) = output_path.extension() {
+                let stem = output_path.file_stem().unwrap();
+                let stem_str = stem.to_string_lossy();
+                let ext_str = extension.to_string_lossy();
+                format!("{}_page_{}.{}", stem_str, page_num, ext_str)
+            } else {
+                format!("{}_page_{}.svg", output_path.display(), page_num)
+            };
+
+            let page_path = output_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(&output_filename);
+
+            debug!("Rendering page {} to: {}", page_num, page_path.display());
+
+            let surface = SvgSurface::new(width, height, Some(&page_path))
+                .map_err(|e| anyhow!("Failed to create SVG surface: {}", e))?;
+
+            let ctx = Context::new(&surface)
+                .map_err(|e| anyhow!("Failed to create Cairo context: {}", e))?;
+
+            render_page_to_context_with_background(&ctx, page, &config.background, catalog)?;
+
+            surface.finish();
+        }
+
+        info!(
+            "SVG export completed: {} pages exported",
+            page_count
+        );
+    }
+
+    Ok(())
+}
+
+/// Render a single page to Cairo context with configurable background
+fn render_page_to_context_with_background(
+    ctx: &Context,
+    page: &testruct_core::document::Page,
+    background: &BackgroundOption,
+    catalog: &AssetCatalog,
+) -> Result<()> {
+    let width = DEFAULT_PAGE_WIDTH;
+    let height = DEFAULT_PAGE_HEIGHT;
+
+    // Draw background based on option
+    match background.to_color() {
+        Some(color) => {
+            // Solid color background
+            ctx.set_source_rgba(
+                color.r as f64,
+                color.g as f64,
+                color.b as f64,
+                color.a as f64,
+            );
+            ctx.rectangle(0.0, 0.0, width, height);
+            ctx.fill()
+                .map_err(|e| anyhow!("Failed to paint background: {}", e))?;
+        }
+        None => {
+            // Transparent background - don't paint anything
+            // SVG will have transparent background by default
+        }
+    }
+
+    // Draw page border only for non-transparent backgrounds
+    if !background.is_transparent() {
+        ctx.set_source_rgb(0.0, 0.0, 0.0);
+        ctx.set_line_width(0.5);
+        ctx.rectangle(0.0, 0.0, width, height);
+        ctx.stroke()
+            .map_err(|e| anyhow!("Failed to draw page border: {}", e))?;
+    }
+
+    // Render all elements
+    for element in &page.elements {
+        render_element_to_context(ctx, element, catalog)?;
+    }
+
+    Ok(())
+}
+
+/// Render a single page to Cairo context (legacy)
 fn render_page_to_context(
     ctx: &Context,
     page: &testruct_core::document::Page,

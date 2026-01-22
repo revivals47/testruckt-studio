@@ -12,7 +12,7 @@ use gtk4::cairo::{self, Context};
 use testruct_core::layout::{Point, Size};
 
 // Re-export types from grid_rendering for backward compatibility
-pub use super::grid_rendering::{Guide, GuideOrientation, RulerConfig};
+pub use super::grid_rendering::{Guide, GuideOrientation, RulerConfig, GridConfig, GridStyle};
 
 // Re-export from rendering_text module
 pub use super::rendering_text::{
@@ -35,7 +35,7 @@ pub struct RenderConfig {
     pub show_rulers: bool,
     pub show_guides: bool,
     pub snap_to_grid: bool,
-    pub grid_spacing: f32,
+    pub grid_config: GridConfig,
     pub guides: Vec<Guide>,
     pub snap_to_guides: bool,
     pub guide_snap_distance: f32,
@@ -51,11 +51,23 @@ impl Default for RenderConfig {
             show_rulers: true,
             show_guides: true,
             snap_to_grid: true,
-            grid_spacing: 10.0,
+            grid_config: GridConfig::default(),
             guides: Vec::new(),
             snap_to_guides: true,
             guide_snap_distance: 5.0,
         }
+    }
+}
+
+impl RenderConfig {
+    /// Get grid spacing (convenience method)
+    pub fn grid_spacing(&self) -> f32 {
+        self.grid_config.spacing
+    }
+
+    /// Set grid spacing
+    pub fn set_grid_spacing(&mut self, spacing: f32) {
+        self.grid_config.spacing = spacing;
     }
 }
 
@@ -79,7 +91,7 @@ pub fn draw_background(
 }
 
 // Re-export draw_grid for backward compatibility
-pub use super::grid_rendering::draw_grid;
+pub use super::grid_rendering::{draw_grid, draw_grid_with_config};
 
 /// Draw page border
 pub fn draw_page_border(ctx: &Context, page_size: &Size) -> Result<(), cairo::Error> {

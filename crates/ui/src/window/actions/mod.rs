@@ -48,6 +48,7 @@ pub fn register_window_actions(
         tool_palette,
         properties_panel,
         toolbar_buttons,
+        &state,
     );
     tools_actions::register(window, state.clone(), canvas_view, property_components);
     group_actions::register(window, state.clone(), canvas_view, property_components);
