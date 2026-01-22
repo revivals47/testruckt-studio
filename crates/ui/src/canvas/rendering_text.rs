@@ -76,10 +76,22 @@ pub fn draw_text_element(
     };
     layout.set_alignment(pango_alignment);
 
-    // Enable text wrapping by setting width constraint
-    // This makes canvas rendering consistent with PDF/SVG export
-    let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
-    layout.set_width((available_width * pango::SCALE as f64) as i32);
+    // Configure for vertical or horizontal text
+    if style.vertical {
+        // Vertical text mode (縦書き)
+        let pango_context = layout.context();
+        pango_context.set_base_gravity(pango::Gravity::East);
+        pango_context.set_gravity_hint(pango::GravityHint::Strong);
+        layout.context_changed();
+
+        // For vertical text, use height as the constraint
+        let available_height = (bounds.size.height as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+        layout.set_width((available_height * pango::SCALE as f64) as i32);
+    } else {
+        // Horizontal text mode (横書き)
+        let available_width = (bounds.size.width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+        layout.set_width((available_width * pango::SCALE as f64) as i32);
+    }
 
     // Apply text decorations
     let attrs = pango::AttrList::new();
@@ -93,16 +105,28 @@ pub fn draw_text_element(
     }
     layout.set_attributes(Some(&attrs));
 
-    // Set text color and position
+    // Set text color
     ctx.set_source_rgb(
         style.color.r as f64,
         style.color.g as f64,
         style.color.b as f64,
     );
-    ctx.translate(
-        bounds.origin.x as f64 + TEXT_PADDING,
-        bounds.origin.y as f64 + TEXT_PADDING,
-    );
+
+    // Position and render based on text direction
+    if style.vertical {
+        // Vertical text: translate to top-right corner, rotate 90 degrees clockwise
+        ctx.translate(
+            bounds.origin.x as f64 + bounds.size.width as f64 - TEXT_PADDING,
+            bounds.origin.y as f64 + TEXT_PADDING,
+        );
+        ctx.rotate(std::f64::consts::FRAC_PI_2);
+    } else {
+        // Horizontal text: normal positioning
+        ctx.translate(
+            bounds.origin.x as f64 + TEXT_PADDING,
+            bounds.origin.y as f64 + TEXT_PADDING,
+        );
+    }
 
     // Render layout
     pangocairo::functions::show_layout(ctx, &layout);
@@ -115,6 +139,8 @@ pub fn draw_text_element(
 ///
 /// This mirrors the rendering configuration (padding, font settings, alignment)
 /// so that layout calculations are consistent between draw and measurement.
+///
+/// For vertical text, this returns the required width (since text flows vertically).
 pub fn measure_text_height(
     text: &str,
     style: &testruct_core::typography::TextStyle,
@@ -168,19 +194,42 @@ pub fn measure_text_height(
     }
     layout.set_attributes(Some(&attrs));
 
-    // Account for the same padding used during draw
-    let available_width = (width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
-    layout.set_width((available_width * pango::SCALE as f64) as i32);
-    layout.set_wrap(pango::WrapMode::WordChar);
+    // Handle vertical vs horizontal text
+    if style.vertical {
+        // Vertical text mode
+        let pango_context = layout.context();
+        pango_context.set_base_gravity(pango::Gravity::East);
+        pango_context.set_gravity_hint(pango::GravityHint::Strong);
+        layout.context_changed();
 
-    // Measure logical height in device pixels
-    let (_, logical_rect) = layout.pixel_extents();
-    let layout_height = logical_rect.height().max(0) as f64;
+        // For vertical text, width parameter represents the available height
+        let available_height = (width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+        layout.set_width((available_height * pango::SCALE as f64) as i32);
+        layout.set_wrap(pango::WrapMode::WordChar);
 
-    let padded_height = layout_height + (TEXT_PADDING * 2.0);
-    let min_height = (style.font_size as f64) + (TEXT_PADDING * 2.0);
+        // Measure logical width (which becomes visual width after rotation)
+        let (_, logical_rect) = layout.pixel_extents();
+        let layout_width = logical_rect.width().max(0) as f64;
 
-    padded_height.max(min_height) as f32
+        let padded_width = layout_width + (TEXT_PADDING * 2.0);
+        let min_width = (style.font_size as f64) + (TEXT_PADDING * 2.0);
+
+        padded_width.max(min_width) as f32
+    } else {
+        // Horizontal text mode
+        let available_width = (width as f64 - (TEXT_PADDING * 2.0)).max(0.0);
+        layout.set_width((available_width * pango::SCALE as f64) as i32);
+        layout.set_wrap(pango::WrapMode::WordChar);
+
+        // Measure logical height in device pixels
+        let (_, logical_rect) = layout.pixel_extents();
+        let layout_height = logical_rect.height().max(0) as f64;
+
+        let padded_height = layout_height + (TEXT_PADDING * 2.0);
+        let min_height = (style.font_size as f64) + (TEXT_PADDING * 2.0);
+
+        padded_height.max(min_height) as f32
+    }
 }
 
 /// Draw a text cursor for editing mode
